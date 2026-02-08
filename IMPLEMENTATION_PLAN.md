@@ -1480,6 +1480,8 @@ Deliverables:
   - `docs/adr/0005-secrets-strategy.md`
   - `docs/adr/0006-separate-backends-not-workspaces.md` *(NEW - from DevOps review)*
   - `docs/adr/0007-single-region-decision.md` *(NEW - from DevOps review)*
+  - `docs/adr/0008-aws-managed-encryption.md` *(NEW - simplicity over KMS)*
+  - `docs/adr/0009-agent-discovery-identity.md` *(PROPOSED - pre-ADR based on RULE 9 & 10)*
 - **`CLAUDE.md`** (Claude AI development guide)
 - **`docs/architecture.md`** (System architecture + network topology diagram)
 - **`docs/runbooks/`** *(NEW - from DevOps review)*
@@ -2501,6 +2503,153 @@ Examples:
 ```
 ```
 
+#### docs/adr/0008-aws-managed-encryption.md
+```markdown
+# ADR 0008: AWS-Managed Encryption by Default
+
+## Status
+Accepted
+
+## Context
+Customer-managed KMS keys add operational complexity and cost without providing meaningful security benefits for most use cases. AWS-managed encryption (SSE-S3, default CloudWatch encryption) provides equivalent protection while simplifying operations.
+
+## Decision
+Use **AWS-managed encryption** (SSE-S3) by default for:
+- S3 buckets (deployment artifacts, outputs, state)
+- CloudWatch Logs (default encryption)
+- Secrets Manager (default AWS-managed key)
+
+Only use **customer-managed KMS** when:
+- Regulatory requirements explicitly mandate customer-controlled keys
+- Cross-account encryption is required
+- Custom key rotation schedules are mandated
+
+## Implementation
+```hcl
+# S3 bucket encryption
+resource "aws_s3_bucket_server_side_encryption_configuration" "deployment" {
+  bucket = aws_s3_bucket.deployment.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"  # AWS-managed
+    }
+  }
+}
+```
+
+## References
+- See `CLAUDE.md` Rule 1.6 for full rationale
+- [AWS S3 Encryption](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingEncryption.html)
+```
+
+#### docs/adr/0009-agent-discovery-identity.md (PRE-ADR)
+```markdown
+# ADR 0009: Agent Discovery and Identity Propagation
+
+## Status
+**Proposed** (Pre-ADR - requires approval before implementation)
+
+## Context
+CLAUDE.md RULE 9 and RULE 10 define requirements for agent discovery and identity propagation in multi-agent systems:
+- RULE 9: Discovery is EXPLICIT
+- RULE 10: Identity Propagation is MANDATORY
+
+This pre-ADR outlines how to implement these rules in the Terraform infrastructure.
+
+## Proposal
+
+### Rule 9: Discovery is EXPLICIT
+
+**9.1: Agents Must Be Discoverable**
+- Every agent MUST expose `/.well-known/agent-card.json` endpoint
+- Agents MUST register with AWS Cloud Map (East-West) or Gateway Manifest (Northbound)
+- FORBIDDEN: Hardcoding agent endpoints in application code
+
+**9.2: Gateway is the Tool Source**
+- Tools (Lambda functions) MUST be accessed via AgentCore Gateway
+- FORBIDDEN: Direct `lambda:InvokeFunction` calls to tools
+
+### Rule 10: Identity Propagation is MANDATORY
+
+**10.1: No Anonymous A2A Calls**
+- All Agent-to-Agent calls MUST use Workload Token
+- Pattern: `GetWorkloadAccessTokenForJWT` → `Authorization: Bearer <token>`
+
+**10.2: User Context Must Persist**
+- Original user identity (Entra ID/Cognito) MUST propagate through agent chains
+- Enables per-user guardrails and audit trail
+
+## Proposed Implementation
+
+### Agent Card Endpoint
+```json
+{
+  "agentId": "research-agent-v1",
+  "name": "Deep Research Agent",
+  "version": "1.0.0",
+  "capabilities": ["research", "synthesis"],
+  "endpoints": {
+    "invoke": "https://api.example.com/agents/research/invoke"
+  },
+  "authentication": {
+    "type": "workload-token",
+    "audience": "urn:agent:research"
+  }
+}
+```
+
+### Terraform Changes Required
+```hcl
+# Cloud Map namespace
+resource "aws_service_discovery_private_dns_namespace" "agents" {
+  name = "agents.internal"
+  vpc  = var.vpc_id
+}
+
+# Workload Identity (CLI-based)
+resource "null_resource" "workload_identity" {
+  count = var.enable_identity ? 1 : 0
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      aws bedrock-agentcore-control create-workload-identity \
+        --agent-id ${var.agent_name} \
+        --audience "urn:agent:${var.agent_name}" \
+        --output json > ${path.module}/.terraform/identity_output.json
+    EOT
+  }
+}
+```
+
+## Open Questions (Require Resolution Before Acceptance)
+
+1. **Scope**: Is this required for ALL agents or only multi-agent systems?
+2. **Timeline**: Should this be Phase 1 or deferred to Phase 3+?
+3. **VPC Requirement**: Does Cloud Map require VPC mode (impacts cost)?
+4. **Backward Compatibility**: How do existing agents migrate?
+5. **Testing**: How to test workload token exchange without production setup?
+
+## Cost Impact (Estimated)
+- Cloud Map: ~$1/month per agent (namespace + service)
+- Workload Identity: Minimal (STS API calls)
+- VPC endpoints (if required): ~$7/month per AZ
+
+## Next Steps
+1. **Discuss** requirements with team
+2. **Clarify** scope and timeline
+3. **Prototype** workload token exchange
+4. **Test** in dev environment
+5. **Update status** to "Accepted" if approved
+6. **Implement** in agreed phase
+
+## References
+- [CLAUDE.md RULE 9](../CLAUDE.md#rule-9-discovery-is-explicit)
+- [CLAUDE.md RULE 10](../CLAUDE.md#rule-10-identity-propagation-is-mandatory)
+- [AWS Cloud Map](https://docs.aws.amazon.com/cloud-map/)
+- [Workload Identity](https://aws.amazon.com/blogs/security/workload-identity/)
+```
+
 ---
 
 ### CLAUDE.md (Project Root) - Development Rules & Principles for AI Coding Agents
@@ -3236,15 +3385,17 @@ checkov (0 critical/high)
 
 ### Key Decisions Summary
 
-| Decision | Rationale | ADR |
-|----------|-----------|-----|
-| 4 modules | Clear separation | 0001 |
-| CLI-based | Provider gaps | 0002 |
-| GitLab CI | On-prem infra | 0003 |
-| S3 backend | Team collaboration | 0004 |
-| Hybrid secrets | Security + convenience | 0005 |
-| Separate backends (not workspaces) | Blast radius containment | 0006 *(NEW)* |
-| Single region | Cost vs. complexity tradeoff | 0007 *(NEW)* |
+| Decision | Rationale | ADR | Status |
+|----------|-----------|-----|--------|
+| 4 modules | Clear separation | 0001 | Accepted |
+| CLI-based | Provider gaps | 0002 | Accepted |
+| GitLab CI | On-prem infra | 0003 | Accepted |
+| S3 backend | Team collaboration | 0004 | Accepted |
+| Hybrid secrets | Security + convenience | 0005 | Accepted |
+| Separate backends (not workspaces) | Blast radius containment | 0006 | Accepted |
+| Single region | Cost vs. complexity tradeoff | 0007 | Accepted |
+| AWS-managed encryption | Simplicity, equivalent security | 0008 | Accepted |
+| Agent discovery & identity | Service mesh, A2A auth | 0009 | **Proposed** |
 
 ### Version Info (PINNED per DevOps Review)
 
