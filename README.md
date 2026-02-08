@@ -377,6 +377,7 @@ Varies by usage and region.
 
 ## Documentation
 
+- **[IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md)** - Comprehensive test & validation plan with phases
 - **[DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md)** - Team onboarding and common tasks
 - **[AGENTS.md](./AGENTS.md)** / **[CLAUDE.md](./CLAUDE.md)** / **[GEMINI.md](./GEMINI.md)** - Universal AI agent development rules (hardlinked files - same content)
 - **[docs/architecture.md](./docs/architecture.md)** - System design and data flows
