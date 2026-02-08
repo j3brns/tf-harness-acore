@@ -24,6 +24,9 @@ Provides S3 bucket and object operations.
 
 **Use Case:** File storage, data retrieval, content management
 
+**Security:** You must set `s3_tools_allowed_buckets` with both bucket and object ARNs.
+The Lambda enforces an allowlist via the `ALLOWED_BUCKETS` environment variable (set by Terraform).
+
 ### 2. Titanic Data (`titanic-data/`)
 
 Serves the Titanic passenger dataset for analysis demonstrations.
@@ -50,6 +53,36 @@ Flask-based local server for development and testing.
 **Use Case:** Local testing without AWS, development
 
 ## Quick Start
+
+### Local Setup (One-Time)
+
+**What you need**
+- `Python 3.12`
+- `uv` (recommended) or `pip`
+- `AWS CLI v2` (for deploy/plan and S3 tool tests)
+- `Terraform 1.14.4` (deploy/plan)
+- `zip` (packaging)
+
+**Why this setup speeds you up**
+- Local server uses the same MCP protocol as Gateway, so you can test tools without AWS.
+- Two‑stage packaging is deterministic, so changes only rebuild when inputs change.
+- Module composition wires ARNs automatically, so you avoid manual wiring errors.
+
+**Setup with `uv` (recommended)**
+```bash
+cd examples/mcp-servers
+uv venv
+uv pip install -r local-dev/requirements.txt
+uv pip install -r s3-tools/requirements-dev.txt
+```
+
+**AWS credentials (only needed for S3 tool tests or deploy)**
+```bash
+aws configure
+```
+Optional: set `ALLOWED_BUCKETS` (comma‑separated) to limit bucket access during local runs.
+
+**Note:** The `Makefile` uses Windows venv paths (`.venv/Scripts/...`). On macOS/Linux/WSL, run the commands above manually or update the Makefile to use `.venv/bin/...`.
 
 ### Option 1: Integrated Deployment (Recommended)
 
@@ -115,6 +148,36 @@ make plan          # Preview changes
 make deploy        # Apply to AWS
 ```
 
+**Process Overview (How the Loop Accelerates Dev)**
+1. Implement or update a tool in `s3-tools/` or `titanic-data/`.
+2. Run the local MCP server (`make dev`) and call tools directly via HTTP.
+3. Validate tool behavior fast without AWS, then run targeted tests.
+4. When ready, deploy with Terraform; ARNs flow automatically to the Gateway.
+
+This mirrors the full Gateway → MCP tool path described in `docs/architecture.md` but keeps the feedback loop local and fast.
+
+**Lifecycle (Cloud ↔ Local)**
+This flow is intentionally bidirectional so production issues get pulled back into a fast local loop.
+
+1. **Local build event**: change tool code → run local MCP server → validate tool behavior via HTTP.
+2. **Promote event**: local behavior is correct → `terraform plan/apply` deploys Lambda MCP servers → Gateway targets updated via module outputs.
+3. **Cloud run event**: real traffic hits Gateway → Lambda tool → results observed in CloudWatch/X‑Ray.
+4. **Cloud issue event**: anomaly, regression, or missing capability → reproduce locally using the same MCP protocol.
+5. **Local fix event**: update tool logic → re‑test locally → redeploy to cloud.
+
+This maps to the architecture in `docs/architecture.md`: the same Gateway→Lambda tool contract is exercised locally first, then promoted to cloud for scale and observability.
+
+**Local Dev Flow (Mermaid)**
+```mermaid
+flowchart LR
+  A[Edit tool code] --> B[Run local MCP server]
+  B --> C[Call tool via HTTP]
+  C --> D[Fix/iterate]
+  D --> B
+  C --> E[Package + deploy]
+  E --> F[Gateway uses new tool]
+```
+
 **Development Cycle:**
 
 ```
@@ -150,6 +213,8 @@ make deploy        # Apply to AWS
 | `Makefile` | All dev commands |
 | `scripts/test-local.sh` | Comprehensive test script |
 | `local-dev/server.py` | Local Flask MCP server |
+| `s3-tools/requirements.txt` | S3 tools dependencies for packaging |
+| `titanic-data/requirements.txt` | Titanic data dependencies for packaging |
 | `terraform/packaging.tf` | Two-stage Lambda build |
 
 ### Option 3: Standalone MCP Server Deployment
@@ -204,6 +269,19 @@ mcp_targets = {
   }
 }
 
+### Optional: Explicit Lambda Invoke Permission
+
+If your Gateway needs a resource-based policy on the Lambda (e.g., cross-account setup),
+enable the explicit permission in `terraform.tfvars`:
+
+```hcl
+enable_bedrock_agentcore_invoke_permission = true
+bedrock_agentcore_invoke_principal = "bedrock-agentcore.amazonaws.com"
+bedrock_agentcore_source_account = "ACCOUNT_ID"
+bedrock_agentcore_source_arn = "arn:aws:bedrock-agentcore:REGION:ACCOUNT_ID:gateway/GATEWAY_ID"
+```
+For same-account setups using the Gateway role, you can keep this disabled.
+
 ## MCP Protocol
 
 All servers implement the MCP JSON-RPC protocol:
@@ -236,6 +314,12 @@ All servers implement the MCP JSON-RPC protocol:
   "id": "1"
 }
 ```
+
+## Packaging Notes
+
+Packaging follows a two-stage build (deps + code) required by `AGENTS.md`.
+Each MCP server has a `requirements.txt` file and the Terraform packaging step creates a zip
+containing `deps/` and `code/`. See `terraform/packaging.tf` for the exact build steps.
 
 ### Call Tool
 
@@ -483,7 +567,7 @@ cat response.json | jq .
 
 ## Security Considerations
 
-1. **IAM Permissions**: Lambda roles have minimal permissions. S3 tools only access allowed buckets.
+1. **IAM Permissions**: Lambda roles have minimal permissions. S3 tools require an explicit bucket allowlist in `terraform.tfvars`.
 
 2. **Input Validation**: All tool inputs are validated before use.
 

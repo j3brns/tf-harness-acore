@@ -69,6 +69,20 @@ terraform/
 +-------------------------------------------------------------+
 ```
 
+## Resource Model (Entity)
+
+```mermaid
+erDiagram
+  AGENT ||--|| GATEWAY : exposes
+  GATEWAY ||--o{ MCP_TOOL : routes_to
+  AGENT ||--|| RUNTIME : executes
+  RUNTIME ||--o{ MEMORY : stores
+  RUNTIME ||--o{ TOOL : uses
+  RUNTIME }|--|| POLICY_ENGINE : enforced_by
+  RUNTIME }|--|| EVALUATOR : assessed_by
+  OBSERVABILITY ||--o{ LOG_GROUP : writes_to
+```
+
 ## Module Architecture
 
 ### Dependency Graph
@@ -141,6 +155,34 @@ agentcore-foundation (NO dependencies)
 ## Data Flow
 
 ### Agent Invocation Flow
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Client as External System
+  participant Gateway as MCP Gateway
+  participant Identity as Workload Identity
+  participant Tool as Lambda MCP Tool
+  participant Runtime as Agent Runtime
+  participant CI as Code Interpreter
+  participant Memory as Memory Store
+  participant Eval as Evaluator
+  participant Policy as Policy Engine
+  participant Obs as CloudWatch/X-Ray
+
+  Client->>Gateway: invoke (MCP request)
+  Gateway->>Identity: authenticate
+  Gateway->>Tool: call tool
+  Tool-->>Gateway: tool result
+  Gateway->>Runtime: dispatch runtime
+  Runtime->>CI: optional code exec
+  Runtime->>Memory: read/write state
+  Runtime->>Eval: evaluate response
+  Runtime->>Policy: enforce policies
+  Runtime-->>Gateway: response
+  Gateway-->>Client: response
+  Runtime-->>Obs: logs/traces
+```
 
 ```
 1. External System -> Gateway (MCP endpoint)

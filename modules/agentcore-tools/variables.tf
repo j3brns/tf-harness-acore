@@ -35,6 +35,15 @@ variable "code_interpreter_network_mode" {
     condition     = contains(["PUBLIC", "SANDBOX", "VPC"], var.code_interpreter_network_mode)
     error_message = "Network mode must be PUBLIC, SANDBOX, or VPC."
   }
+
+  validation {
+    condition = var.code_interpreter_network_mode != "VPC" || (
+      var.code_interpreter_vpc_config != null &&
+      length(var.code_interpreter_vpc_config.subnet_ids) > 0 &&
+      length(var.code_interpreter_vpc_config.security_group_ids) > 0
+    )
+    error_message = "VPC network mode requires code_interpreter_vpc_config with subnet_ids and security_group_ids."
+  }
 }
 
 variable "code_interpreter_execution_timeout" {
@@ -74,6 +83,15 @@ variable "browser_network_mode" {
     condition     = contains(["PUBLIC", "SANDBOX", "VPC"], var.browser_network_mode)
     error_message = "Network mode must be PUBLIC, SANDBOX, or VPC."
   }
+
+  validation {
+    condition = var.browser_network_mode != "VPC" || (
+      var.browser_vpc_config != null &&
+      length(var.browser_vpc_config.subnet_ids) > 0 &&
+      length(var.browser_vpc_config.security_group_ids) > 0
+    )
+    error_message = "VPC network mode requires browser_vpc_config with subnet_ids and security_group_ids."
+  }
 }
 
 variable "browser_vpc_config" {
@@ -108,11 +126,19 @@ variable "browser_recording_s3_prefix" {
 variable "enable_kms" {
   description = "Enable KMS encryption"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "kms_key_arn" {
   description = "ARN of KMS key for encryption"
   type        = string
   default     = ""
+
+  validation {
+    condition = !var.enable_kms || (
+      var.kms_key_arn != "" &&
+      !can(regex("123456789012|999999999999|000000000000", var.kms_key_arn))
+    )
+    error_message = "kms_key_arn must be set to a real ARN when enable_kms is true."
+  }
 }

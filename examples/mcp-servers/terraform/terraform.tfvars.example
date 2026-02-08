@@ -13,14 +13,17 @@ deploy_s3_tools = true
 # Deploy Titanic Data MCP Server
 deploy_titanic_data = true
 
-# Optional: Restrict S3 tools to specific buckets
-# Leave empty for access to all buckets
+# Required: Restrict S3 tools to specific buckets (include both bucket and bucket/*)
 s3_tools_allowed_buckets = [
-  # "arn:aws:s3:::my-bucket-1",
-  # "arn:aws:s3:::my-bucket-1/*",
-  # "arn:aws:s3:::my-bucket-2",
-  # "arn:aws:s3:::my-bucket-2/*",
+  "arn:aws:s3:::example-agentcore-bucket",
+  "arn:aws:s3:::example-agentcore-bucket/*",
 ]
+
+# Optional: Explicit Lambda invoke permission for Bedrock AgentCore service principal
+# enable_bedrock_agentcore_invoke_permission = false
+# bedrock_agentcore_invoke_principal = "bedrock-agentcore.amazonaws.com"
+# bedrock_agentcore_source_account = "ACCOUNT_ID"
+# bedrock_agentcore_source_arn = "arn:aws:bedrock-agentcore:REGION:ACCOUNT_ID:gateway/GATEWAY_ID"
 
 # Lambda configuration
 lambda_timeout = 30      # seconds

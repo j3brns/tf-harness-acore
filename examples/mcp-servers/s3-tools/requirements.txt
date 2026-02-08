@@ -1,0 +1,2 @@
+# Dependencies for s3-tools MCP server.
+# boto3 is provided by the AWS Lambda Python runtime.

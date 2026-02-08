@@ -17,7 +17,7 @@ resource "null_resource" "agent_runtime" {
       echo "Creating agent runtime for ${var.agent_name}..."
 
       # Get deployment package from S3
-      DEPLOYMENT_S3_URI="s3://${local.deployment_bucket}/deployments/"
+      DEPLOYMENT_S3_URI="s3://${local.deployment_bucket}"
 
       # Prepare runtime configuration
       RUNTIME_CONFIG='${jsonencode(var.runtime_config)}'
@@ -28,7 +28,7 @@ resource "null_resource" "agent_runtime" {
         --agent-name "${var.agent_name}" \
         --role-arn "${var.runtime_role_arn != "" ? var.runtime_role_arn : aws_iam_role.runtime[0].arn}" \
         --artifact-s3-uri "$DEPLOYMENT_S3_URI" \
-        --artifact-s3-key "deployments/" \
+        --artifact-s3-key "${local.deployment_key}" \
         --execution-role-arn "${var.runtime_role_arn != "" ? var.runtime_role_arn : aws_iam_role.runtime[0].arn}" \
         --region ${var.region} \
         --output json > ${path.module}/.terraform/runtime_output.json

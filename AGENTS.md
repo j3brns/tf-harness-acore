@@ -123,23 +123,6 @@ The following resources MUST use the `null_resource` + AWS CLI pattern due to pr
 8. Evaluators
 9. Credential Providers
 
-### Mandatory Terraform Pattern
-```hcl
-resource "null_resource" "resource_name" {
-  triggers = {
-    config_hash = sha256(jsonencode(var.resource_config))
-  }
-
-  provisioner "local-exec" {
-    command = <<-EOT
-      set -e
-      aws bedrock-agentcore-control create-X ... > output.json
-      if [ ! -s "output.json" ]; then exit 1; fi
-    EOT
-  }
-}
-```
-
 ---
 
 ## RULE 9: Discovery is EXPLICIT
@@ -174,6 +157,17 @@ resource "null_resource" "resource_name" {
 ### Rule 11.2: Session Management
 - **Pattern**: Use **Secure, HTTP-only, SameSite=Strict** cookies for Session IDs.
 - **Reference**: ADR 0011 (Serverless Token Handler).
+
+---
+
+## RULE 12: Comprehensive Issue Reporting
+
+### Rule 12.1: Issue Structure
+AI Agents MUST create comprehensive GitHub issues. Every issue MUST include:
+- **Context**: Why is this change needed? (Relate to ADRs/Rules).
+- **Technical Detail**: Specific AWS APIs, Python libraries, or Terraform patterns to be used.
+- **Implementation Tasks**: A checklist of specific actionable items.
+- **Acceptance Criteria**: Verifiable outcomes (e.g., "Exit code 0", "Test passes").
 
 ---
 

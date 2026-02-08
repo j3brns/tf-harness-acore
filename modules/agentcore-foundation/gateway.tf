@@ -52,9 +52,14 @@ resource "null_resource" "gateway_target" {
   for_each = var.enable_gateway ? var.mcp_targets : {}
 
   triggers = {
-    name       = each.value.name
-    lambda_arn = each.value.lambda_arn
-    gateway_id = var.enable_gateway ? file("${path.module}/.terraform/gateway_id.txt") : ""
+    name               = each.value.name
+    lambda_arn         = each.value.lambda_arn
+    gateway_name       = var.gateway_name != "" ? var.gateway_name : "${var.agent_name}-gateway"
+    gateway_config_hash = sha256(jsonencode({
+      name        = var.gateway_name != "" ? var.gateway_name : "${var.agent_name}-gateway"
+      search_type = var.gateway_search_type
+      versions    = var.gateway_mcp_versions
+    }))
   }
 
   provisioner "local-exec" {
@@ -63,9 +68,16 @@ resource "null_resource" "gateway_target" {
 
       echo "Creating Gateway Target: ${each.value.name}..."
 
+      if [ ! -f "${path.module}/.terraform/gateway_id.txt" ]; then
+        echo "ERROR: Gateway ID not found. Create gateway first."
+        exit 1
+      fi
+
+      GATEWAY_ID=$(cat "${path.module}/.terraform/gateway_id.txt")
+
       aws bedrock-agentcore-control create-gateway-target \
         --name "${each.value.name}" \
-        --gateway-identifier "${self.triggers.gateway_id}" \
+        --gateway-identifier "$GATEWAY_ID" \
         --target-configuration "{\"mcp\":{\"lambda\":{\"lambdaArn\":\"${each.value.lambda_arn}\"}}}" \
         --region ${var.region} \
         --output json > ${path.module}/.terraform/target_${each.key}.json

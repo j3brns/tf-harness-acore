@@ -73,6 +73,11 @@ ENV/
 *.zip
 node_modules/
 
+# MCP tool downloads
+mcp_excalidraw/
+excalidraw-mcp-app/
+excalidraw-mcp-*/
+
 # Large artifacts and archives
 *.tar
 *.tar.gz

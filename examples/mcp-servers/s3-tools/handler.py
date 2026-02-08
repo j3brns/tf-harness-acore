@@ -15,6 +15,7 @@ Tools provided:
 import json
 import logging
 import base64
+import os
 from typing import Any
 from datetime import datetime
 
@@ -28,6 +29,33 @@ logger.setLevel(logging.INFO)
 s3_client = boto3.client('s3')
 
 
+def get_allowed_buckets() -> set[str] | None:
+    """Return allowed buckets from env, or None if not configured."""
+    raw = os.environ.get("ALLOWED_BUCKETS", "")
+    buckets = {b.strip() for b in raw.split(",") if b.strip()}
+    return buckets if buckets else None
+
+
+def enforce_bucket_allowed(bucket: str) -> dict | None:
+    """Enforce bucket allowlist. Returns error dict if not allowed."""
+    allowed = get_allowed_buckets()
+    if allowed is None:
+        if os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+            return {
+                "success": False,
+                "error": "ALLOWED_BUCKETS not configured",
+                "error_code": "ConfigError"
+            }
+        return None
+    if bucket not in allowed:
+        return {
+            "success": False,
+            "error": f"Bucket not allowed: {bucket}",
+            "error_code": "AccessDenied"
+        }
+    return None
+
+
 def json_serial(obj):
     """JSON serializer for objects not serializable by default."""
     if isinstance(obj, datetime):
@@ -38,6 +66,14 @@ def json_serial(obj):
 def tool_list_buckets(params: dict) -> dict:
     """List all S3 buckets accessible by this Lambda."""
     try:
+        allowed = get_allowed_buckets()
+        if allowed is None and os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+            return {
+                "success": False,
+                "error": "ALLOWED_BUCKETS not configured",
+                "error_code": "ConfigError"
+            }
+
         response = s3_client.list_buckets()
 
         buckets = [
@@ -47,6 +83,9 @@ def tool_list_buckets(params: dict) -> dict:
             }
             for bucket in response.get("Buckets", [])
         ]
+
+        if allowed:
+            buckets = [b for b in buckets if b["name"] in allowed]
 
         # Optional: filter by prefix
         prefix = params.get("prefix")
@@ -80,6 +119,10 @@ def tool_list_objects(params: dict) -> dict:
     bucket = params.get("bucket")
     if not bucket:
         return {"success": False, "error": "bucket parameter required"}
+
+    bucket_check = enforce_bucket_allowed(bucket)
+    if bucket_check:
+        return bucket_check
 
     try:
         list_params = {
@@ -142,6 +185,10 @@ def tool_get_object(params: dict) -> dict:
 
     if not bucket or not key:
         return {"success": False, "error": "bucket and key parameters required"}
+
+    bucket_check = enforce_bucket_allowed(bucket)
+    if bucket_check:
+        return bucket_check
 
     max_size = params.get("max_size", 1024 * 1024)  # 1MB default
     encoding = params.get("encoding", "text")
@@ -208,6 +255,10 @@ def tool_put_object(params: dict) -> dict:
     if not bucket or not key or content is None:
         return {"success": False, "error": "bucket, key, and content parameters required"}
 
+    bucket_check = enforce_bucket_allowed(bucket)
+    if bucket_check:
+        return bucket_check
+
     content_type = params.get("content_type", "text/plain")
     encoding = params.get("encoding", "text")
 
@@ -258,6 +309,10 @@ def tool_get_object_metadata(params: dict) -> dict:
 
     if not bucket or not key:
         return {"success": False, "error": "bucket and key parameters required"}
+
+    bucket_check = enforce_bucket_allowed(bucket)
+    if bucket_check:
+        return bucket_check
 
     try:
         response = s3_client.head_object(Bucket=bucket, Key=key)

@@ -1,3 +1,22 @@
+locals {
+  code_interpreter_subnet_arns = var.code_interpreter_vpc_config != null ? [
+    for subnet_id in var.code_interpreter_vpc_config.subnet_ids :
+    "arn:aws:ec2:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:subnet/${subnet_id}"
+  ] : []
+  code_interpreter_security_group_arns = var.code_interpreter_vpc_config != null ? [
+    for sg_id in var.code_interpreter_vpc_config.security_group_ids :
+    "arn:aws:ec2:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:security-group/${sg_id}"
+  ] : []
+  browser_subnet_arns = var.browser_vpc_config != null ? [
+    for subnet_id in var.browser_vpc_config.subnet_ids :
+    "arn:aws:ec2:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:subnet/${subnet_id}"
+  ] : []
+  browser_security_group_arns = var.browser_vpc_config != null ? [
+    for sg_id in var.browser_vpc_config.security_group_ids :
+    "arn:aws:ec2:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:security-group/${sg_id}"
+  ] : []
+}
+
 # IAM Role for Code Interpreter
 resource "aws_iam_role" "code_interpreter" {
   count = var.enable_code_interpreter ? 1 : 0
@@ -25,38 +44,49 @@ resource "aws_iam_role_policy" "code_interpreter" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Resource = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/code-interpreter/*"
-      },
-      # VPC access if needed
-      var.code_interpreter_network_mode == "VPC" ? {
-        Effect = "Allow"
-        Action = [
-          "ec2:CreateNetworkInterface",
-          "ec2:DescribeNetworkInterfaces",
-          "ec2:DeleteNetworkInterface",
-          "ec2:AssignPrivateIpAddresses",
-          "ec2:UnassignPrivateIpAddresses"
-        ]
-        Resource = "*"
-      } : null,
-      # KMS encryption
-      var.enable_kms ? {
-        Effect = "Allow"
-        Action = [
-          "kms:Decrypt",
-          "kms:GenerateDataKey"
-        ]
-        Resource = var.kms_key_arn != "" ? [var.kms_key_arn] : ["*"]
-      } : null
-    ]
+    Statement = concat(
+      [
+        {
+          Effect = "Allow"
+          Action = [
+            "logs:CreateLogGroup",
+            "logs:CreateLogStream",
+            "logs:PutLogEvents"
+          ]
+          Resource = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/code-interpreter/*"
+        }
+      ],
+      # AWS-REQUIRED: EC2 network interface APIs do not support resource-level scoping.
+      var.code_interpreter_network_mode == "VPC" ? [
+        {
+          Effect = "Allow"
+          Action = [
+            "ec2:CreateNetworkInterface",
+            "ec2:DescribeNetworkInterfaces",
+            "ec2:DeleteNetworkInterface",
+            "ec2:AssignPrivateIpAddresses",
+            "ec2:UnassignPrivateIpAddresses"
+          ]
+          Resource = "*"
+          Condition = {
+            ArnEquals = {
+              "ec2:Subnet"        = local.code_interpreter_subnet_arns
+              "ec2:SecurityGroup" = local.code_interpreter_security_group_arns
+            }
+          }
+        }
+      ] : [],
+      var.enable_kms ? [
+        {
+          Effect = "Allow"
+          Action = [
+            "kms:Decrypt",
+            "kms:GenerateDataKey"
+          ]
+          Resource = [var.kms_key_arn]
+        }
+      ] : []
+    )
   })
 }
 
@@ -87,46 +117,58 @@ resource "aws_iam_role_policy" "browser" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Resource = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/browser/*"
-      },
-      # S3 access for recording
-      var.enable_browser_recording && var.browser_recording_s3_bucket != "" ? {
-        Effect = "Allow"
-        Action = [
-          "s3:PutObject",
-          "s3:PutObjectAcl"
-        ]
-        Resource = "arn:aws:s3:::${var.browser_recording_s3_bucket}/${var.browser_recording_s3_prefix}*"
-      } : null,
-      # VPC access if needed
-      var.browser_network_mode == "VPC" ? {
-        Effect = "Allow"
-        Action = [
-          "ec2:CreateNetworkInterface",
-          "ec2:DescribeNetworkInterfaces",
-          "ec2:DeleteNetworkInterface",
-          "ec2:AssignPrivateIpAddresses",
-          "ec2:UnassignPrivateIpAddresses"
-        ]
-        Resource = "*"
-      } : null,
-      # KMS encryption
-      var.enable_kms ? {
-        Effect = "Allow"
-        Action = [
-          "kms:Decrypt",
-          "kms:GenerateDataKey"
-        ]
-        Resource = var.kms_key_arn != "" ? [var.kms_key_arn] : ["*"]
-      } : null
-    ]
+    Statement = concat(
+      [
+        {
+          Effect = "Allow"
+          Action = [
+            "logs:CreateLogGroup",
+            "logs:CreateLogStream",
+            "logs:PutLogEvents"
+          ]
+          Resource = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/browser/*"
+        }
+      ],
+      var.enable_browser_recording && var.browser_recording_s3_bucket != "" ? [
+        {
+          Effect = "Allow"
+          Action = [
+            "s3:PutObject",
+            "s3:PutObjectAcl"
+          ]
+          Resource = "arn:aws:s3:::${var.browser_recording_s3_bucket}/${var.browser_recording_s3_prefix}*"
+        }
+      ] : [],
+      # AWS-REQUIRED: EC2 network interface APIs do not support resource-level scoping.
+      var.browser_network_mode == "VPC" ? [
+        {
+          Effect = "Allow"
+          Action = [
+            "ec2:CreateNetworkInterface",
+            "ec2:DescribeNetworkInterfaces",
+            "ec2:DeleteNetworkInterface",
+            "ec2:AssignPrivateIpAddresses",
+            "ec2:UnassignPrivateIpAddresses"
+          ]
+          Resource = "*"
+          Condition = {
+            ArnEquals = {
+              "ec2:Subnet"        = local.browser_subnet_arns
+              "ec2:SecurityGroup" = local.browser_security_group_arns
+            }
+          }
+        }
+      ] : [],
+      var.enable_kms ? [
+        {
+          Effect = "Allow"
+          Action = [
+            "kms:Decrypt",
+            "kms:GenerateDataKey"
+          ]
+          Resource = [var.kms_key_arn]
+        }
+      ] : []
+    )
   })
 }

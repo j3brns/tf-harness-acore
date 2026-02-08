@@ -29,6 +29,18 @@ graph TD
 
 **Implementation Note**: Most AWS Bedrock AgentCore resources are provisioned via AWS CLI using `null_resource` + `local-exec` pattern, as they are not yet available in the Terraform AWS provider. IAM roles, CloudWatch logs, and S3 buckets use native Terraform resources.
 
+## Lifecycle (Local → Cloud → Local)
+
+```mermaid
+stateDiagram-v2
+    [*] --> LocalDev: edit tool or agent code
+    LocalDev --> LocalTest: run local MCP server
+    LocalTest --> Package: deps+code packaging
+    Package --> Deploy: terraform apply
+    Deploy --> Observe: CloudWatch/X-Ray
+    Observe --> LocalDev: feedback loop
+```
+
 ## Project Structure
 
 ```

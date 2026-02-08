@@ -1,23 +1,9 @@
 # MCP Server Lambda Packaging
 #
-# Two-stage build following CLAUDE.md Rule 5:
-# Stage 1: Dependencies (Lambda layer - cached)
-# Stage 2: Code (deployment package - fresh each build)
-#
-# Structure:
-#   examples/mcp-servers/
-#   ├── s3-tools/
-#   │   ├── handler.py
-#   │   └── pyproject.toml
-#   ├── titanic-data/
-#   │   ├── handler.py
-#   │   └── pyproject.toml
-#   └── terraform/
-#       └── .build/           # Generated artifacts (gitignored)
-#           ├── s3-tools.zip
-#           ├── titanic-data.zip
-#           └── layers/
-#               └── dependencies.zip
+# Two-stage build required by AGENTS.md:
+# 1) deps/ installed via pip
+# 2) code/ copied from source
+# 3) deployment zip contains deps/ + code/
 
 locals {
   # Source paths
@@ -25,130 +11,120 @@ locals {
   titanic_data_path = "${path.module}/../titanic-data"
   build_dir         = "${path.module}/.build"
 
-  # Hash source files for change detection
-  s3_tools_files = var.deploy_s3_tools ? fileset(local.s3_tools_path, "**/*.py") : []
-  s3_tools_hash = var.deploy_s3_tools ? sha256(join("", [
+  # Dependency files (requirements.txt)
+  s3_tools_requirements     = "${local.s3_tools_path}/requirements.txt"
+  titanic_data_requirements = "${local.titanic_data_path}/requirements.txt"
+
+  # Source hashes for change detection
+  s3_tools_files = var.deploy_s3_tools ? fileset(local.s3_tools_path, "**") : []
+  s3_tools_source_hash = var.deploy_s3_tools ? sha256(join("", [
     for f in local.s3_tools_files : filesha256("${local.s3_tools_path}/${f}")
   ])) : "not-deployed"
+  s3_tools_dependencies_hash = var.deploy_s3_tools && fileexists(local.s3_tools_requirements) ? filemd5(local.s3_tools_requirements) : "missing"
 
-  titanic_data_files = var.deploy_titanic_data ? fileset(local.titanic_data_path, "**/*.py") : []
-  titanic_data_hash = var.deploy_titanic_data ? sha256(join("", [
+  titanic_data_files = var.deploy_titanic_data ? fileset(local.titanic_data_path, "**") : []
+  titanic_data_source_hash = var.deploy_titanic_data ? sha256(join("", [
     for f in local.titanic_data_files : filesha256("${local.titanic_data_path}/${f}")
   ])) : "not-deployed"
+  titanic_data_dependencies_hash = var.deploy_titanic_data && fileexists(local.titanic_data_requirements) ? filemd5(local.titanic_data_requirements) : "missing"
 
-  # Dependencies detection
-  s3_tools_deps_file     = "${local.s3_tools_path}/pyproject.toml"
-  titanic_data_deps_file = "${local.titanic_data_path}/pyproject.toml"
-
-  s3_tools_has_deps     = var.deploy_s3_tools && fileexists(local.s3_tools_deps_file)
-  titanic_data_has_deps = var.deploy_titanic_data && fileexists(local.titanic_data_deps_file)
-
-  # boto3 is included in Lambda runtime - check if we need extra deps
-  s3_tools_needs_layer = local.s3_tools_has_deps && can(regex("dependencies\\s*=\\s*\\[\\s*[^\\]]+", file(local.s3_tools_deps_file)))
+  # Package hashes (base64) for Lambda source_code_hash
+  s3_tools_package_hash     = var.deploy_s3_tools ? base64sha256("${local.s3_tools_source_hash}:${local.s3_tools_dependencies_hash}") : "not-deployed"
+  titanic_data_package_hash = var.deploy_titanic_data ? base64sha256("${local.titanic_data_source_hash}:${local.titanic_data_dependencies_hash}") : "not-deployed"
 }
 
 # -----------------------------------------------------------------------------
-# Stage 1: Dependencies Layer (Optional - only if non-runtime deps needed)
+# Stage 1 + 2: Build packages (deps + code) with hash triggers
 # -----------------------------------------------------------------------------
-# Note: boto3 is included in Lambda runtime, so s3-tools doesn't need a layer
-# This is prepared for MCP servers that need pandas, numpy, etc.
 
-resource "null_resource" "build_dependencies_layer" {
-  count = var.enable_dependencies_layer ? 1 : 0
+resource "null_resource" "build_s3_tools" {
+  count = var.deploy_s3_tools ? 1 : 0
 
   triggers = {
-    s3_tools_deps     = local.s3_tools_has_deps ? filesha256(local.s3_tools_deps_file) : "none"
-    titanic_data_deps = local.titanic_data_has_deps ? filesha256(local.titanic_data_deps_file) : "none"
+    dependencies_hash = local.s3_tools_dependencies_hash
+    source_hash       = local.s3_tools_source_hash
   }
 
   provisioner "local-exec" {
     command     = <<-EOT
       set -e
-      echo "Building dependencies layer..."
+      echo "Building s3-tools package..."
 
-      # Create build directory
-      mkdir -p "${local.build_dir}/layers/python/lib/python3.12/site-packages"
-
-      # Install s3-tools dependencies (skip boto3 - already in Lambda)
-      if [ -f "${local.s3_tools_deps_file}" ]; then
-        # Extract non-boto3 dependencies
-        grep -E "^[[:space:]]*\"[a-zA-Z]" "${local.s3_tools_deps_file}" | \
-          grep -v "boto3" | \
-          sed 's/[",]//g' | \
-          xargs -r pip install \
-            --platform manylinux2014_x86_64 \
-            --target "${local.build_dir}/layers/python/lib/python3.12/site-packages" \
-            --implementation cp \
-            --python-version 3.12 \
-            --only-binary=:all: \
-            --upgrade || true
+      if [ ! -d "${local.s3_tools_path}" ]; then
+        echo "ERROR: Source path not found: ${local.s3_tools_path}"
+        exit 1
+      fi
+      if [ ! -f "${local.s3_tools_requirements}" ]; then
+        echo "ERROR: Requirements file not found: ${local.s3_tools_requirements}"
+        exit 1
       fi
 
-      # Create layer zip
-      cd "${local.build_dir}/layers"
-      if [ -d "python" ] && [ "$(ls -A python/lib/python3.12/site-packages 2>/dev/null)" ]; then
-        zip -r dependencies.zip python/
-        echo "Layer built: dependencies.zip"
+      BUILD_DIR=$(mktemp -d)
+      DEPS_DIR="$BUILD_DIR/deps"
+      CODE_DIR="$BUILD_DIR/code"
+
+      mkdir -p "$DEPS_DIR" "$CODE_DIR"
+
+      if grep -Eq "^[a-zA-Z]" "${local.s3_tools_requirements}"; then
+        pip install -t "$DEPS_DIR" -r <(grep -E "^[a-zA-Z]" "${local.s3_tools_requirements}")
       else
-        echo "No additional dependencies to layer"
-        echo '{"empty": true}' > dependencies.json
+        echo "No dependencies to install for s3-tools"
       fi
+      cp -r "${local.s3_tools_path}/"* "$CODE_DIR/"
+
+      mkdir -p "${local.build_dir}"
+      cd "$BUILD_DIR"
+      zip -r "${local.build_dir}/s3-tools.zip" deps/ code/
+
+      rm -rf "$BUILD_DIR"
     EOT
     interpreter = ["bash", "-c"]
   }
 }
 
-# -----------------------------------------------------------------------------
-# Stage 2: Code Packages
-# -----------------------------------------------------------------------------
+resource "null_resource" "build_titanic_data" {
+  count = var.deploy_titanic_data ? 1 : 0
 
-# S3 Tools - Package entire directory
-data "archive_file" "s3_tools" {
-  count       = var.deploy_s3_tools ? 1 : 0
-  type        = "zip"
-  source_dir  = local.s3_tools_path
-  output_path = "${local.build_dir}/s3-tools.zip"
+  triggers = {
+    dependencies_hash = local.titanic_data_dependencies_hash
+    source_hash       = local.titanic_data_source_hash
+  }
 
-  excludes = [
-    "__pycache__",
-    "*.pyc",
-    ".pytest_cache",
-    "tests",
-    ".git",
-    "*.egg-info"
-  ]
-}
+  provisioner "local-exec" {
+    command     = <<-EOT
+      set -e
+      echo "Building titanic-data package..."
 
-# Titanic Data - Package entire directory
-data "archive_file" "titanic_data" {
-  count       = var.deploy_titanic_data ? 1 : 0
-  type        = "zip"
-  source_dir  = local.titanic_data_path
-  output_path = "${local.build_dir}/titanic-data.zip"
+      if [ ! -d "${local.titanic_data_path}" ]; then
+        echo "ERROR: Source path not found: ${local.titanic_data_path}"
+        exit 1
+      fi
+      if [ ! -f "${local.titanic_data_requirements}" ]; then
+        echo "ERROR: Requirements file not found: ${local.titanic_data_requirements}"
+        exit 1
+      fi
 
-  excludes = [
-    "__pycache__",
-    "*.pyc",
-    ".pytest_cache",
-    "tests",
-    ".git",
-    "*.egg-info"
-  ]
-}
+      BUILD_DIR=$(mktemp -d)
+      DEPS_DIR="$BUILD_DIR/deps"
+      CODE_DIR="$BUILD_DIR/code"
 
-# -----------------------------------------------------------------------------
-# Lambda Layer (Optional)
-# -----------------------------------------------------------------------------
+      mkdir -p "$DEPS_DIR" "$CODE_DIR"
 
-resource "aws_lambda_layer_version" "mcp_dependencies" {
-  count = var.enable_dependencies_layer && fileexists("${local.build_dir}/layers/dependencies.zip") ? 1 : 0
+      if grep -Eq "^[a-zA-Z]" "${local.titanic_data_requirements}"; then
+        pip install -t "$DEPS_DIR" -r <(grep -E "^[a-zA-Z]" "${local.titanic_data_requirements}")
+      else
+        echo "No dependencies to install for titanic-data"
+      fi
+      cp -r "${local.titanic_data_path}/"* "$CODE_DIR/"
 
-  filename            = "${local.build_dir}/layers/dependencies.zip"
-  layer_name          = "${var.name_prefix}-mcp-dependencies-${var.environment}"
-  compatible_runtimes = ["python3.12"]
-  description         = "Shared dependencies for MCP server Lambdas"
+      mkdir -p "${local.build_dir}"
+      cd "$BUILD_DIR"
+      zip -r "${local.build_dir}/titanic-data.zip" deps/ code/
 
-  depends_on = [null_resource.build_dependencies_layer]
+      rm -rf "$BUILD_DIR"
+    EOT
+    interpreter = ["bash", "-c"]
+  }
 }
 
 # -----------------------------------------------------------------------------
@@ -159,17 +135,18 @@ output "packaging_info" {
   description = "Packaging details for debugging"
   value = {
     s3_tools = var.deploy_s3_tools ? {
-      source_path   = local.s3_tools_path
-      source_hash   = local.s3_tools_hash
-      package_path  = "${local.build_dir}/s3-tools.zip"
-      has_deps_file = local.s3_tools_has_deps
+      source_path       = local.s3_tools_path
+      source_hash       = local.s3_tools_source_hash
+      package_hash      = local.s3_tools_package_hash
+      package_path      = "${local.build_dir}/s3-tools.zip"
+      requirements_file = local.s3_tools_requirements
     } : null
     titanic_data = var.deploy_titanic_data ? {
-      source_path   = local.titanic_data_path
-      source_hash   = local.titanic_data_hash
-      package_path  = "${local.build_dir}/titanic-data.zip"
-      has_deps_file = local.titanic_data_has_deps
+      source_path       = local.titanic_data_path
+      source_hash       = local.titanic_data_source_hash
+      package_hash      = local.titanic_data_package_hash
+      package_path      = "${local.build_dir}/titanic-data.zip"
+      requirements_file = local.titanic_data_requirements
     } : null
-    layer_enabled = var.enable_dependencies_layer
   }
 }

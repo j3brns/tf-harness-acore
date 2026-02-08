@@ -325,7 +325,7 @@ terraform state show aws_bedrockagentcore_gateway.main[0]
 
 ## Security Checklist
 
-- [ ] Enable KMS encryption (`enable_kms = true`)
+- [ ] Use AWS-managed encryption by default; enable KMS only if required
 - [ ] Use VPC for network isolation
 - [ ] Configure security groups appropriately
 - [ ] Enable X-Ray tracing (`enable_xray = true`)
