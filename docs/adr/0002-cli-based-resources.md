@@ -6,16 +6,21 @@ Accepted
 
 ## Context
 
-7 of 13 AWS Bedrock AgentCore resources don't exist in Terraform AWS provider yet:
+The AWS Bedrock AgentCore suite is currently not supported by the `hashicorp/aws` Terraform provider. While some resources (Gateway, Identity) appeared to have native types in some documentation, local validation confirmed that they do not yet exist in the provider registry (up to v5.100.0).
+
+Resources requiring CLI-based provisioning:
+- Gateway (MCP)
+- Workload Identity
+- Browser
+- Code Interpreter
 - Agent Runtime
 - Memory (short-term and long-term)
 - Policy Engine
 - Cedar Policies
 - Evaluators
 - OAuth2 Credential Providers
-- Other Credential Providers
 
-Validation with terraform-mcp-server confirmed these resource gaps.
+Validation with the local Terraform provider and `terraform-mcp-server` confirmed these gaps.
 
 ## Decision
 

@@ -21,14 +21,22 @@ resource "null_resource" "policy_engine" {
         --schema '${var.policy_engine_schema}' \
         %{endif}
         --region ${var.region} \
-        --output json > ${path.module}/.terraform/policy_engine.json 2>/dev/null || true
+        --output json > ${path.module}/.terraform/policy_engine.json
 
-      # Extract policy engine ID
-      POLICY_ENGINE_ID=$(cat ${path.module}/.terraform/policy_engine.json 2>/dev/null | jq -r '.policyEngineId // empty' || echo "")
-      if [ -n "$POLICY_ENGINE_ID" ]; then
-        echo "$POLICY_ENGINE_ID" > ${path.module}/.terraform/policy_engine_id.txt
+      # Verify output file exists and is not empty
+      if [ ! -s "${path.module}/.terraform/policy_engine.json" ]; then
+        echo "ERROR: Failed to create policy engine - no output received"
+        exit 1
       fi
 
+      # Extract policy engine ID
+      POLICY_ENGINE_ID=$(jq -r '.policyEngineId // empty' < ${path.module}/.terraform/policy_engine.json)
+      if [ -z "$POLICY_ENGINE_ID" ]; then
+        echo "ERROR: Policy engine ID missing from output"
+        exit 1
+      fi
+      
+      echo "$POLICY_ENGINE_ID" > ${path.module}/.terraform/policy_engine_id.txt
       echo "Policy engine created successfully"
     EOT
 
@@ -67,11 +75,18 @@ resource "null_resource" "cedar_policies" {
           --name "${each.key}" \
           --policy-statements "$POLICY_CONTENT" \
           --region ${var.region} \
-          --output json > ${path.module}/.terraform/policy_${each.key}.json 2>/dev/null || true
+          --output json > ${path.module}/.terraform/policy_${each.key}.json
+
+        # Verify output file
+        if [ ! -s "${path.module}/.terraform/policy_${each.key}.json" ]; then
+          echo "ERROR: Failed to create policy ${each.key}"
+          exit 1
+        fi
 
         echo "Policy ${each.key} created"
       else
-        echo "Warning: Policy engine ID not found. Ensure policy engine was created first."
+        echo "ERROR: Policy engine ID not found. Ensure policy engine was created first."
+        exit 1
       fi
     EOT
 

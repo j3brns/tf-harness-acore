@@ -8,19 +8,17 @@ This document summarizes the complete implementation of the AWS Bedrock AgentCor
 
 ### Core Modules (4 total)
 
-#### 1. **agentcore-foundation** (Terraform-Native) ✅
-- **Status**: Fully implemented with native resources
+#### 1. **agentcore-foundation** (CLI-Based) ✅
+- **Status**: Updated to Rule 3.1 compliance (CLI-based for Gateway/Identity)
 - **Files**: 6 files (gateway.tf, identity.tf, observability.tf, iam.tf, data.tf, outputs.tf)
 - **Resources**:
-  - ✅ `aws_bedrockagentcore_gateway` - MCP protocol gateway
-  - ✅ `aws_bedrockagentcore_gateway_target` - MCP tool targets
-  - ✅ `aws_bedrockagentcore_workload_identity` - OAuth2-enabled identity
+  - ⚠️ `null_resource` + CLI for Gateway (MCP protocol gateway)
+  - ⚠️ `null_resource` + CLI for Gateway Target (MCP tool targets)
+  - ⚠️ `null_resource` + CLI for Workload Identity (OAuth2-enabled identity)
   - ✅ `aws_cloudwatch_log_group` - Gateway and runtime logs
   - ✅ `aws_cloudwatch_log_resource_policy` - Log delivery permissions
   - ✅ `aws_xray_sampling_rule` - Distributed tracing
   - ✅ `aws_xray_group` - Error tracking group
-  - ✅ `aws_kms_key` - Encryption at rest
-  - ✅ `aws_cloudwatch_metric_alarm` - Gateway health monitoring (2 alarms)
   - ✅ IAM roles and policies for all components
 
 - **Key Features**:
@@ -30,12 +28,12 @@ This document summarizes the complete implementation of the AWS Bedrock AgentCor
   - CloudWatch monitoring with automatic alarms
   - X-Ray distributed tracing
 
-#### 2. **agentcore-tools** (Terraform-Native) ✅
-- **Status**: Fully implemented with native resources
+#### 2. **agentcore-tools** (CLI-Based) ✅
+- **Status**: Updated to Rule 3.1 compliance (CLI-based for Tools)
 - **Files**: 5 files (code_interpreter.tf, browser.tf, iam.tf, data.tf, outputs.tf)
 - **Resources**:
-  - ✅ `aws_bedrockagentcore_code_interpreter` - Python execution sandbox
-  - ✅ `aws_bedrockagentcore_browser` - Web browsing capability
+  - ⚠️ `null_resource` + CLI for Code Interpreter
+  - ⚠️ `null_resource` + CLI for Browser
   - ✅ CloudWatch log groups for both tools
   - ✅ S3 bucket policies for browser recording
   - ✅ IAM roles and policies with VPC support
@@ -169,11 +167,11 @@ Complete example for a support agent with:
 
 | Feature | Module | Type | Status |
 |---------|--------|------|--------|
-| **Gateway (MCP)** | foundation | Terraform | ✅ Complete |
-| **Identity (Workload)** | foundation | Terraform | ✅ Complete |
+| **Gateway (MCP)** | foundation | CLI-based | ✅ Complete |
+| **Identity (Workload)** | foundation | CLI-based | ✅ Complete |
 | **Observability** | foundation | Terraform | ✅ Complete |
-| **Code Interpreter** | tools | Terraform | ✅ Complete |
-| **Browser** | tools | Terraform | ✅ Complete |
+| **Code Interpreter** | tools | CLI-based | ✅ Complete |
+| **Browser** | tools | CLI-based | ✅ Complete |
 | **Runtime** | runtime | CLI-based | ✅ Complete |
 | **Memory** | runtime | CLI-based | ✅ Complete |
 | **Policy Engine** | governance | CLI-based | ✅ Complete |

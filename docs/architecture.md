@@ -87,9 +87,9 @@ agentcore-foundation (NO dependencies)
 **Purpose**: Core infrastructure (Gateway, Identity, Observability)
 
 **Resources**:
-- `aws_bedrockagentcore_gateway` - MCP protocol gateway
-- `aws_bedrockagentcore_gateway_target` - MCP Lambda targets
-- `aws_bedrockagentcore_workload_identity` - OAuth2 identity
+- `null_resource` + CLI for Gateway (MCP protocol gateway)
+- `null_resource` + CLI for Gateway Target (MCP Lambda targets)
+- `null_resource` + CLI for Workload Identity (OAuth2 identity)
 - `aws_cloudwatch_log_group` - Centralized logging
 - `aws_xray_sampling_rule` - Distributed tracing
 - IAM roles and policies
@@ -103,8 +103,8 @@ agentcore-foundation (NO dependencies)
 **Purpose**: Agent capabilities (Code Interpreter, Browser)
 
 **Resources**:
-- `aws_bedrockagentcore_code_interpreter` - Python sandbox
-- `aws_bedrockagentcore_browser` - Web browser
+- `null_resource` + CLI for Code Interpreter (Python sandbox)
+- `null_resource` + CLI for Browser (Web browser)
 - CloudWatch log groups
 - IAM roles
 
@@ -332,10 +332,14 @@ S3 Bucket (per environment)
 
 ## CLI-Based Resources
 
-Due to AWS provider gaps, 7 resources use AWS CLI:
+Due to AWS provider gaps, the core Bedrock AgentCore suite uses AWS CLI:
 
 | Resource | CLI Command |
 |----------|------------|
+| Gateway | `bedrock-agentcore-control create-gateway` |
+| Identity | `bedrock-agentcore-control create-workload-identity` |
+| Browser | `bedrock-agentcore-control create-browser` |
+| Code Interpreter | `bedrock-agentcore-control create-code-interpreter` |
 | Runtime | `bedrock-agentcore-control create-agent-runtime` |
 | Memory | `bedrock-agentcore-control create-memory` |
 | Policy Engine | `bedrock-agentcore-control create-policy-engine` |

@@ -187,9 +187,11 @@ variable "my_setting" {
 
 # 2. Use in module resources
 # modules/agentcore-foundation/gateway.tf
-resource "aws_bedrockagentcore_gateway" "main" {
-  # Use the variable
-  name = var.my_setting
+resource "null_resource" "gateway" {
+  triggers = {
+    name = var.my_setting
+  }
+  # See Rule 3.1 in AGENTS.md for the full pattern
 }
 
 # 3. Add to root variables.tf

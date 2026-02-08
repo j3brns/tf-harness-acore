@@ -5,13 +5,6 @@ resource "aws_cloudwatch_log_group" "agentcore" {
   name              = "/aws/bedrock/agentcore/runtime/${var.agent_name}"
   retention_in_days = var.log_retention_days
 
-  dynamic "kms_key_id" {
-    for_each = var.enable_kms ? [aws_kms_key.agentcore[0].arn] : []
-    content {
-      value = kms_key_id.value
-    }
-  }
-
   tags = var.tags
 
   depends_on = [aws_cloudwatch_log_resource_policy.bedrock_agentcore]
@@ -21,16 +14,17 @@ resource "aws_cloudwatch_log_group" "agentcore" {
 resource "aws_xray_sampling_rule" "agentcore" {
   count = var.enable_observability && var.enable_xray ? 1 : 0
 
-  rule_name    = "${var.agent_name}-sampling"
-  priority     = 100
-  fixed_rate   = var.xray_sampling_rate
-  service_type = "AWS::BedrockAgentCore"
-  service_name = var.agent_name
-  host         = "*"
-  http_method  = "*"
-  url_path     = "*"
-  resource_arn = "*"
-  version      = 1
+  rule_name      = "${var.agent_name}-sampling"
+  priority       = 100
+  fixed_rate     = var.xray_sampling_rate
+  reservoir_size = 1
+  service_type   = "AWS::BedrockAgentCore"
+  service_name   = var.agent_name
+  host           = "*"
+  http_method    = "*"
+  url_path       = "*"
+  resource_arn   = "*"
+  version        = 1
 
   attributes = {
     "Environment" = var.environment
@@ -46,7 +40,11 @@ resource "aws_xray_group" "agentcore_errors" {
 
   group_name        = "${var.agent_name}-errors"
   filter_expression = "status code >= 400"
-  insight_enabled   = true
+
+  insights_configuration {
+    insights_enabled      = true
+    notifications_enabled = false
+  }
 
   tags = var.tags
 }
@@ -67,7 +65,7 @@ resource "aws_cloudwatch_metric_alarm" "gateway_errors" {
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    GatewayId = var.enable_gateway ? aws_bedrockagentcore_gateway.main[0].gateway_id : ""
+    GatewayId = var.enable_gateway ? data.external.gateway_output[0].result.gatewayId : ""
   }
 
   tags = var.tags
@@ -89,7 +87,7 @@ resource "aws_cloudwatch_metric_alarm" "target_duration" {
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    GatewayId = var.enable_gateway ? aws_bedrockagentcore_gateway.main[0].gateway_id : ""
+    GatewayId = var.enable_gateway ? data.external.gateway_output[0].result.gatewayId : ""
   }
 
   tags = var.tags

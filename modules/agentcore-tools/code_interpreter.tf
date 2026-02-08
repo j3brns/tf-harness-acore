@@ -1,28 +1,37 @@
-# Code Interpreter for Python execution
-resource "aws_bedrockagentcore_code_interpreter" "python" {
+# Code Interpreter - CLI-based provisioning
+resource "null_resource" "code_interpreter" {
   count = var.enable_code_interpreter ? 1 : 0
 
-  name               = "${var.agent_name}-code-interpreter"
-  execution_role_arn = aws_iam_role.code_interpreter[0].arn
-
-  # Network configuration
-  network_configuration {
-    network_mode = var.code_interpreter_network_mode
-
-    dynamic "vpc_config" {
-      for_each = var.code_interpreter_network_mode == "VPC" && var.code_interpreter_vpc_config != null ? [var.code_interpreter_vpc_config] : []
-      content {
-        security_groups             = vpc_config.value.security_group_ids
-        subnets                     = vpc_config.value.subnet_ids
-        associate_public_ip_address = vpc_config.value.associate_public_ip
-      }
-    }
+  triggers = {
+    name               = "${var.agent_name}-code-interpreter"
+    execution_role_arn = aws_iam_role.code_interpreter[0].arn
   }
 
-  # Execution timeout
-  execution_timeout_seconds = var.code_interpreter_execution_timeout
+  provisioner "local-exec" {
+    command = <<-EOT
+      set -e
 
-  tags = var.tags
+      aws bedrock-agentcore-control create-code-interpreter \
+        --name "${self.triggers.name}" \
+        --role-arn "${self.triggers.execution_role_arn}" \
+        --region ${var.region} \
+        --output json > ${path.module}/.terraform/interpreter_output.json
+
+      if [ ! -s "${path.module}/.terraform/interpreter_output.json" ]; then
+        exit 1
+      fi
+    EOT
+
+    interpreter = ["bash", "-c"]
+  }
+
+  depends_on = [aws_iam_role.code_interpreter]
+}
+
+data "external" "interpreter_output" {
+  count = var.enable_code_interpreter ? 1 : 0
+  program = ["cat", "${path.module}/.terraform/interpreter_output.json"]
+  depends_on = [null_resource.code_interpreter]
 }
 
 # CloudWatch Log Group for Code Interpreter

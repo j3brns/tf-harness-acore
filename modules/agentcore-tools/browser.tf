@@ -1,38 +1,37 @@
-# Browser tool for web navigation
-resource "aws_bedrockagentcore_browser" "web" {
+# Browser - CLI-based provisioning
+resource "null_resource" "browser" {
   count = var.enable_browser ? 1 : 0
 
-  name               = "${var.agent_name}-browser"
-  execution_role_arn = aws_iam_role.browser[0].arn
-
-  # Network configuration
-  network_configuration {
-    network_mode = var.browser_network_mode
-
-    dynamic "vpc_config" {
-      for_each = var.browser_network_mode == "VPC" && var.browser_vpc_config != null ? [var.browser_vpc_config] : []
-      content {
-        security_groups             = vpc_config.value.security_group_ids
-        subnets                     = vpc_config.value.subnet_ids
-        associate_public_ip_address = vpc_config.value.associate_public_ip
-      }
-    }
+  triggers = {
+    name               = "${var.agent_name}-browser"
+    execution_role_arn = aws_iam_role.browser[0].arn
   }
 
-  # Session recording configuration
-  dynamic "recording_configuration" {
-    for_each = var.enable_browser_recording && var.browser_recording_s3_bucket != "" ? [1] : []
-    content {
-      enabled = true
+  provisioner "local-exec" {
+    command = <<-EOT
+      set -e
 
-      s3_configuration {
-        bucket_name = var.browser_recording_s3_bucket
-        prefix      = var.browser_recording_s3_prefix
-      }
-    }
+      aws bedrock-agentcore-control create-browser \
+        --name "${self.triggers.name}" \
+        --role-arn "${self.triggers.execution_role_arn}" \
+        --region ${var.region} \
+        --output json > ${path.module}/.terraform/browser_output.json
+
+      if [ ! -s "${path.module}/.terraform/browser_output.json" ]; then
+        exit 1
+      fi
+    EOT
+
+    interpreter = ["bash", "-c"]
   }
 
-  tags = var.tags
+  depends_on = [aws_iam_role.browser]
+}
+
+data "external" "browser_output" {
+  count = var.enable_browser ? 1 : 0
+  program = ["cat", "${path.module}/.terraform/browser_output.json"]
+  depends_on = [null_resource.browser]
 }
 
 # CloudWatch Log Group for Browser

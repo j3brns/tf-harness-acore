@@ -1,11 +1,11 @@
 output "code_interpreter_id" {
   description = "ID of the code interpreter"
-  value       = var.enable_code_interpreter ? aws_bedrockagentcore_code_interpreter.python[0].code_interpreter_id : null
+  value       = var.enable_code_interpreter ? data.external.interpreter_output[0].result.codeInterpreterId : null
 }
 
 output "code_interpreter_arn" {
   description = "ARN of the code interpreter"
-  value       = var.enable_code_interpreter ? aws_bedrockagentcore_code_interpreter.python[0].code_interpreter_arn : null
+  value       = var.enable_code_interpreter ? data.external.interpreter_output[0].result.codeInterpreterArn : null
   sensitive   = true
 }
 
@@ -17,12 +17,12 @@ output "code_interpreter_role_arn" {
 
 output "browser_id" {
   description = "ID of the browser tool"
-  value       = var.enable_browser ? aws_bedrockagentcore_browser.web[0].browser_id : null
+  value       = var.enable_browser ? data.external.browser_output[0].result.browserId : null
 }
 
 output "browser_arn" {
   description = "ARN of the browser tool"
-  value       = var.enable_browser ? aws_bedrockagentcore_browser.web[0].browser_arn : null
+  value       = var.enable_browser ? data.external.browser_output[0].result.browserArn : null
   sensitive   = true
 }
 

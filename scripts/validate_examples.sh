@@ -50,7 +50,7 @@ if [ -d "$EXAMPLES_DIR" ]; then
     for example_file in "$EXAMPLES_DIR"/*.tfvars; do
         if [ -f "$example_file" ]; then
             ((EXAMPLE_COUNT++))
-            validate_example "$example_file" || true
+            validate_example "$example_file"
         fi
     done
 else
@@ -63,7 +63,7 @@ for example_dir in "$EXAMPLES_DIR"/*/; do
         for tfvars_file in "$example_dir"*.tfvars "$example_dir"terraform.tfvars; do
             if [ -f "$tfvars_file" ]; then
                 ((EXAMPLE_COUNT++))
-                validate_example "$tfvars_file" || true
+                validate_example "$tfvars_file"
             fi
         done
     fi

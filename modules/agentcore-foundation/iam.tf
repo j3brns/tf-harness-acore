@@ -100,6 +100,7 @@ resource "aws_iam_role_policy" "workload_identity" {
         Action = [
           "sts:GetCallerIdentity"
         ]
+        # AWS-REQUIRED: sts:GetCallerIdentity does not support resource-level scoping
         Resource = "*"
       },
       {

@@ -1,17 +1,17 @@
 output "gateway_id" {
   description = "ID of the MCP gateway"
-  value       = var.enable_gateway ? aws_bedrockagentcore_gateway.main[0].gateway_id : null
+  value       = var.enable_gateway ? data.external.gateway_output[0].result.gatewayId : null
 }
 
 output "gateway_arn" {
   description = "ARN of the MCP gateway"
-  value       = var.enable_gateway ? aws_bedrockagentcore_gateway.main[0].gateway_arn : null
+  value       = var.enable_gateway ? data.external.gateway_output[0].result.gatewayArn : null
   sensitive   = true
 }
 
 output "gateway_endpoint" {
   description = "Endpoint URL of the MCP gateway"
-  value       = var.enable_gateway ? aws_bedrockagentcore_gateway.main[0].gateway_endpoint : null
+  value       = var.enable_gateway ? data.external.gateway_output[0].result.gatewayEndpoint : null
 }
 
 output "gateway_role_arn" {
@@ -22,12 +22,12 @@ output "gateway_role_arn" {
 
 output "workload_identity_id" {
   description = "ID of the workload identity"
-  value       = var.enable_identity ? aws_bedrockagentcore_workload_identity.agent[0].workload_identity_id : null
+  value       = var.enable_identity ? data.external.identity_output[0].result.workloadIdentityId : null
 }
 
 output "workload_identity_arn" {
   description = "ARN of the workload identity"
-  value       = var.enable_identity ? aws_bedrockagentcore_workload_identity.agent[0].workload_identity_arn : null
+  value       = var.enable_identity ? data.external.identity_output[0].result.workloadIdentityArn : null
   sensitive   = true
 }
 
@@ -57,11 +57,6 @@ output "xray_sampling_rule_arn" {
 }
 
 output "gateway_targets" {
-  description = "Map of gateway target names to their IDs"
-  value = var.enable_gateway ? {
-    for name, target in aws_bedrockagentcore_gateway_target.mcp : name => {
-      target_id = target.target_id
-      arn       = target.target_arn
-    }
-  } : {}
+  description = "Map of gateway target names (IDs available in .terraform/target_*.json)"
+  value       = var.enable_gateway ? keys(var.mcp_targets) : []
 }
