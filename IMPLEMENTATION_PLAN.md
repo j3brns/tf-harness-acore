@@ -1481,7 +1481,9 @@ Deliverables:
   - `docs/adr/0006-separate-backends-not-workspaces.md` *(NEW - from DevOps review)*
   - `docs/adr/0007-single-region-decision.md` *(NEW - from DevOps review)*
   - `docs/adr/0008-aws-managed-encryption.md` *(NEW - simplicity over KMS)*
-  - `docs/adr/0009-agent-discovery-identity.md` *(PROPOSED - pre-ADR based on RULE 9 & 10)*
+  - `docs/adr/0009-strands-agent-publishing.md` *(ACCEPTED - B2E identity architecture)*
+  - `docs/adr/pre-0009-b2e-architecture-discovery.md` *(Research that led to ADR 0009)*
+  - `docs/adr/pre-0010-service-discovery.md` *(PROPOSED - Cloud Map for A2A discovery)*
 - **`CLAUDE.md`** (Claude AI development guide)
 - **`docs/architecture.md`** (System architecture + network topology diagram)
 - **`docs/runbooks/`** *(NEW - from DevOps review)*
@@ -2543,112 +2545,59 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "deployment" {
 - [AWS S3 Encryption](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingEncryption.html)
 ```
 
-#### docs/adr/0009-agent-discovery-identity.md (PRE-ADR)
-```markdown
-# ADR 0009: Agent Discovery and Identity Propagation
+#### docs/adr/0009-strands-agent-publishing.md (ACCEPTED)
 
-## Status
-**Proposed** (Pre-ADR - requires approval before implementation)
+**Note**: This ADR already exists in `docs/adr/0009-strands-agent-publishing.md`.
 
-## Context
-CLAUDE.md RULE 9 and RULE 10 define requirements for agent discovery and identity propagation in multi-agent systems:
-- RULE 9: Discovery is EXPLICIT
-- RULE 10: Identity Propagation is MANDATORY
+**Status**: Accepted
 
-This pre-ADR outlines how to implement these rules in the Terraform infrastructure.
+**Summary**: Defines B2E publishing architecture for Strands SDK agents:
+- **API Gateway REST** with response streaming (mandatory for GenAI UX)
+- **Entra ID** integration via STS WebIdentity Exchange (no Cognito)
+- **3-Legged OAuth (3LO)** with callback handler for external IdP integration
+- **Lambda Proxy** for InvokeAgent with streaming support
 
-## Proposal
+**Key Technical Decisions**:
+- REST API v1 (not HTTP API) for 10MB+ streaming support
+- STS AssumeRoleWithWebIdentity for Entra ID token validation
+- Dedicated `/auth/callback` endpoint for 3LO completion
+- 15-minute timeout support for long-running research agents
 
-### Rule 9: Discovery is EXPLICIT
+**References**:
+- Full ADR: `docs/adr/0009-strands-agent-publishing.md`
+- Research: `docs/adr/pre-0009-b2e-architecture-discovery.md`
 
-**9.1: Agents Must Be Discoverable**
-- Every agent MUST expose `/.well-known/agent-card.json` endpoint
-- Agents MUST register with AWS Cloud Map (East-West) or Gateway Manifest (Northbound)
-- FORBIDDEN: Hardcoding agent endpoints in application code
+---
 
-**9.2: Gateway is the Tool Source**
-- Tools (Lambda functions) MUST be accessed via AgentCore Gateway
-- FORBIDDEN: Direct `lambda:InvokeFunction` calls to tools
+#### docs/adr/0010-service-discovery.md (PROPOSED - from pre-0010)
 
-### Rule 10: Identity Propagation is MANDATORY
+**Note**: This is currently a pre-ADR at `docs/adr/pre-0010-service-discovery.md`.
 
-**10.1: No Anonymous A2A Calls**
-- All Agent-to-Agent calls MUST use Workload Token
-- Pattern: `GetWorkloadAccessTokenForJWT` → `Authorization: Bearer <token>`
+**Status**: Proposed (requires approval before implementation)
 
-**10.2: User Context Must Persist**
-- Original user identity (Entra ID/Cognito) MUST propagate through agent chains
-- Enables per-user guardrails and audit trail
+**Summary**: Defines dual-tier service discovery for multi-agent systems:
+- **Northbound (Catalog)**: REST API for UI discovery, filtered by Entra ID groups
+- **East-West (Cloud Map)**: DNS/SDK for Agent-to-Agent discovery (<10ms resolution)
 
-## Proposed Implementation
+**Key Technical Decisions**:
+- Separate registries for different use cases (UI vs A2A)
+- Agent cards at `/.well-known/agent-card.json` for protocol negotiation
+- Cloud Map private DNS namespace: `agents.internal`
+- API Gateway `/agents` endpoint backed by DynamoDB/S3 manifest
 
-### Agent Card Endpoint
-```json
-{
-  "agentId": "research-agent-v1",
-  "name": "Deep Research Agent",
-  "version": "1.0.0",
-  "capabilities": ["research", "synthesis"],
-  "endpoints": {
-    "invoke": "https://api.example.com/agents/research/invoke"
-  },
-  "authentication": {
-    "type": "workload-token",
-    "audience": "urn:agent:research"
-  }
-}
-```
+**Open Questions**:
+1. Required for ALL agents or only multi-agent systems?
+2. Timeline: Phase 1 or deferred?
+3. VPC requirement for Cloud Map (cost impact)?
+4. Testing strategy without production setup?
 
-### Terraform Changes Required
-```hcl
-# Cloud Map namespace
-resource "aws_service_discovery_private_dns_namespace" "agents" {
-  name = "agents.internal"
-  vpc  = var.vpc_id
-}
-
-# Workload Identity (CLI-based)
-resource "null_resource" "workload_identity" {
-  count = var.enable_identity ? 1 : 0
-
-  provisioner "local-exec" {
-    command = <<-EOT
-      aws bedrock-agentcore-control create-workload-identity \
-        --agent-id ${var.agent_name} \
-        --audience "urn:agent:${var.agent_name}" \
-        --output json > ${path.module}/.terraform/identity_output.json
-    EOT
-  }
-}
-```
-
-## Open Questions (Require Resolution Before Acceptance)
-
-1. **Scope**: Is this required for ALL agents or only multi-agent systems?
-2. **Timeline**: Should this be Phase 1 or deferred to Phase 3+?
-3. **VPC Requirement**: Does Cloud Map require VPC mode (impacts cost)?
-4. **Backward Compatibility**: How do existing agents migrate?
-5. **Testing**: How to test workload token exchange without production setup?
-
-## Cost Impact (Estimated)
-- Cloud Map: ~$1/month per agent (namespace + service)
-- Workload Identity: Minimal (STS API calls)
+**Cost Impact**:
+- Cloud Map: ~$1/month per agent
 - VPC endpoints (if required): ~$7/month per AZ
 
-## Next Steps
-1. **Discuss** requirements with team
-2. **Clarify** scope and timeline
-3. **Prototype** workload token exchange
-4. **Test** in dev environment
-5. **Update status** to "Accepted" if approved
-6. **Implement** in agreed phase
-
-## References
-- [CLAUDE.md RULE 9](../CLAUDE.md#rule-9-discovery-is-explicit)
-- [CLAUDE.md RULE 10](../CLAUDE.md#rule-10-identity-propagation-is-mandatory)
-- [AWS Cloud Map](https://docs.aws.amazon.com/cloud-map/)
-- [Workload Identity](https://aws.amazon.com/blogs/security/workload-identity/)
-```
+**References**:
+- Pre-ADR: `docs/adr/pre-0010-service-discovery.md`
+- Related: CLAUDE.md RULE 9 (Discovery is EXPLICIT)
 
 ---
 
@@ -3395,7 +3344,8 @@ checkov (0 critical/high)
 | Separate backends (not workspaces) | Blast radius containment | 0006 | Accepted |
 | Single region | Cost vs. complexity tradeoff | 0007 | Accepted |
 | AWS-managed encryption | Simplicity, equivalent security | 0008 | Accepted |
-| Agent discovery & identity | Service mesh, A2A auth | 0009 | **Proposed** |
+| Strands B2E Publishing | API Gateway streaming + Entra ID + 3LO OAuth | 0009 | Accepted |
+| Service Discovery (Dual-Tier) | Cloud Map (East-West) + API Catalog (Northbound) | 0010 | **Proposed** |
 
 ### Version Info (PINNED per DevOps Review)
 
