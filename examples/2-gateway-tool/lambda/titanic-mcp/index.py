@@ -25,25 +25,25 @@ def fetch_titanic_data() -> tuple[list, int]:
         tuple: (list of records, total count)
     """
     with urllib.request.urlopen(TITANIC_URL, timeout=30) as response:
-        csv_data = response.read().decode('utf-8')
+        csv_data = response.read().decode("utf-8")
 
-    lines = csv_data.strip().split('\n')
-    headers = lines[0].split(',')
+    lines = csv_data.strip().split("\n")
+    headers = lines[0].split(",")
 
     records = []
     for line in lines[1:]:  # Skip header
-        values = line.split(',')
+        values = line.split(",")
         if len(values) >= len(headers):
             record = {}
-            for i, header in enumerate(headers[:len(values)]):
+            for i, header in enumerate(headers[: len(values)]):
                 value = values[i].strip('"')
                 # Convert numeric fields
-                if header in ['PassengerId', 'Survived', 'Pclass', 'SibSp', 'Parch']:
+                if header in ["PassengerId", "Survived", "Pclass", "SibSp", "Parch"]:
                     try:
                         record[header] = int(value) if value else None
                     except ValueError:
                         record[header] = None
-                elif header in ['Age', 'Fare']:
+                elif header in ["Age", "Fare"]:
                     try:
                         record[header] = float(value) if value else None
                     except ValueError:
@@ -70,10 +70,14 @@ def get_schema() -> dict:
             {"name": "Ticket", "type": "string", "description": "Ticket number"},
             {"name": "Fare", "type": "float", "description": "Passenger fare"},
             {"name": "Cabin", "type": "string", "description": "Cabin number"},
-            {"name": "Embarked", "type": "string", "description": "Port: C = Cherbourg, Q = Queenstown, S = Southampton"},
+            {
+                "name": "Embarked",
+                "type": "string",
+                "description": "Port: C = Cherbourg, Q = Queenstown, S = Southampton",
+            },
         ],
         "total_records": 891,
-        "source": "Kaggle Titanic Dataset"
+        "source": "Kaggle Titanic Dataset",
     }
 
 
@@ -92,77 +96,59 @@ def lambda_handler(event: dict, context: Any) -> dict:
 
     try:
         # Extract action from event
-        action = event.get('action', 'fetch')
+        action = event.get("action", "fetch")
 
-        if action == 'fetch':
+        if action == "fetch":
             # Fetch dataset
             records, count = fetch_titanic_data()
 
             # Optionally limit records
-            limit = event.get('limit', 100)
+            limit = event.get("limit", 100)
             if limit and limit < len(records):
                 records = records[:limit]
 
             return {
-                'statusCode': 200,
-                'body': json.dumps({
-                    'status': 'success',
-                    'dataset': 'titanic',
-                    'format': 'json',
-                    'total_records': count,
-                    'returned_records': len(records),
-                    'data': records
-                })
+                "statusCode": 200,
+                "body": json.dumps(
+                    {
+                        "status": "success",
+                        "dataset": "titanic",
+                        "format": "json",
+                        "total_records": count,
+                        "returned_records": len(records),
+                        "data": records,
+                    }
+                ),
             }
 
-        elif action == 'schema':
+        elif action == "schema":
             schema = get_schema()
-            return {
-                'statusCode': 200,
-                'body': json.dumps({
-                    'status': 'success',
-                    'schema': schema
-                })
-            }
+            return {"statusCode": 200, "body": json.dumps({"status": "success", "schema": schema})}
 
-        elif action == 'sample':
+        elif action == "sample":
             # Return small sample for testing
             records, _ = fetch_titanic_data()
             sample = records[:10]
             return {
-                'statusCode': 200,
-                'body': json.dumps({
-                    'status': 'success',
-                    'sample_size': len(sample),
-                    'data': sample
-                })
+                "statusCode": 200,
+                "body": json.dumps({"status": "success", "sample_size": len(sample), "data": sample}),
             }
 
         else:
             return {
-                'statusCode': 400,
-                'body': json.dumps({
-                    'status': 'error',
-                    'message': f"Unknown action: {action}. Valid actions: fetch, schema, sample"
-                })
+                "statusCode": 400,
+                "body": json.dumps(
+                    {"status": "error", "message": f"Unknown action: {action}. Valid actions: fetch, schema, sample"}
+                ),
             }
 
     except urllib.error.URLError as e:
         return {
-            'statusCode': 500,
-            'body': json.dumps({
-                'status': 'error',
-                'message': f"Failed to fetch dataset: {str(e)}"
-            })
+            "statusCode": 500,
+            "body": json.dumps({"status": "error", "message": f"Failed to fetch dataset: {str(e)}"}),
         }
     except Exception as e:
-        return {
-            'statusCode': 500,
-            'body': json.dumps({
-                'status': 'error',
-                'message': f"Internal error: {str(e)}"
-            })
-        }
+        return {"statusCode": 500, "body": json.dumps({"status": "error", "message": f"Internal error: {str(e)}"})}
 
 
 # Local testing
@@ -170,8 +156,8 @@ if __name__ == "__main__":
     # Test fetch action
     print("Testing fetch action:")
     result = lambda_handler({"action": "fetch", "limit": 5}, None)
-    print(json.dumps(json.loads(result['body']), indent=2))
+    print(json.dumps(json.loads(result["body"]), indent=2))
 
     print("\nTesting schema action:")
     result = lambda_handler({"action": "schema"}, None)
-    print(json.dumps(json.loads(result['body']), indent=2))
+    print(json.dumps(json.loads(result["body"]), indent=2))

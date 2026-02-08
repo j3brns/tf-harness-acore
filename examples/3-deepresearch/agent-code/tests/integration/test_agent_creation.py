@@ -15,10 +15,11 @@ class TestAgentCreation:
     @pytest.fixture
     def mock_strands_components(self):
         """Mock Strands DeepAgents components."""
-        with patch("deepresearch.main.SubAgent") as mock_subagent, \
-             patch("deepresearch.main.create_deep_agent") as mock_create, \
-             patch("deepresearch.main.get_default_model") as mock_model, \
-             patch("deepresearch.main.basic_claude_haiku_4_5") as mock_haiku:
+        with patch("deepresearch.main.SubAgent") as mock_subagent, patch(
+            "deepresearch.main.create_deep_agent"
+        ) as mock_create, patch("deepresearch.main.get_default_model") as mock_model, patch(
+            "deepresearch.main.basic_claude_haiku_4_5"
+        ) as mock_haiku:
             mock_model.return_value = MagicMock()
             mock_haiku.return_value = MagicMock()
             mock_subagent.return_value = MagicMock()
@@ -139,10 +140,11 @@ class TestRuntimeIntegration:
     @pytest.fixture
     def mock_runtime_dependencies(self):
         """Mock runtime dependencies."""
-        with patch("deepresearch.utils.secrets.load_secrets_from_secrets_manager") as mock_secrets, \
-             patch("deepresearch.utils.telemetry.initialize_telemetry") as mock_telemetry, \
-             patch("deepresearch.utils.session.get_session_id") as mock_session, \
-             patch("deepresearch.utils.session.create_session_manager") as mock_manager:
+        with patch("deepresearch.utils.secrets.load_secrets_from_secrets_manager") as mock_secrets, patch(
+            "deepresearch.utils.telemetry.initialize_telemetry"
+        ) as mock_telemetry, patch("deepresearch.utils.session.get_session_id") as mock_session, patch(
+            "deepresearch.utils.session.create_session_manager"
+        ) as mock_manager:
             mock_secrets.return_value = {}
             mock_telemetry.return_value = True
             mock_session.return_value = "test-session-id"
@@ -184,10 +186,11 @@ class TestAgentWithMockedTools:
 
     def test_agent_creation_with_mock_search(self, mock_internet_search):
         """Should create agent with mocked search tool."""
-        with patch("deepresearch.main.SubAgent") as mock_subagent, \
-             patch("deepresearch.main.create_deep_agent") as mock_create, \
-             patch("deepresearch.main.get_default_model") as mock_model, \
-             patch("deepresearch.main.basic_claude_haiku_4_5") as mock_haiku:
+        with patch("deepresearch.main.SubAgent") as mock_subagent, patch(
+            "deepresearch.main.create_deep_agent"
+        ) as mock_create, patch("deepresearch.main.get_default_model") as mock_model, patch(
+            "deepresearch.main.basic_claude_haiku_4_5"
+        ) as mock_haiku:
             mock_model.return_value = MagicMock()
             mock_haiku.return_value = MagicMock()
             mock_subagent.return_value = MagicMock()

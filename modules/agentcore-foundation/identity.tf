@@ -16,7 +16,7 @@ resource "null_resource" "workload_identity" {
         --allowed-resource-oauth2-return-urls ${jsonencode(var.oauth_return_urls)} \
         --region ${var.region} \
         --output json > ${path.module}/.terraform/identity_output.json
-      
+
       if [ ! -s "${path.module}/.terraform/identity_output.json" ]; then
         exit 1
       fi
@@ -27,8 +27,8 @@ resource "null_resource" "workload_identity" {
 }
 
 data "external" "identity_output" {
-  count = var.enable_identity ? 1 : 0
-  program = ["cat", "${path.module}/.terraform/identity_output.json"]
+  count      = var.enable_identity ? 1 : 0
+  program    = ["cat", "${path.module}/.terraform/identity_output.json"]
   depends_on = [null_resource.workload_identity]
 }
 

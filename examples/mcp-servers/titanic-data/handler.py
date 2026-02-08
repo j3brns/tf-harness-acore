@@ -78,6 +78,7 @@ TITANIC_DATA = """PassengerId,Survived,Pclass,Name,Sex,Age,SibSp,Parch,Ticket,Fa
 def parse_csv(csv_string: str) -> list[dict]:
     """Parse CSV string into list of dictionaries."""
     import csv
+
     reader = csv.DictReader(StringIO(csv_string.strip()))
     return list(reader)
 
@@ -103,19 +104,13 @@ def tool_fetch_dataset(params: dict) -> dict:
     columns = params.get("columns")
 
     # Apply offset and limit
-    result = data[offset:offset + limit]
+    result = data[offset : offset + limit]
 
     # Filter columns if specified
     if columns:
         result = [{k: v for k, v in row.items() if k in columns} for row in result]
 
-    return {
-        "success": True,
-        "total_rows": len(data),
-        "returned_rows": len(result),
-        "offset": offset,
-        "data": result
-    }
+    return {"success": True, "total_rows": len(data), "returned_rows": len(result), "offset": offset, "data": result}
 
 
 def tool_get_schema(params: dict) -> dict:
@@ -146,19 +141,9 @@ def tool_get_schema(params: dict) -> dict:
                 except (ValueError, TypeError):
                     col_type = "string"
 
-        columns.append({
-            "name": col_name,
-            "type": col_type,
-            "non_null_count": len(values),
-            "sample_values": values[:3]
-        })
+        columns.append({"name": col_name, "type": col_type, "non_null_count": len(values), "sample_values": values[:3]})
 
-    return {
-        "success": True,
-        "total_rows": len(data),
-        "total_columns": len(columns),
-        "columns": columns
-    }
+    return {"success": True, "total_rows": len(data), "total_columns": len(columns), "columns": columns}
 
 
 def tool_query(params: dict) -> dict:
@@ -192,12 +177,7 @@ def tool_query(params: dict) -> dict:
             if len(result) >= limit:
                 break
 
-    return {
-        "success": True,
-        "query": filters,
-        "returned_rows": len(result),
-        "data": result
-    }
+    return {"success": True, "query": filters, "returned_rows": len(result), "data": result}
 
 
 def tool_get_statistics(params: dict) -> dict:
@@ -212,10 +192,7 @@ def tool_get_statistics(params: dict) -> dict:
     if not data:
         return {"success": False, "error": "No data available"}
 
-    stats = {
-        "total_rows": len(data),
-        "columns": {}
-    }
+    stats = {"total_rows": len(data), "columns": {}}
 
     # Calculate statistics for numeric columns
     numeric_cols = ["Survived", "Pclass", "Age", "SibSp", "Parch", "Fare"]
@@ -237,27 +214,22 @@ def tool_get_statistics(params: dict) -> dict:
                 "mean": round(sum(values) / len(values), 3),
                 "min": min(values),
                 "max": max(values),
-                "sum": round(sum(values), 3)
+                "sum": round(sum(values), 3),
             }
 
     # Add categorical stats
-    stats["survival_rate"] = round(
-        sum(1 for row in data if row.get("Survived") == "1") / len(data), 3
-    )
+    stats["survival_rate"] = round(sum(1 for row in data if row.get("Survived") == "1") / len(data), 3)
     stats["gender_distribution"] = {
         "male": sum(1 for row in data if row.get("Sex") == "male"),
-        "female": sum(1 for row in data if row.get("Sex") == "female")
+        "female": sum(1 for row in data if row.get("Sex") == "female"),
     }
     stats["class_distribution"] = {
         "1": sum(1 for row in data if row.get("Pclass") == "1"),
         "2": sum(1 for row in data if row.get("Pclass") == "2"),
-        "3": sum(1 for row in data if row.get("Pclass") == "3")
+        "3": sum(1 for row in data if row.get("Pclass") == "3"),
     }
 
-    return {
-        "success": True,
-        "statistics": stats
-    }
+    return {"success": True, "statistics": stats}
 
 
 # Tool registry
@@ -268,30 +240,24 @@ TOOLS = {
         "parameters": {
             "limit": "Maximum rows to return",
             "offset": "Rows to skip",
-            "columns": "List of columns to include"
-        }
+            "columns": "List of columns to include",
+        },
     },
     "get_schema": {
         "handler": tool_get_schema,
         "description": "Get dataset schema and column information",
-        "parameters": {}
+        "parameters": {},
     },
     "query": {
         "handler": tool_query,
         "description": "Query dataset with filters",
-        "parameters": {
-            "filter": "Column:value filter pairs",
-            "columns": "Columns to return",
-            "limit": "Maximum rows"
-        }
+        "parameters": {"filter": "Column:value filter pairs", "columns": "Columns to return", "limit": "Maximum rows"},
     },
     "get_statistics": {
         "handler": tool_get_statistics,
         "description": "Get summary statistics",
-        "parameters": {
-            "columns": "Columns to analyze"
-        }
-    }
+        "parameters": {"columns": "Columns to analyze"},
+    },
 }
 
 
@@ -333,18 +299,13 @@ def lambda_handler(event: dict, context: Any) -> dict:
                         "inputSchema": {
                             "type": "object",
                             "properties": {
-                                k: {"type": "string", "description": v}
-                                for k, v in info["parameters"].items()
-                            }
-                        }
+                                k: {"type": "string", "description": v} for k, v in info["parameters"].items()
+                            },
+                        },
                     }
                     for name, info in TOOLS.items()
                 ]
-                return {
-                    "jsonrpc": "2.0",
-                    "result": {"tools": tools_list},
-                    "id": request_id
-                }
+                return {"jsonrpc": "2.0", "result": {"tools": tools_list}, "id": request_id}
 
             elif method == "tools/call":
                 params = event.get("params", {})
@@ -355,14 +316,14 @@ def lambda_handler(event: dict, context: Any) -> dict:
                     return {
                         "jsonrpc": "2.0",
                         "error": {"code": -32601, "message": f"Unknown tool: {tool_name}"},
-                        "id": request_id
+                        "id": request_id,
                     }
 
                 result = TOOLS[tool_name]["handler"](tool_args)
                 return {
                     "jsonrpc": "2.0",
                     "result": {"content": [{"type": "text", "text": json.dumps(result)}]},
-                    "id": request_id
+                    "id": request_id,
                 }
 
         # Handle simple format (direct invocation)
@@ -372,22 +333,16 @@ def lambda_handler(event: dict, context: Any) -> dict:
         if tool_name not in TOOLS:
             return {
                 "statusCode": 400,
-                "body": json.dumps({"error": f"Unknown tool: {tool_name}", "available": list(TOOLS.keys())})
+                "body": json.dumps({"error": f"Unknown tool: {tool_name}", "available": list(TOOLS.keys())}),
             }
 
         result = TOOLS[tool_name]["handler"](tool_params)
 
-        return {
-            "statusCode": 200,
-            "body": json.dumps(result)
-        }
+        return {"statusCode": 200, "body": json.dumps(result)}
 
     except Exception as e:
         logger.error(f"Error: {str(e)}")
-        return {
-            "statusCode": 500,
-            "body": json.dumps({"error": str(e)})
-        }
+        return {"statusCode": 500, "body": json.dumps({"error": str(e)})}
 
 
 # Local testing
@@ -409,8 +364,7 @@ if __name__ == "__main__":
 
     # Test query
     print("\n=== Query (females in 1st class) ===")
-    result = lambda_handler({
-        "tool": "query",
-        "parameters": {"filter": {"Sex": "female", "Pclass": "1"}, "limit": 5}
-    }, None)
+    result = lambda_handler(
+        {"tool": "query", "parameters": {"filter": {"Sex": "female", "Pclass": "1"}, "limit": 5}}, None
+    )
     print(json.dumps(json.loads(result["body"]), indent=2))

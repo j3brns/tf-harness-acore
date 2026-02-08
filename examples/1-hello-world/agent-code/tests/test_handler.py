@@ -1,8 +1,7 @@
 """
 Unit tests for Hello World agent handler.
 """
-import pytest
-import json
+
 from unittest.mock import patch, MagicMock
 from datetime import datetime
 
@@ -27,15 +26,13 @@ class TestHandler:
         """Test handler truncates when more than 5 buckets."""
         mock_client = MagicMock()
         mock_client.list_buckets.return_value = {
-            'Buckets': [
-                {'Name': f'bucket-{i}', 'CreationDate': datetime(2024, 1, i+1)}
-                for i in range(10)
-            ],
-            'ResponseMetadata': {'HTTPHeaders': {'date': 'Mon, 01 Jan 2024 00:00:00 GMT'}}
+            "Buckets": [{"Name": f"bucket-{i}", "CreationDate": datetime(2024, 1, i + 1)} for i in range(10)],
+            "ResponseMetadata": {"HTTPHeaders": {"date": "Mon, 01 Jan 2024 00:00:00 GMT"}},
         }
 
-        with patch('boto3.client', return_value=mock_client):
+        with patch("boto3.client", return_value=mock_client):
             from runtime import handler
+
             result = handler(sample_event, None)
 
         assert result["status"] == "success"
@@ -47,12 +44,13 @@ class TestHandler:
         """Test handler handles empty bucket list."""
         mock_client = MagicMock()
         mock_client.list_buckets.return_value = {
-            'Buckets': [],
-            'ResponseMetadata': {'HTTPHeaders': {'date': 'Mon, 01 Jan 2024 00:00:00 GMT'}}
+            "Buckets": [],
+            "ResponseMetadata": {"HTTPHeaders": {"date": "Mon, 01 Jan 2024 00:00:00 GMT"}},
         }
 
-        with patch('boto3.client', return_value=mock_client):
+        with patch("boto3.client", return_value=mock_client):
             from runtime import handler
+
             result = handler(sample_event, None)
 
         assert result["status"] == "success"
@@ -62,10 +60,11 @@ class TestHandler:
 
     def test_handler_boto3_import_error(self, sample_event):
         """Test handler gracefully handles missing boto3."""
-        with patch.dict('sys.modules', {'boto3': None}):
+        with patch.dict("sys.modules", {"boto3": None}):
             # Force reimport to trigger ImportError path
             import importlib
             import runtime
+
             importlib.reload(runtime)
 
             # The handler should catch ImportError internally
@@ -80,8 +79,9 @@ class TestHandler:
         mock_client = MagicMock()
         mock_client.list_buckets.side_effect = Exception("Access Denied")
 
-        with patch('boto3.client', return_value=mock_client):
+        with patch("boto3.client", return_value=mock_client):
             from runtime import handler
+
             result = handler(sample_event, None)
 
         assert result["status"] == "error"

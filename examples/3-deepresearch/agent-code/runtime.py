@@ -97,9 +97,7 @@ def upload_outputs_to_s3(session_id: str) -> dict[str, list[str]]:
         logger.info("OUTPUTS_BUCKET_NAME not set, skipping S3 upload")
         return {"uploaded": [], "failed": []}
 
-    logger.info(
-        f"Uploading outputs to S3 bucket '{bucket_name}' with prefix '{session_id}'"
-    )
+    logger.info(f"Uploading outputs to S3 bucket '{bucket_name}' with prefix '{session_id}'")
 
     return upload_session_outputs(
         session_id=session_id,

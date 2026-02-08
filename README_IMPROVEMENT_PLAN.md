@@ -124,7 +124,7 @@ graph LR
     A[Foundation<br/>Gateway, Identity, Observability] --> B[Tools<br/>Code Interpreter, Browser]
     A --> C[Runtime<br/>Runtime, Memory, S3]
     C --> D[Governance<br/>Policy, Evaluations]
-    
+
     style A fill:#e1f5fe
     style B fill:#f3e5f5
     style C fill:#fff3e0
@@ -140,7 +140,7 @@ sequenceDiagram
     participant Runtime
     participant Tools
     participant Memory
-    
+
     User->>Gateway: Invoke agent
     Gateway->>Lambda: Call MCP tool
     Lambda-->>Gateway: Tool result
@@ -162,7 +162,7 @@ graph LR
     F -->|Yes| G[Deploy Test]
     G --> H{Tag Release}
     H -->|Yes| I[Deploy Prod]
-    
+
     style A fill:#e3f2fd
     style E fill:#c8e6c9
     style G fill:#fff9c4
@@ -176,12 +176,12 @@ graph TB
         A1[Code Interpreter] -->|Internet| B1[External APIs]
         A2[Browser] -->|Internet| B1
     end
-    
+
     subgraph SANDBOX
         C1[Code Interpreter] -->|AWS Network| D1[AWS Services]
         C2[Browser] -->|AWS Network| D1
     end
-    
+
     subgraph VPC
         E1[Code Interpreter] -->|Your VPC| F1[VPC Endpoints]
         E2[Browser] -->|Your VPC| F1

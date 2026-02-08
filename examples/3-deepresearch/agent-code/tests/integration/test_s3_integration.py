@@ -5,17 +5,31 @@ Uses moto to mock S3 for realistic integration testing without AWS access.
 """
 
 import pytest
-from pathlib import Path
-from unittest.mock import patch
 
 # Try to import moto, skip tests if not installed
 try:
     import boto3
     from moto import mock_aws
+
     MOTO_AVAILABLE = True
 except ImportError:
     MOTO_AVAILABLE = False
-    mock_aws = lambda: lambda f: f  # No-op decorator
+
+    class _NoopContext:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    def mock_aws(func=None):  # type: ignore[override]
+        if func is None:
+            return _NoopContext()
+
+        def wrapper(*args, **kwargs):
+            return func(*args, **kwargs)
+
+        return wrapper
 
 
 @pytest.mark.skipif(not MOTO_AVAILABLE, reason="moto not installed")
@@ -50,14 +64,10 @@ class TestS3IntegrationWithMoto:
         (docs_dir / "source2.md").write_text("# Source 2\n\nContent from source 2.")
 
         # Create findings file
-        (tmp_path / "research_findings_ai_safety.md").write_text(
-            "# Findings\n\n- Finding 1\n- Finding 2"
-        )
+        (tmp_path / "research_findings_ai_safety.md").write_text("# Findings\n\n- Finding 1\n- Finding 2")
 
         # Create report file
-        (tmp_path / "ai_safety_report.md").write_text(
-            "# AI Safety Report\n\n## Summary\n\nThis is the report."
-        )
+        (tmp_path / "ai_safety_report.md").write_text("# AI Safety Report\n\n## Summary\n\nThis is the report.")
 
         return tmp_path
 
@@ -166,10 +176,12 @@ class TestSecretsManagerIntegration:
 
         # Create secret
         sm = boto3.client("secretsmanager", region_name="us-east-1")
-        secret_value = json.dumps({
-            "LINKUP_API_KEY": "test-linkup-key",
-            "OTHER_SECRET": "test-other-value",
-        })
+        secret_value = json.dumps(
+            {
+                "LINKUP_API_KEY": "test-linkup-key",
+                "OTHER_SECRET": "test-other-value",
+            }
+        )
         sm.create_secret(
             Name="deepresearch/secrets",
             SecretString=secret_value,
@@ -183,6 +195,7 @@ class TestSecretsManagerIntegration:
 
         # Clear the cache before testing
         from deepresearch.utils.secrets import load_secrets_from_secrets_manager
+
         load_secrets_from_secrets_manager.cache_clear()
 
         # Test loading secrets

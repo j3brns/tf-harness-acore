@@ -38,11 +38,11 @@ def handler(event, context):
         # Import boto3 here to allow local testing without it
         import boto3
 
-        s3 = boto3.client('s3')
+        s3 = boto3.client("s3")
 
         # List buckets
         response = s3.list_buckets()
-        buckets = response.get('Buckets', [])
+        buckets = response.get("Buckets", [])
 
         # Build response
         result = {
@@ -52,14 +52,11 @@ def handler(event, context):
             "data": {
                 "bucket_count": len(buckets),
                 "buckets": [
-                    {
-                        "name": bucket['Name'],
-                        "created": bucket['CreationDate'].isoformat()
-                    }
+                    {"name": bucket["Name"], "created": bucket["CreationDate"].isoformat()}
                     for bucket in buckets[:5]  # First 5 buckets
                 ],
-                "truncated": len(buckets) > 5
-            }
+                "truncated": len(buckets) > 5,
+            },
         }
 
         logger.info(f"Found {len(buckets)} buckets")
@@ -71,11 +68,7 @@ def handler(event, context):
             "status": "success",
             "message": "Hello from Bedrock AgentCore! (demo mode - boto3 not available)",
             "timestamp": datetime.utcnow().isoformat() + "Z",
-            "data": {
-                "bucket_count": 0,
-                "buckets": [],
-                "demo_mode": True
-            }
+            "data": {"bucket_count": 0, "buckets": [], "demo_mode": True},
         }
 
     except Exception as e:
@@ -83,16 +76,14 @@ def handler(event, context):
         return {
             "status": "error",
             "message": f"Failed to list buckets: {str(e)}",
-            "timestamp": datetime.utcnow().isoformat() + "Z"
+            "timestamp": datetime.utcnow().isoformat() + "Z",
         }
 
 
 # Allow local testing
 if __name__ == "__main__":
     # Test event
-    test_event = {
-        "action": "list_buckets"
-    }
+    test_event = {"action": "list_buckets"}
 
     result = handler(test_event, None)
     print(json.dumps(result, indent=2, default=str))

@@ -12,13 +12,13 @@ repos:
       - id: terraform_fmt
         name: Terraform Format
         description: Rewrites Terraform files to canonical format
-        
+
       - id: terraform_validate
         name: Terraform Validate
         description: Validates Terraform configuration
         args:
           - --hook-config=--retry-once-with-cleanup=true
-          
+
       - id: terraform_docs
         name: Terraform Docs
         description: Generate documentation from Terraform modules
@@ -26,13 +26,13 @@ repos:
           - --hook-config=--path-to-file=README.md
           - --hook-config=--add-to-existing-file=true
           - --hook-config=--create-file-if-not-exist=true
-          
+
       - id: terraform_tflint
         name: TFLint
         description: Linter for Terraform
         args:
           - --args=--config=__GIT_WORKING_DIR__/.tflint.hcl
-          
+
       - id: terraform_checkov
         name: Checkov Security Scan
         description: Security and compliance scanner
@@ -50,28 +50,28 @@ repos:
         name: Check YAML
         description: Validates YAML syntax
         exclude: ^\.gitlab-ci\.yml$  # GitLab CI has special syntax
-        
+
       - id: check-json
         name: Check JSON
         description: Validates JSON syntax
-        
+
       - id: end-of-file-fixer
         name: Fix End of Files
         description: Ensures files end with newline
-        
+
       - id: trailing-whitespace
         name: Trim Trailing Whitespace
         description: Removes trailing whitespace
-        
+
       - id: check-added-large-files
         name: Check Large Files
         description: Prevents large files from being committed
         args: ['--maxkb=1000']
-        
+
       - id: check-merge-conflict
         name: Check Merge Conflicts
         description: Checks for merge conflict markers
-        
+
       - id: detect-private-key
         name: Detect Private Keys
         description: Prevents private keys from being committed
@@ -93,7 +93,7 @@ repos:
         name: Flake8 Linter
         description: Python linter
         types: [python]
-        args: ['--max-line-length=120', '--ignore=E501,W503']
+        args: ['--max-line-length=120', '--ignore=E203,E501,W503']
 
   # Documentation sync check (custom)
   - repo: local
@@ -101,7 +101,8 @@ repos:
       - id: docs-sync-check
         name: Check Docs Updated With Code
         description: Ensures documentation is updated when code changes
-        entry: bash -c 'if git diff --cached --name-only | grep -qE "\.tf$"; then git diff --cached --name-only | grep -qE "\.md$" || { echo "ERROR: Terraform changed without doc update"; exit 1; }; fi'
+        entry: >-
+          bash -c 'if git diff --cached --name-only | grep -qE "\.tf$"; then git diff --cached --name-only | grep -qE "\.md$" || { echo "ERROR: Terraform changed without doc update"; exit 1; }; fi'
         language: system
         pass_filenames: false
         always_run: true
@@ -109,15 +110,17 @@ repos:
       - id: tests-sync-check
         name: Check Tests Updated With Terraform Changes
         description: Ensures tests are updated when Terraform changes
-        entry: bash -c 'if git diff --cached --name-only | grep -qE "\.tf$"; then git diff --cached --name-only | grep -qE "^(tests/|scripts/validate_examples\.sh|examples/.*/agent-code/tests/|examples/.*/tests/)" || { echo "ERROR: Terraform changed without tests"; exit 1; }; fi'
+        entry: >-
+          bash -c 'if git diff --cached --name-only | grep -qE "\.tf$"; then git diff --cached --name-only | grep -qE "^(tests/|scripts/validate_examples\.sh|examples/.*/agent-code/tests/|examples/.*/tests/)" || { echo "ERROR: Terraform changed without tests"; exit 1; }; fi'
         language: system
         pass_filenames: false
         always_run: true
-        
+
       - id: no-placeholder-arns
         name: Check No Placeholder ARNs
         description: Prevents placeholder AWS account IDs in code
-        entry: bash -c 'git diff --cached --name-only | xargs grep -l "123456789012\|999999999999\|000000000000" 2>/dev/null && echo "ERROR: Placeholder ARNs found" && exit 1 || exit 0'
+        entry: >-
+          bash -c 'git diff --cached --name-only | xargs grep -l "123456789012\|999999999999\|000000000000" 2>/dev/null && echo "ERROR: Placeholder ARNs found" && exit 1 || exit 0'
         language: system
         pass_filenames: false
         types: [text]

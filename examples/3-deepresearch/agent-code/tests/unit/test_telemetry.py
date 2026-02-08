@@ -84,8 +84,7 @@ class TestInitializeOtel:
 
         # The actual test - import will fail
         result = _initialize_otel()
-        # This depends on whether the import actually fails in the test env
-        # In real unit test, we'd mock the import
+        assert result is False
 
     @patch("deepresearch.utils.telemetry.StrandsTelemetry")
     def test_initializes_successfully(self, mock_strands_class, monkeypatch):

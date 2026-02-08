@@ -29,8 +29,8 @@ resource "null_resource" "code_interpreter" {
 }
 
 data "external" "interpreter_output" {
-  count = var.enable_code_interpreter ? 1 : 0
-  program = ["cat", "${path.module}/.terraform/interpreter_output.json"]
+  count      = var.enable_code_interpreter ? 1 : 0
+  program    = ["cat", "${path.module}/.terraform/interpreter_output.json"]
   depends_on = [null_resource.code_interpreter]
 }
 

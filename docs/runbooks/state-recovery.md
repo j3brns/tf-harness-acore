@@ -88,7 +88,7 @@ terraform apply -target=<RESOURCE>
 ## Prevention
 
 1. **Enable S3 versioning** on state bucket
-2. **Use DynamoDB locking** to prevent concurrent modifications  
+2. **Use DynamoDB locking** to prevent concurrent modifications
 3. **Never modify state manually** - use `terraform state` commands
 4. **Run weekly drift detection** in CI/CD pipeline
 5. **Test state recovery monthly** in dev environment

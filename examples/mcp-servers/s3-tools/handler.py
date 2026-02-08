@@ -26,7 +26,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 # Initialize S3 client
-s3_client = boto3.client('s3')
+s3_client = boto3.client("s3")
 
 
 def get_allowed_buckets() -> set[str] | None:
@@ -41,18 +41,10 @@ def enforce_bucket_allowed(bucket: str) -> dict | None:
     allowed = get_allowed_buckets()
     if allowed is None:
         if os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
-            return {
-                "success": False,
-                "error": "ALLOWED_BUCKETS not configured",
-                "error_code": "ConfigError"
-            }
+            return {"success": False, "error": "ALLOWED_BUCKETS not configured", "error_code": "ConfigError"}
         return None
     if bucket not in allowed:
-        return {
-            "success": False,
-            "error": f"Bucket not allowed: {bucket}",
-            "error_code": "AccessDenied"
-        }
+        return {"success": False, "error": f"Bucket not allowed: {bucket}", "error_code": "AccessDenied"}
     return None
 
 
@@ -68,19 +60,12 @@ def tool_list_buckets(params: dict) -> dict:
     try:
         allowed = get_allowed_buckets()
         if allowed is None and os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
-            return {
-                "success": False,
-                "error": "ALLOWED_BUCKETS not configured",
-                "error_code": "ConfigError"
-            }
+            return {"success": False, "error": "ALLOWED_BUCKETS not configured", "error_code": "ConfigError"}
 
         response = s3_client.list_buckets()
 
         buckets = [
-            {
-                "name": bucket["Name"],
-                "creation_date": bucket["CreationDate"].isoformat()
-            }
+            {"name": bucket["Name"], "creation_date": bucket["CreationDate"].isoformat()}
             for bucket in response.get("Buckets", [])
         ]
 
@@ -92,18 +77,10 @@ def tool_list_buckets(params: dict) -> dict:
         if prefix:
             buckets = [b for b in buckets if b["name"].startswith(prefix)]
 
-        return {
-            "success": True,
-            "count": len(buckets),
-            "buckets": buckets
-        }
+        return {"success": True, "count": len(buckets), "buckets": buckets}
 
     except ClientError as e:
-        return {
-            "success": False,
-            "error": str(e),
-            "error_code": e.response["Error"]["Code"]
-        }
+        return {"success": False, "error": str(e), "error_code": e.response["Error"]["Code"]}
 
 
 def tool_list_objects(params: dict) -> dict:
@@ -125,10 +102,7 @@ def tool_list_objects(params: dict) -> dict:
         return bucket_check
 
     try:
-        list_params = {
-            "Bucket": bucket,
-            "MaxKeys": params.get("max_keys", 100)
-        }
+        list_params = {"Bucket": bucket, "MaxKeys": params.get("max_keys", 100)}
 
         if params.get("prefix"):
             list_params["Prefix"] = params["prefix"]
@@ -142,16 +116,13 @@ def tool_list_objects(params: dict) -> dict:
                 "key": obj["Key"],
                 "size": obj["Size"],
                 "last_modified": obj["LastModified"].isoformat(),
-                "storage_class": obj.get("StorageClass", "STANDARD")
+                "storage_class": obj.get("StorageClass", "STANDARD"),
             }
             for obj in response.get("Contents", [])
         ]
 
         # Include common prefixes (folders) if delimiter was used
-        prefixes = [
-            {"prefix": cp["Prefix"]}
-            for cp in response.get("CommonPrefixes", [])
-        ]
+        prefixes = [{"prefix": cp["Prefix"]} for cp in response.get("CommonPrefixes", [])]
 
         return {
             "success": True,
@@ -159,15 +130,11 @@ def tool_list_objects(params: dict) -> dict:
             "object_count": len(objects),
             "is_truncated": response.get("IsTruncated", False),
             "objects": objects,
-            "common_prefixes": prefixes
+            "common_prefixes": prefixes,
         }
 
     except ClientError as e:
-        return {
-            "success": False,
-            "error": str(e),
-            "error_code": e.response["Error"]["Code"]
-        }
+        return {"success": False, "error": str(e), "error_code": e.response["Error"]["Code"]}
 
 
 def tool_get_object(params: dict) -> dict:
@@ -203,7 +170,7 @@ def tool_get_object(params: dict) -> dict:
                 "success": False,
                 "error": f"Object too large: {size} bytes (max: {max_size})",
                 "size": size,
-                "content_type": head.get("ContentType")
+                "content_type": head.get("ContentType"),
             }
 
         # Get object
@@ -226,15 +193,11 @@ def tool_get_object(params: dict) -> dict:
             "content_type": response.get("ContentType"),
             "last_modified": response["LastModified"].isoformat(),
             "encoding": encoding,
-            "content": content
+            "content": content,
         }
 
     except ClientError as e:
-        return {
-            "success": False,
-            "error": str(e),
-            "error_code": e.response["Error"]["Code"]
-        }
+        return {"success": False, "error": str(e), "error_code": e.response["Error"]["Code"]}
 
 
 def tool_put_object(params: dict) -> dict:
@@ -272,12 +235,7 @@ def tool_put_object(params: dict) -> dict:
         else:
             body = content.encode("utf-8")
 
-        response = s3_client.put_object(
-            Bucket=bucket,
-            Key=key,
-            Body=body,
-            ContentType=content_type
-        )
+        response = s3_client.put_object(Bucket=bucket, Key=key, Body=body, ContentType=content_type)
 
         return {
             "success": True,
@@ -285,15 +243,11 @@ def tool_put_object(params: dict) -> dict:
             "key": key,
             "size": len(body),
             "etag": response.get("ETag", "").strip('"'),
-            "version_id": response.get("VersionId")
+            "version_id": response.get("VersionId"),
         }
 
     except ClientError as e:
-        return {
-            "success": False,
-            "error": str(e),
-            "error_code": e.response["Error"]["Code"]
-        }
+        return {"success": False, "error": str(e), "error_code": e.response["Error"]["Code"]}
 
 
 def tool_get_object_metadata(params: dict) -> dict:
@@ -327,22 +281,14 @@ def tool_get_object_metadata(params: dict) -> dict:
             "etag": response.get("ETag", "").strip('"'),
             "storage_class": response.get("StorageClass", "STANDARD"),
             "metadata": response.get("Metadata", {}),
-            "version_id": response.get("VersionId")
+            "version_id": response.get("VersionId"),
         }
 
     except ClientError as e:
         error_code = e.response["Error"]["Code"]
         if error_code == "404":
-            return {
-                "success": False,
-                "error": "Object not found",
-                "error_code": "NotFound"
-            }
-        return {
-            "success": False,
-            "error": str(e),
-            "error_code": error_code
-        }
+            return {"success": False, "error": "Object not found", "error_code": "NotFound"}
+        return {"success": False, "error": str(e), "error_code": error_code}
 
 
 # Tool registry
@@ -350,9 +296,7 @@ TOOLS = {
     "list_buckets": {
         "handler": tool_list_buckets,
         "description": "List S3 buckets",
-        "parameters": {
-            "prefix": "Optional bucket name prefix filter"
-        }
+        "parameters": {"prefix": "Optional bucket name prefix filter"},
     },
     "list_objects": {
         "handler": tool_list_objects,
@@ -361,8 +305,8 @@ TOOLS = {
             "bucket": "Bucket name (required)",
             "prefix": "Object key prefix filter",
             "max_keys": "Maximum objects to return",
-            "delimiter": "Delimiter for hierarchy"
-        }
+            "delimiter": "Delimiter for hierarchy",
+        },
     },
     "get_object": {
         "handler": tool_get_object,
@@ -371,8 +315,8 @@ TOOLS = {
             "bucket": "Bucket name (required)",
             "key": "Object key (required)",
             "encoding": "Content encoding: text, base64, json",
-            "max_size": "Maximum size to read in bytes"
-        }
+            "max_size": "Maximum size to read in bytes",
+        },
     },
     "put_object": {
         "handler": tool_put_object,
@@ -382,17 +326,14 @@ TOOLS = {
             "key": "Object key (required)",
             "content": "Content to upload (required)",
             "content_type": "MIME type",
-            "encoding": "Content encoding: text or base64"
-        }
+            "encoding": "Content encoding: text or base64",
+        },
     },
     "get_object_metadata": {
         "handler": tool_get_object_metadata,
         "description": "Get object metadata",
-        "parameters": {
-            "bucket": "Bucket name (required)",
-            "key": "Object key (required)"
-        }
-    }
+        "parameters": {"bucket": "Bucket name (required)", "key": "Object key (required)"},
+    },
 }
 
 
@@ -418,19 +359,14 @@ def lambda_handler(event: dict, context: Any) -> dict:
                         "inputSchema": {
                             "type": "object",
                             "properties": {
-                                k: {"type": "string", "description": v}
-                                for k, v in info["parameters"].items()
+                                k: {"type": "string", "description": v} for k, v in info["parameters"].items()
                             },
-                            "required": [k for k, v in info["parameters"].items() if "required" in v.lower()]
-                        }
+                            "required": [k for k, v in info["parameters"].items() if "required" in v.lower()],
+                        },
                     }
                     for name, info in TOOLS.items()
                 ]
-                return {
-                    "jsonrpc": "2.0",
-                    "result": {"tools": tools_list},
-                    "id": request_id
-                }
+                return {"jsonrpc": "2.0", "result": {"tools": tools_list}, "id": request_id}
 
             elif method == "tools/call":
                 params = event.get("params", {})
@@ -441,14 +377,14 @@ def lambda_handler(event: dict, context: Any) -> dict:
                     return {
                         "jsonrpc": "2.0",
                         "error": {"code": -32601, "message": f"Unknown tool: {tool_name}"},
-                        "id": request_id
+                        "id": request_id,
                     }
 
                 result = TOOLS[tool_name]["handler"](tool_args)
                 return {
                     "jsonrpc": "2.0",
                     "result": {"content": [{"type": "text", "text": json.dumps(result, default=json_serial)}]},
-                    "id": request_id
+                    "id": request_id,
                 }
 
         # Handle simple format
@@ -458,28 +394,22 @@ def lambda_handler(event: dict, context: Any) -> dict:
         if not tool_name:
             return {
                 "statusCode": 400,
-                "body": json.dumps({"error": "tool parameter required", "available": list(TOOLS.keys())})
+                "body": json.dumps({"error": "tool parameter required", "available": list(TOOLS.keys())}),
             }
 
         if tool_name not in TOOLS:
             return {
                 "statusCode": 400,
-                "body": json.dumps({"error": f"Unknown tool: {tool_name}", "available": list(TOOLS.keys())})
+                "body": json.dumps({"error": f"Unknown tool: {tool_name}", "available": list(TOOLS.keys())}),
             }
 
         result = TOOLS[tool_name]["handler"](tool_params)
 
-        return {
-            "statusCode": 200,
-            "body": json.dumps(result, default=json_serial)
-        }
+        return {"statusCode": 200, "body": json.dumps(result, default=json_serial)}
 
     except Exception as e:
         logger.error(f"Error: {str(e)}")
-        return {
-            "statusCode": 500,
-            "body": json.dumps({"error": str(e)})
-        }
+        return {"statusCode": 500, "body": json.dumps({"error": str(e)})}
 
 
 # Local testing (requires AWS credentials)

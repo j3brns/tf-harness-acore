@@ -34,17 +34,22 @@ def invoke_mcp_tool(tool_name: str, action: str, **kwargs) -> dict:
     # Mock response for local testing
     # In production, this would invoke the actual MCP gateway
     if tool_name == "titanic-dataset" and action == "fetch":
-        return {
-            "status": "success",
-            "data": get_mock_titanic_data()
-        }
+        return {"status": "success", "data": get_mock_titanic_data()}
     elif tool_name == "titanic-dataset" and action == "schema":
         return {
             "status": "success",
             "columns": [
-                "PassengerId", "Survived", "Pclass", "Name",
-                "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked"
-            ]
+                "PassengerId",
+                "Survived",
+                "Pclass",
+                "Name",
+                "Sex",
+                "Age",
+                "SibSp",
+                "Parch",
+                "Fare",
+                "Embarked",
+            ],
         }
 
     return {"status": "error", "message": f"Unknown tool/action: {tool_name}/{action}"}
@@ -79,46 +84,42 @@ def analyze_survival(data: list) -> dict:
 
         # Calculate survival statistics
         total = len(df)
-        survived = df['Survived'].sum()
+        survived = df["Survived"].sum()
         survival_rate = survived / total if total > 0 else 0
 
         # By class
-        survival_by_class = df.groupby('Pclass')['Survived'].mean().to_dict()
+        survival_by_class = df.groupby("Pclass")["Survived"].mean().to_dict()
 
         # By gender
-        survival_by_gender = df.groupby('Sex')['Survived'].mean().to_dict()
+        survival_by_gender = df.groupby("Sex")["Survived"].mean().to_dict()
 
         # Average age of survivors vs non-survivors
-        avg_age_survived = df[df['Survived'] == 1]['Age'].mean()
-        avg_age_died = df[df['Survived'] == 0]['Age'].mean()
+        avg_age_survived = df[df["Survived"] == 1]["Age"].mean()
+        avg_age_died = df[df["Survived"] == 0]["Age"].mean()
 
         return {
             "total_passengers": total,
             "survivors": int(survived),
             "overall_survival_rate": round(survival_rate, 3),
-            "survival_by_class": {
-                str(k): round(v, 3) for k, v in survival_by_class.items()
-            },
-            "survival_by_gender": {
-                k: round(v, 3) for k, v in survival_by_gender.items()
-            },
+            "survival_by_class": {str(k): round(v, 3) for k, v in survival_by_class.items()},
+            "survival_by_gender": {k: round(v, 3) for k, v in survival_by_gender.items()},
             "avg_age": {
                 "survivors": round(avg_age_survived, 1) if pd.notna(avg_age_survived) else None,
-                "non_survivors": round(avg_age_died, 1) if pd.notna(avg_age_died) else None
-            }
+                "non_survivors": round(avg_age_died, 1) if pd.notna(avg_age_died) else None,
+            },
         }
 
     except ImportError:
         # Manual calculation without pandas
         total = len(data)
-        survived = sum(1 for p in data if p.get('Survived') == 1)
+        survived = sum(1 for p in data if p.get("Survived") == 1)
         survival_rate = survived / total if total > 0 else 0
 
         return {
             "total_passengers": total,
             "survivors": survived,
             "overall_survival_rate": round(survival_rate, 3),
-            "note": "Detailed analysis requires pandas"
+            "note": "Detailed analysis requires pandas",
         }
 
 
@@ -126,28 +127,22 @@ def generate_insights(analysis: dict) -> list:
     """Generate human-readable insights from analysis."""
     insights = []
 
-    survival_rate = analysis.get('overall_survival_rate', 0)
+    survival_rate = analysis.get("overall_survival_rate", 0)
     insights.append(f"Overall survival rate was {survival_rate * 100:.1f}%")
 
-    if 'survival_by_class' in analysis:
-        class_rates = analysis['survival_by_class']
-        if '1' in class_rates:
-            insights.append(
-                f"First class passengers had {class_rates['1'] * 100:.1f}% survival rate"
-            )
-        if '3' in class_rates:
-            insights.append(
-                f"Third class passengers had {class_rates['3'] * 100:.1f}% survival rate"
-            )
+    if "survival_by_class" in analysis:
+        class_rates = analysis["survival_by_class"]
+        if "1" in class_rates:
+            insights.append(f"First class passengers had {class_rates['1'] * 100:.1f}% survival rate")
+        if "3" in class_rates:
+            insights.append(f"Third class passengers had {class_rates['3'] * 100:.1f}% survival rate")
 
-    if 'survival_by_gender' in analysis:
-        gender_rates = analysis['survival_by_gender']
-        if 'female' in gender_rates and 'male' in gender_rates:
-            female_rate = gender_rates['female'] * 100
-            male_rate = gender_rates['male'] * 100
-            insights.append(
-                f"Women survived at {female_rate:.1f}% vs men at {male_rate:.1f}%"
-            )
+    if "survival_by_gender" in analysis:
+        gender_rates = analysis["survival_by_gender"]
+        if "female" in gender_rates and "male" in gender_rates:
+            female_rate = gender_rates["female"] * 100
+            male_rate = gender_rates["male"] * 100
+            insights.append(f"Women survived at {female_rate:.1f}% vs men at {male_rate:.1f}%")
 
     return insights
 
@@ -190,7 +185,7 @@ def handler(event: dict, context: Any) -> dict:
             "message": "Titanic survival analysis complete",
             "timestamp": datetime.utcnow().isoformat() + "Z",
             "analysis": analysis,
-            "insights": insights
+            "insights": insights,
         }
 
         logger.info("Analysis complete")
@@ -201,7 +196,7 @@ def handler(event: dict, context: Any) -> dict:
         return {
             "status": "error",
             "message": f"Analysis failed: {str(e)}",
-            "timestamp": datetime.utcnow().isoformat() + "Z"
+            "timestamp": datetime.utcnow().isoformat() + "Z",
         }
 
 

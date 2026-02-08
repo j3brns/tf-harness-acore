@@ -63,9 +63,7 @@ def create_deepsearch_agent(
         if hasattr(research_tool, "__name__"):
             tool_name = research_tool.__name__
         else:
-            raise ValueError(
-                "Tool name not provided and could not be auto-detected, pass it as a string"
-            )
+            raise ValueError("Tool name not provided and could not be auto-detected, pass it as a string")
 
     lead_prompt = RESEARCH_LEAD_PROMPT.format(internet_tool_name=tool_name)
     subagent_prompt = RESEARCH_SUBAGENT_PROMPT.format(internet_tool_name=tool_name)
@@ -141,9 +139,7 @@ def main():
 
     for attempt in range(max_retries):
         try:
-            logger.info(
-                f"Starting agent execution (attempt {attempt + 1}/{max_retries})..."
-            )
+            logger.info(f"Starting agent execution (attempt {attempt + 1}/{max_retries})...")
             result = agent(prompt)
             logger.info("Agent execution completed successfully!")
             break  # Success, exit retry loop
@@ -161,16 +157,12 @@ def main():
             )
 
             if is_retryable:
-                logger.warning(
-                    f"Streaming error encountered (attempt {attempt + 1}/{max_retries}): {e}"
-                )
+                logger.warning(f"Streaming error encountered (attempt {attempt + 1}/{max_retries}): {e}")
                 if attempt < max_retries - 1:
                     logger.info(f"Retrying in {retry_delay} seconds...")
                     time.sleep(retry_delay)
                 else:
-                    logger.error(
-                        "All retry attempts exhausted. Please try again later."
-                    )
+                    logger.error("All retry attempts exhausted. Please try again later.")
                     raise
             else:
                 # Non-retryable error, re-raise immediately

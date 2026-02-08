@@ -29,8 +29,8 @@ resource "null_resource" "browser" {
 }
 
 data "external" "browser_output" {
-  count = var.enable_browser ? 1 : 0
-  program = ["cat", "${path.module}/.terraform/browser_output.json"]
+  count      = var.enable_browser ? 1 : 0
+  program    = ["cat", "${path.module}/.terraform/browser_output.json"]
   depends_on = [null_resource.browser]
 }
 

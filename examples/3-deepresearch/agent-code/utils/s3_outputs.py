@@ -164,10 +164,7 @@ def upload_session_outputs(
         else:
             result["failed"].append(str(file_path))
 
-    logger.info(
-        f"S3 upload complete: {len(result['uploaded'])} uploaded, "
-        f"{len(result['failed'])} failed"
-    )
+    logger.info(f"S3 upload complete: {len(result['uploaded'])} uploaded, " f"{len(result['failed'])} failed")
     return result
 
 

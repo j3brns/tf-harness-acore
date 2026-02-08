@@ -21,11 +21,7 @@ def handler(event: dict, context: Any) -> dict:
 
     if action == "list_buckets":
         # Would invoke s3-tools MCP: list_buckets
-        return {
-            "status": "success",
-            "action": "list_buckets",
-            "message": "Use Gateway to invoke s3-tools.list_buckets"
-        }
+        return {"status": "success", "action": "list_buckets", "message": "Use Gateway to invoke s3-tools.list_buckets"}
 
     elif action == "analyze":
         # Would invoke titanic-data MCP: get_statistics
@@ -39,9 +35,9 @@ def handler(event: dict, context: Any) -> dict:
                 "insights": [
                     "First class passengers had 63% survival rate",
                     "Female passengers had 74% survival rate",
-                    "Age was a significant factor in survival"
-                ]
-            }
+                    "Age was a significant factor in survival",
+                ],
+            },
         }
 
     elif action == "full_workflow":
@@ -55,16 +51,16 @@ def handler(event: dict, context: Any) -> dict:
             "workflow_steps": [
                 {"step": 1, "tool": "titanic-data.fetch_dataset", "status": "ready"},
                 {"step": 2, "tool": "code-interpreter", "status": "ready"},
-                {"step": 3, "tool": "s3-tools.put_object", "status": "ready"}
+                {"step": 3, "tool": "s3-tools.put_object", "status": "ready"},
             ],
-            "message": "Workflow ready - invoke via Gateway"
+            "message": "Workflow ready - invoke via Gateway",
         }
 
     else:
         return {
             "status": "error",
             "message": f"Unknown action: {action}",
-            "available_actions": ["list_buckets", "analyze", "full_workflow"]
+            "available_actions": ["list_buckets", "analyze", "full_workflow"],
         }
 
 

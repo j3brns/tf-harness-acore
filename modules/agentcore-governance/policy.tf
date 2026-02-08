@@ -35,7 +35,7 @@ resource "null_resource" "policy_engine" {
         echo "ERROR: Policy engine ID missing from output"
         exit 1
       fi
-      
+
       echo "$POLICY_ENGINE_ID" > ${path.module}/.terraform/policy_engine_id.txt
       echo "Policy engine created successfully"
     EOT

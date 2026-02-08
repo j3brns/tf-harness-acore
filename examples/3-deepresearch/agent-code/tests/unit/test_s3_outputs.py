@@ -2,8 +2,6 @@
 Unit tests for deepresearch.utils.s3_outputs module.
 """
 
-import pytest
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 from botocore.exceptions import ClientError
 
@@ -40,6 +38,7 @@ class TestGetS3Client:
         result = get_s3_client()
 
         mock_boto_client.assert_called_once_with("s3", region_name="eu-west-1")
+        assert result == mock_client
 
 
 class TestUploadFileToS3:

@@ -52,9 +52,9 @@ resource "null_resource" "gateway_target" {
   for_each = var.enable_gateway ? var.mcp_targets : {}
 
   triggers = {
-    name               = each.value.name
-    lambda_arn         = each.value.lambda_arn
-    gateway_name       = var.gateway_name != "" ? var.gateway_name : "${var.agent_name}-gateway"
+    name         = each.value.name
+    lambda_arn   = each.value.lambda_arn
+    gateway_name = var.gateway_name != "" ? var.gateway_name : "${var.agent_name}-gateway"
     gateway_config_hash = sha256(jsonencode({
       name        = var.gateway_name != "" ? var.gateway_name : "${var.agent_name}-gateway"
       search_type = var.gateway_search_type
@@ -96,8 +96,8 @@ resource "null_resource" "gateway_target" {
 
 # Data sources for IDs
 data "external" "gateway_output" {
-  count = var.enable_gateway ? 1 : 0
-  program = ["cat", "${path.module}/.terraform/gateway_output.json"]
+  count      = var.enable_gateway ? 1 : 0
+  program    = ["cat", "${path.module}/.terraform/gateway_output.json"]
   depends_on = [null_resource.gateway]
 }
 

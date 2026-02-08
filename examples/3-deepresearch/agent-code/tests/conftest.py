@@ -2,7 +2,6 @@
 Pytest fixtures for DeepResearch agent tests.
 """
 
-import os
 import pytest
 from unittest.mock import MagicMock, patch
 

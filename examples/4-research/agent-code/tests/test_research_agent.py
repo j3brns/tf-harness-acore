@@ -1,7 +1,7 @@
 """
 Unit tests for Research agent.
 """
-import pytest
+
 import sys
 import os
 

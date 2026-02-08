@@ -111,8 +111,7 @@ def _initialize_weave() -> bool:
         return True
     except ImportError:
         logger.debug(
-            "Weave not installed, skipping Weave telemetry. "
-            "Install with: pip install 'deepresearch[weave]'"
+            "Weave not installed, skipping Weave telemetry. " "Install with: pip install 'deepresearch[weave]'"
         )
         return False
     except Exception as e:

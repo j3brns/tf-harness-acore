@@ -1,6 +1,7 @@
 """
 Pytest fixtures for Gateway Tool agent tests.
 """
+
 import pytest
 
 
@@ -27,12 +28,14 @@ def large_titanic_data():
     """Larger Titanic dataset for testing edge cases."""
     data = []
     for i in range(100):
-        data.append({
-            "PassengerId": i + 1,
-            "Survived": 1 if i % 3 == 0 else 0,  # ~33% survival rate
-            "Pclass": (i % 3) + 1,
-            "Sex": "female" if i % 2 == 0 else "male",
-            "Age": 20 + (i % 50),
-            "Fare": 10.0 + (i * 0.5)
-        })
+        data.append(
+            {
+                "PassengerId": i + 1,
+                "Survived": 1 if i % 3 == 0 else 0,  # ~33% survival rate
+                "Pclass": (i % 3) + 1,
+                "Sex": "female" if i % 2 == 0 else "male",
+                "Age": 20 + (i % 50),
+                "Fare": 10.0 + (i * 0.5),
+            }
+        )
     return data

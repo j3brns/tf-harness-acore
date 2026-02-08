@@ -1,6 +1,7 @@
 """
 Pytest fixtures for Research agent tests.
 """
+
 import pytest
 
 
@@ -26,7 +27,7 @@ def sample_arxiv_papers():
             "authors": ["Smith, J."],
             "abstract": "This paper presents...",
             "published": "2024-01-15",
-            "url": "https://arxiv.org/abs/2401.00001"
+            "url": "https://arxiv.org/abs/2401.00001",
         },
         {
             "id": "2401.00002",
@@ -34,8 +35,8 @@ def sample_arxiv_papers():
             "authors": ["Jones, A."],
             "abstract": "We present new...",
             "published": "2024-01-10",
-            "url": "https://arxiv.org/abs/2401.00002"
-        }
+            "url": "https://arxiv.org/abs/2401.00002",
+        },
     ]
 
 
@@ -49,6 +50,6 @@ def sample_pubmed_papers():
             "authors": ["Brown, M.D."],
             "journal": "Nature Medicine",
             "published": "2024-01-12",
-            "doi": "10.1038/s41591-024-00001-0"
+            "doi": "10.1038/s41591-024-00001-0",
         }
     ]

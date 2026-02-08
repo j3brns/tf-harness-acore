@@ -7,7 +7,7 @@ Record the exhaustive discovery process, technical evidence, and feasibility ana
 
 ### 2.1. API Gateway Streaming (The Nov 2025 Update)
 We validated that response streaming is the primary differentiator for the publishing layer.
-*   **REST API (v1) Capabilities:** 
+*   **REST API (v1) Capabilities:**
     *   Supports **Payload Response Streaming** for `AWS_PROXY`.
     *   **Limits:** First 10MB unrestricted; subsequent data throttled to 2MB/s.
     *   **Timeout:** Supports long-running execution up to 15 minutes (critical for Deep Research agents).

@@ -1,7 +1,7 @@
 """
 Unit tests for Gateway Tool agent analysis functions.
 """
-import pytest
+
 import sys
 import os
 
@@ -136,7 +136,7 @@ class TestGenerateInsights:
         analysis = {
             "overall_survival_rate": 0.38,
             "survival_by_class": {"1": 0.63, "3": 0.24},
-            "survival_by_gender": {"female": 0.74, "male": 0.19}
+            "survival_by_gender": {"female": 0.74, "male": 0.19},
         }
 
         insights = generate_insights(analysis)
@@ -162,10 +162,7 @@ class TestGenerateInsights:
         """Test insights include gender comparison."""
         from runtime import generate_insights
 
-        analysis = {
-            "overall_survival_rate": 0.38,
-            "survival_by_gender": {"female": 0.74, "male": 0.19}
-        }
+        analysis = {"overall_survival_rate": 0.38, "survival_by_gender": {"female": 0.74, "male": 0.19}}
 
         insights = generate_insights(analysis)
 

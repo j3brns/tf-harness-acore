@@ -1,6 +1,7 @@
 """
 Utility functions for session management.
 """
+
 import logging
 import os
 import uuid
@@ -8,6 +9,7 @@ import uuid
 from deepresearch.config import get_memory_config
 
 logger = logging.getLogger(__name__)
+
 
 def get_session_id(context=None) -> str:
     """

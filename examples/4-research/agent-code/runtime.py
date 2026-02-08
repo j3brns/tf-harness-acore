@@ -57,7 +57,7 @@ class ResearchAgent:
                 "authors": ["Smith, J.", "Jones, A."],
                 "abstract": f"This paper presents a comprehensive study on {query}...",
                 "published": "2024-01-15",
-                "url": f"https://arxiv.org/abs/2401.00001"
+                "url": "https://arxiv.org/abs/2401.00001",
             },
             {
                 "id": "2401.00002",
@@ -65,8 +65,8 @@ class ResearchAgent:
                 "authors": ["Williams, R."],
                 "abstract": f"We present new methodological advances for {query}...",
                 "published": "2024-01-10",
-                "url": f"https://arxiv.org/abs/2401.00002"
-            }
+                "url": "https://arxiv.org/abs/2401.00002",
+            },
         ]
 
     def search_pubmed(self, query: str, max_results: int = 5) -> list:
@@ -86,7 +86,7 @@ class ResearchAgent:
                 "authors": ["Brown, M.D.", "Davis, P."],
                 "journal": "Nature Medicine",
                 "published": "2024-01-12",
-                "doi": "10.1038/s41591-024-00001-0"
+                "doi": "10.1038/s41591-024-00001-0",
             }
         ]
 
@@ -105,7 +105,7 @@ class ResearchAgent:
             "content": "Full paper content extracted via browser...",
             "sections": ["Introduction", "Methods", "Results", "Discussion"],
             "figures": 5,
-            "tables": 3
+            "tables": 3,
         }
 
     def analyze_findings(self, papers: list) -> dict:
@@ -124,26 +124,23 @@ class ResearchAgent:
                 df = pd.DataFrame(papers)
                 return {
                     "total_papers": len(papers),
-                    "sources": df['url'].nunique() if 'url' in df.columns else len(papers),
+                    "sources": df["url"].nunique() if "url" in df.columns else len(papers),
                     "year_range": "2024",
-                    "methodology": "Systematic literature review"
+                    "methodology": "Systematic literature review",
                 }
         except ImportError:
             pass
 
         return {
             "total_papers": len(papers),
-            "sources": len(set(p.get('url', p.get('pmid', '')) for p in papers)),
-            "note": "Detailed analysis requires pandas"
+            "sources": len(set(p.get("url", p.get("pmid", "")) for p in papers)),
+            "note": "Detailed analysis requires pandas",
         }
 
     def store_memory(self, key: str, value: Any) -> None:
         """Store findings in long-term memory."""
         logger.info(f"Storing in memory: {key}")
-        self.memory[key] = {
-            "value": value,
-            "timestamp": datetime.utcnow().isoformat()
-        }
+        self.memory[key] = {"value": value, "timestamp": datetime.utcnow().isoformat()}
 
     def recall_memory(self, key: str) -> Optional[Any]:
         """Recall from long-term memory."""
@@ -158,26 +155,19 @@ class ResearchAgent:
             "methodology": {
                 "sources": ["ArXiv", "PubMed"],
                 "papers_reviewed": len(papers),
-                "analysis_method": "Systematic literature review"
+                "analysis_method": "Systematic literature review",
             },
             "findings": findings,
             "papers": [
-                {
-                    "title": p.get("title"),
-                    "source": p.get("url") or p.get("doi"),
-                    "relevance": "high"
-                }
+                {"title": p.get("title"), "source": p.get("url") or p.get("doi"), "relevance": "high"}
                 for p in papers[:5]
             ],
             "recommendations": [
                 "Further investigation recommended in specific areas",
                 "Consider experimental validation",
-                "Review related work in adjacent fields"
+                "Review related work in adjacent fields",
             ],
-            "limitations": [
-                "Limited to English language publications",
-                "Focused on recent publications (2024)"
-            ]
+            "limitations": ["Limited to English language publications", "Focused on recent publications (2024)"],
         }
 
     def research(self, query: str) -> dict:
@@ -212,11 +202,10 @@ class ResearchAgent:
 
         # Step 4: Store in memory
         logger.info("Step 4: Storing in memory...")
-        self.store_memory(f"research_{query}", {
-            "papers": len(all_papers),
-            "findings": findings,
-            "timestamp": datetime.utcnow().isoformat()
-        })
+        self.store_memory(
+            f"research_{query}",
+            {"papers": len(all_papers), "findings": findings, "timestamp": datetime.utcnow().isoformat()},
+        )
 
         # Step 5: Generate report
         logger.info("Step 5: Generating report...")
@@ -251,7 +240,7 @@ def handler(event: dict, context: Any) -> dict:
             "status": "success",
             "message": f"Research completed on: {query}",
             "timestamp": datetime.utcnow().isoformat() + "Z",
-            "report": report
+            "report": report,
         }
 
     except Exception as e:
@@ -259,16 +248,13 @@ def handler(event: dict, context: Any) -> dict:
         return {
             "status": "error",
             "message": f"Research failed: {str(e)}",
-            "timestamp": datetime.utcnow().isoformat() + "Z"
+            "timestamp": datetime.utcnow().isoformat() + "Z",
         }
 
 
 # Local testing
 if __name__ == "__main__":
-    test_event = {
-        "query": "transformer neural networks",
-        "max_papers": 10
-    }
+    test_event = {"query": "transformer neural networks", "max_papers": 10}
 
     result = handler(test_event, None)
     print(json.dumps(result, indent=2))

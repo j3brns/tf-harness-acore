@@ -2,7 +2,6 @@
 Unit tests for deepresearch.config module.
 """
 
-import pytest
 from deepresearch.config import is_memory_enabled, get_memory_config
 
 
