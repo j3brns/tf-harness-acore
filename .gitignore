@@ -72,6 +72,7 @@ ENV/
 .build/
 *.zip
 node_modules/
+.tools/
 
 # MCP tool downloads
 mcp_excalidraw/
