@@ -63,6 +63,6 @@ We analyzed how agents find each other (A2A) and how UIs find agents (Northbound
 We determined that **API Gateway Stages** (dev, test, prod) should map 1:1 to **Bedrock Agent Aliases**. This ensures that code changes in the Strands SDK can be promoted through environments safely without changing the endpoint URL for the client.
 
 ## 6. Conclusion
-The proposed architecture—**REST API with Streaming, STS-based WebIdentity Federation, and a Dedicated Callback Handler**—is the only path that satisfies the enterprise requirement for security, UX, and multi-agent (Strands) collaboration.
+The proposed architecture -- **REST API with Streaming, STS-based WebIdentity Federation, and a Dedicated Callback Handler** -- is the only path that satisfies the enterprise requirement for security, UX, and multi-agent (Strands) collaboration.
 
 **Next Step:** Proceed to **ADR 0009** for formal architectural approval.

@@ -82,6 +82,9 @@ Terraform commands with AWS access
 
 ## Implementation Notes
 
+While the repository is hosted on GitHub, a minimal GitHub Actions workflow runs validation only.
+This does not change the decision to use GitLab CI with WIF for deployment after migration.
+
 ### GitLab CI Variables Required
 
 ```

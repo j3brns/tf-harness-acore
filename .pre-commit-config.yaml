@@ -101,7 +101,15 @@ repos:
       - id: docs-sync-check
         name: Check Docs Updated With Code
         description: Ensures documentation is updated when code changes
-        entry: bash -c 'if git diff --cached --name-only | grep -qE "\.(tf)$"; then git diff --cached --name-only | grep -qE "\.(md)$" || echo "WARNING: Terraform changed without doc update"; fi'
+        entry: bash -c 'if git diff --cached --name-only | grep -qE "\.tf$"; then git diff --cached --name-only | grep -qE "\.md$" || { echo "ERROR: Terraform changed without doc update"; exit 1; }; fi'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: tests-sync-check
+        name: Check Tests Updated With Terraform Changes
+        description: Ensures tests are updated when Terraform changes
+        entry: bash -c 'if git diff --cached --name-only | grep -qE "\.tf$"; then git diff --cached --name-only | grep -qE "^(tests/|scripts/validate_examples\.sh|examples/.*/agent-code/tests/|examples/.*/tests/)" || { echo "ERROR: Terraform changed without tests"; exit 1; }; fi'
         language: system
         pass_filenames: false
         always_run: true

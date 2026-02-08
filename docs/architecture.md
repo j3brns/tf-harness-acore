@@ -161,18 +161,20 @@ agentcore-foundation (NO dependencies)
 
 ```
 1. Developer -> Commits code to Git
-2. GitLab CI -> Runs validate/lint/test (no AWS)
-3. Merge to main -> Auto-deploys to dev
-4. Release branch -> Manual deploy to test
-5. Tag release -> Manual deploy to prod
+2. GitHub Actions (current) / GitLab CI (target) -> Runs validate/lint/test (no AWS)
+3. GitLab CI (target) -> Auto-deploys to dev on merge to main
+4. GitLab CI (target) -> Manual deploy to test from release branch
+5. GitLab CI (target) -> Manual deploy to prod from tag
 ```
+
+GitHub Actions currently runs validation only and does not deploy to AWS.
 
 ## Security Architecture
 
 ### Authentication & Authorization
 
 ```
-GitLab -> WIF -> AWS STS -> Temporary Credentials
+GitLab (deploy) -> WIF -> AWS STS -> Temporary Credentials
     |
     v
 Terraform -> Creates Resources

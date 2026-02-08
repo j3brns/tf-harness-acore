@@ -372,7 +372,16 @@ pre-commit run --all-files
 # Fix issues, then retry commit
 ```
 
-## GitLab CI Pipeline
+## CI Pipeline
+
+### Current: GitHub Actions (validation only)
+- Runs docs/tests gate, Terraform fmt/validate, TFLint, Checkov, and example validation.
+- Uses `terraform init -backend=false` on the runner (local only, no AWS).
+- Uses shared GitHub Actions for Terraform, TFLint, and Checkov setup plus caching.
+- Caches Terraform plugins, TFLint plugins, and pip downloads to speed CI runs.
+- No deployments run in GitHub Actions.
+
+### Next Phase: GitLab CI Pipeline
 
 ### Pipeline Stages
 
@@ -381,7 +390,7 @@ validate -> lint -> test -> deploy-dev -> deploy-test -> deploy-prod
   (auto)    (auto)  (auto)    (auto)       (manual)       (manual)
 ```
 
-### Triggering Deployments
+### Triggering Deployments (after GitLab migration)
 
 **Dev**: Automatic on merge to `main`
 ```bash

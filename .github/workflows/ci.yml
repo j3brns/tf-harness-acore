@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  docs-tests-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Enforce docs/tests on Terraform changes
+        run: |
+          set -euo pipefail
+          BASE_REF="${{ github.base_ref }}"
+          if [ -z "$BASE_REF" ]; then
+            BASE_REF="${{ github.event.repository.default_branch }}"
+          fi
+          git fetch origin "$BASE_REF"
+          CHANGED=$(git diff --name-only "origin/$BASE_REF"...HEAD)
+          if printf '%s\n' "$CHANGED" | grep -qE '\.tf$'; then
+            printf '%s\n' "$CHANGED" | grep -qE '\.md$' || { echo "ERROR: Terraform changed without docs"; exit 1; }
+            printf '%s\n' "$CHANGED" | grep -qE '^(tests/|scripts/validate_examples\.sh|examples/.*/agent-code/tests/|examples/.*/tests/)' || { echo "ERROR: Terraform changed without tests"; exit 1; }
+          fi
+
+  terraform-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/terraform-setup
+        with:
+          terraform_version: 1.14.4
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+      - name: Terraform init (local backend only)
+        run: |
+          terraform init -backend=false
+      - name: Terraform validate
+        run: terraform validate
+
+  tflint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/tflint-setup
+        with:
+          tflint_version: v0.50.3
+      - name: TFLint init
+        run: tflint --init
+      - name: TFLint
+        run: tflint --recursive --format compact --config .tflint.hcl
+
+  checkov:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkov-setup
+        with:
+          python_version: "3.12"
+      - name: Checkov scan
+        run: checkov -d . --framework terraform --quiet --compact --skip-check CKV_AWS_144,CKV_AWS_145
+
+  examples-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/terraform-setup
+        with:
+          terraform_version: 1.14.4
+      - name: Validate examples (local init via script)
+        run: bash scripts/validate_examples.sh

@@ -1,0 +1,24 @@
+name: Checkov Setup
+description: Setup Checkov with pip caching
+inputs:
+  python_version:
+    description: Python version to install
+    required: false
+    default: "3.12"
+runs:
+  using: composite
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python_version }}
+    - name: Cache pip
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-checkov-${{ hashFiles('.github/workflows/ci.yml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-checkov-
+    - name: Install Checkov
+      shell: bash
+      run: pip install checkov

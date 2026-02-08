@@ -1,0 +1,21 @@
+name: TFLint Setup
+description: Setup TFLint with plugin caching
+inputs:
+  tflint_version:
+    description: TFLint version to install
+    required: false
+    default: "v0.50.3"
+runs:
+  using: composite
+  steps:
+    - name: Cache TFLint plugins
+      uses: actions/cache@v4
+      with:
+        path: ~/.tflint.d/plugins
+        key: ${{ runner.os }}-tflint-${{ hashFiles('.tflint.hcl') }}
+        restore-keys: |
+          ${{ runner.os }}-tflint-
+    - name: Setup TFLint
+      uses: terraform-linters/setup-tflint@v4
+      with:
+        tflint_version: ${{ inputs.tflint_version }}

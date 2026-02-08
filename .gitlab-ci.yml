@@ -83,6 +83,24 @@ validate:plan:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
+validate:docs-and-tests:
+  stage: validate
+  extends: .terraform_setup
+  script:
+    - cd $TF_ROOT
+    - |
+      set -euo pipefail
+      TARGET="${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-$CI_DEFAULT_BRANCH}"
+      git fetch origin "$TARGET"
+      CHANGED=$(git diff --name-only "origin/$TARGET"...HEAD)
+      if printf '%s\n' "$CHANGED" | grep -qE "\.tf$"; then
+        printf '%s\n' "$CHANGED" | grep -qE "\.md$" || { echo "ERROR: Terraform changed without docs"; exit 1; }
+        printf '%s\n' "$CHANGED" | grep -qE "^(tests/|scripts/validate_examples\.sh|examples/.*/agent-code/tests/|examples/.*/tests/)" || { echo "ERROR: Terraform changed without tests"; exit 1; }
+      fi
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
 # =============================================================================
 # STAGE 2: LINT (No AWS resources)
 # =============================================================================

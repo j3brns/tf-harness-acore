@@ -72,3 +72,18 @@ ENV/
 .build/
 *.zip
 node_modules/
+
+# Large artifacts and archives
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.iso
+*.dmg
+*.pkg
+*.img
+*.bin
