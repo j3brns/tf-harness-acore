@@ -41,6 +41,37 @@ stateDiagram-v2
     Observe --> LocalDev: feedback loop
 ```
 
+## Informal Flow (Local → Cloud)
+
+```mermaid
+flowchart LR
+  subgraph Phase1[Phase 1: Local build]
+    A[Write agent/tool code] --> B[Run locally]
+    B --> C[Quick checks + tests]
+  end
+
+  subgraph Phase2[Phase 2: Observability (optional)]
+    D[Enable telemetry] --> E[Weave or OTEL backend]
+  end
+
+  subgraph Phase3[Phase 3: Infra + deploy]
+    F[Terraform plan/apply] --> G[AgentCore runtime + gateway]
+    G --> H[MCP tools (Lambda)]
+  end
+
+  subgraph Phase4[Phase 4: Operate]
+    I[User traffic] --> J[Runtime executes]
+    J --> K[Logs + traces]
+    K --> L[Fix + iterate]
+  end
+
+  C --> F
+  B --> D
+  G --> J
+  E --> K
+  L --> A
+```
+
 ## Project Structure
 
 ```
