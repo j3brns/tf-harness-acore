@@ -451,6 +451,29 @@ terraform {
 4. Add validation to `scripts/validate_examples.sh`
 5. Document in `examples/N-name/README.md`
 
+## RULE 9: Discovery is EXPLICIT
+
+### Rule 9.1: Agents Must Be Discoverable
+- **Requirement:** Every agent MUST expose `/.well-known/agent-card.json`.
+- **Registry:** Agents MUST register with **Cloud Map** (East-West) or the **Gateway Manifest** (Northbound).
+- **Forbidden:** Hardcoding agent endpoints in application code.
+
+### Rule 9.2: Gateway is the Tool Source
+- **Requirement:** Tools (Lambda functions) MUST be accessed via the **AgentCore Gateway**.
+- **Forbidden:** Agents invoking Tool Lambdas directly via `lambda:InvokeFunction`.
+
+---
+
+## RULE 10: Identity Propagation is MANDATORY
+
+### Rule 10.1: No Anonymous A2A Calls
+- **Requirement:** All Agent-to-Agent calls MUST use a **Workload Token**.
+- **Pattern:** `GetWorkloadAccessTokenForJWT` -> `Authorization: Bearer <token>`.
+
+### Rule 10.2: User Context Must Persist
+- **Requirement:** The original user's identity (Entra ID) MUST be exchanged, not dropped.
+- **Why:** To enforce Guardrails and Policies at the destination agent.
+
 ---
 
 ## DECISION FRAMEWORK

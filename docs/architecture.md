@@ -187,6 +187,13 @@ Gateway -> Workload Identity (OAuth2)
 MCP Tools -> Lambda IAM execution role
 ```
 
+#### Agent-to-Agent (A2A) Auth
+For multi-agent collaboration (Strands), we use **Workload Identity Propagation**:
+1.  **Source Agent** receives User JWT.
+2.  Calls `GetWorkloadAccessTokenForJWT` to exchange User JWT for **Workload Token**.
+3.  Invokes **Target Agent** with `Authorization: Bearer <WorkloadToken>`.
+4.  **Target Agent** validates token via its Inbound Authorizer.
+
 ### Encryption Strategy (ADR 0008)
 
 **At Rest**:
@@ -272,6 +279,19 @@ S3 Bucket (per environment)
 - Error tracking
 
 ## Network Architecture
+
+### Service Discovery (ADR 0010)
+Strands agents use a dual-tier discovery model:
+
+1.  **East-West (Agent-to-Agent):** Uses **AWS Cloud Map**.
+    *   Namespace: `agents.internal`
+    *   Resolution: Logical Name -> Runtime Endpoint
+    *   Protocol: A2A (Agent Cards)
+
+2.  **Northbound (User-to-Agent):** Uses **API Gateway Catalog**.
+    *   Endpoint: `GET /agents`
+    *   Resolution: User Group -> Available Agents
+    *   Protocol: REST
 
 ### Network Modes
 
