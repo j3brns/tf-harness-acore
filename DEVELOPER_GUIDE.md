@@ -1,0 +1,465 @@
+# Developer Guide - Bedrock AgentCore Terraform
+
+## Welcome
+
+This guide will get you from zero to deploying agents in under 30 minutes.
+
+## Prerequisites
+
+### Required
+- Git installed
+- Terraform >= 1.5.0 (use `.terraform-version` with tfenv)
+- AWS CLI configured
+- Python 3.12+
+- Text editor (VS Code recommended)
+
+### Optional
+- Docker (for local testing)
+- Go 1.20+ (for Terratest)
+- pre-commit (`pip install pre-commit`)
+- TFLint
+- Checkov
+
+## Quick Start (5 Minutes)
+
+```bash
+# 1. Clone repository
+git clone <repo-url>
+cd terraform
+
+# 2. Install pre-commit hooks (optional but recommended)
+pip install pre-commit
+pre-commit install
+
+# 3. Validate everything works
+terraform init -backend=false
+terraform validate
+terraform fmt -check
+
+# 4. Run security scan
+checkov -d . --framework terraform --compact
+
+# 5. Test with example
+terraform plan -var-file=examples/1-hello-world/terraform.tfvars
+```
+
+If all commands succeed, you're ready to develop!
+
+## Development Workflow
+
+### Making Changes
+
+```bash
+# 1. Create feature branch
+git checkout -b feature/add-new-capability
+
+# 2. Make your changes
+# Edit files...
+
+# 3. Validate locally (NO AWS needed)
+terraform fmt -recursive
+terraform validate
+terraform plan -backend=false
+
+# 4. Security scan
+checkov -d . --framework terraform --compact
+
+# 5. Commit (pre-commit hooks run automatically)
+git add .
+git commit -m "feat: add new capability"
+
+# 6. Push and create MR
+git push origin feature/add-new-capability
+```
+
+### Local Testing (No AWS Required)
+
+```bash
+# Format check
+terraform fmt -check -recursive
+
+# Syntax validation
+terraform validate
+
+# Generate plan (dry-run)
+terraform plan -backend=false -var-file=examples/1-hello-world/terraform.tfvars
+
+# Security scan
+checkov -d . --framework terraform --compact
+
+# Lint
+tflint --recursive
+```
+
+**Key Point**: You can validate everything locally without an AWS account!
+
+## Project Structure
+
+```
+terraform/
++-- modules/              # Core modules (require approval for changes)
+|   +-- agentcore-foundation/
+|   +-- agentcore-tools/
+|   +-- agentcore-runtime/
+|   +-- agentcore-governance/
+|
++-- examples/             # Example agents
+|   +-- 1-hello-world/    # Basic S3 explorer agent
+|   +-- 2-gateway-tool/   # MCP gateway with Titanic analysis
+|   +-- 3-deepresearch/   # Full Strands DeepAgents implementation
+|   +-- 4-research/       # Simplified research agent
+|
++-- docs/                 # Documentation
+|   +-- adr/              # Architecture Decision Records
+|   +-- architecture.md   # System architecture
+|   +-- runbooks/         # Operational runbooks
+|
++-- scripts/              # Helper scripts
+|   +-- validate_examples.sh
+|
++-- tests/                # Test suite
+|   +-- validation/
+|   +-- security/
+|
++-- main.tf               # Module composition
++-- variables.tf          # Input variables
++-- outputs.tf            # Output values
++-- versions.tf           # Provider versions
++-- .terraform-version    # Pinned Terraform version
++-- CLAUDE.md             # AI agent development rules
++-- DEVELOPER_GUIDE.md    # This file
++-- README.md             # User documentation
+```
+
+## Common Tasks
+
+### Task 1: Create a New Example Agent
+
+```bash
+# 1. Create example directory
+mkdir -p examples/5-my-agent/agent-code
+
+# 2. Create agent code
+cat > examples/5-my-agent/agent-code/runtime.py <<'EOF'
+from bedrock_agentcore import BedrockAgentCoreApp
+
+app = BedrockAgentCoreApp()
+
+@app.entrypoint
+def invoke(payload, context=None):
+    return {"status": "success", "message": "Hello from my agent!"}
+
+if __name__ == "__main__":
+    app.run()
+EOF
+
+# 3. Create terraform.tfvars file
+cat > examples/5-my-agent/terraform.tfvars <<'EOF'
+agent_name          = "my-agent"
+region              = "us-east-1"
+environment         = "dev"
+
+enable_gateway      = true
+enable_runtime      = true
+runtime_source_path = "./examples/5-my-agent/agent-code"
+
+enable_observability = true
+EOF
+
+# 4. Test it
+terraform plan -var-file=examples/5-my-agent/terraform.tfvars
+```
+
+### Task 2: Add a New Variable
+
+```hcl
+# 1. Add to module's variables.tf with validation
+variable "my_setting" {
+  description = "My new setting"
+  type        = string
+  default     = "default-value"
+
+  validation {
+    condition     = length(var.my_setting) > 0
+    error_message = "Value must not be empty."
+  }
+}
+
+# 2. Use in module resources
+# modules/agentcore-foundation/gateway.tf
+resource "aws_bedrockagentcore_gateway" "main" {
+  # Use the variable
+  name = var.my_setting
+}
+
+# 3. Add to root variables.tf
+variable "my_setting" {
+  description = "My new setting"
+  type        = string
+  default     = "default-value"
+}
+
+# 4. Pass to module in main.tf
+module "agentcore_foundation" {
+  source = "./modules/agentcore-foundation"
+  my_setting = var.my_setting
+}
+
+# 5. Test
+terraform validate
+```
+
+### Task 3: Fix Security Issue
+
+```bash
+# 1. Run Checkov to identify issues
+checkov -d . --framework terraform
+
+# 2. Review findings and fix
+# Example: Replace wildcard resource with specific ARN
+
+# 3. Re-run Checkov
+checkov -d . --framework terraform
+
+# 4. Verify fix
+terraform validate
+terraform plan
+```
+
+## Module Guide
+
+### Foundation Module
+
+Controls: Gateway, Identity, Observability
+
+```hcl
+# Enable/disable features
+enable_gateway       = true
+enable_identity      = false
+enable_observability = true
+enable_xray          = true
+
+# Gateway configuration
+gateway_name        = "my-gateway"
+gateway_search_type = "HYBRID"  # or "SEMANTIC"
+
+# MCP targets (Lambda functions)
+mcp_targets = {
+  my_tool = {
+    name       = "my-tool"
+    lambda_arn = "arn:aws:lambda:us-east-1:ACCOUNT:function:my-mcp"
+  }
+}
+```
+
+### Tools Module
+
+Controls: Code Interpreter, Browser
+
+```hcl
+# Code interpreter
+enable_code_interpreter       = true
+code_interpreter_network_mode = "SANDBOX"  # PUBLIC, SANDBOX, VPC
+
+# Browser
+enable_browser       = true
+browser_network_mode = "SANDBOX"
+```
+
+### Runtime Module
+
+Controls: Runtime, Memory, Packaging
+
+```hcl
+# Runtime
+enable_runtime      = true
+runtime_source_path = "./agent-code"
+runtime_entry_file  = "runtime.py"
+
+# Memory
+enable_memory = true
+memory_type   = "BOTH"  # SHORT_TERM, LONG_TERM, BOTH
+
+# Packaging
+enable_packaging = true
+python_version   = "3.12"
+```
+
+### Governance Module
+
+Controls: Policy Engine, Evaluations
+
+```hcl
+# Policy engine
+enable_policy_engine = true
+cedar_policy_files = {
+  pii = "./policies/pii-protection.cedar"
+}
+
+# Evaluations
+enable_evaluations = true
+evaluation_type    = "REASONING"  # TOOL_CALL, REASONING, RESPONSE, ALL
+evaluator_model_id = "anthropic.claude-sonnet-4-5"
+```
+
+## Testing Your Changes
+
+### Level 1: Local Validation (Always Run)
+
+```bash
+# Quick validation (30 seconds)
+terraform fmt -check
+terraform validate
+terraform plan -backend=false -var-file=examples/1-hello-world/terraform.tfvars
+```
+
+### Level 2: Security Scan (Before Commit)
+
+```bash
+# Security check (1 minute)
+checkov -d . --framework terraform --compact
+tflint --recursive
+```
+
+### Level 3: Full Test Suite
+
+```bash
+# Complete tests (5 minutes)
+make test-all
+
+# Or individually:
+make test-validate
+make test-security
+```
+
+## Debugging
+
+### Common Issues
+
+#### "terraform: command not found"
+```bash
+# Install Terraform
+# macOS
+brew install terraform
+
+# Or use tfenv
+brew install tfenv
+tfenv install 1.5.7
+tfenv use 1.5.7
+```
+
+#### "Error: Module not found"
+```bash
+# Initialize Terraform
+terraform init -backend=false
+```
+
+#### "Checkov failed with critical issues"
+```bash
+# See detailed output
+checkov -d . --framework terraform
+
+# Fix issues, then re-run
+```
+
+#### "Pre-commit hooks failing"
+```bash
+# Run manually to see errors
+pre-commit run --all-files
+
+# Fix issues, then retry commit
+```
+
+## GitLab CI Pipeline
+
+### Pipeline Stages
+
+```
+validate -> lint -> test -> deploy-dev -> deploy-test -> deploy-prod
+  (auto)    (auto)  (auto)    (auto)       (manual)       (manual)
+```
+
+### Triggering Deployments
+
+**Dev**: Automatic on merge to `main`
+```bash
+git checkout main
+git merge feature/my-branch
+git push origin main
+# CI deploys to dev automatically
+```
+
+**Test**: Manual from release branch
+```bash
+git checkout -b release/v1.2.0
+git push origin release/v1.2.0
+# Go to GitLab, trigger deploy-test job manually
+```
+
+**Prod**: Manual from tag
+```bash
+git tag v1.2.0
+git push origin v1.2.0
+# Go to GitLab, trigger deploy-prod job manually (requires approval)
+```
+
+## Best Practices
+
+### DO
+- Run `terraform validate` before every commit
+- Use pre-commit hooks
+- Test examples after module changes
+- Add validation to variables
+- Use descriptive commit messages
+- Keep changes focused (one feature per MR)
+- Document decisions in ADRs
+- Update docs when changing code
+
+### DON'T
+- Use `Resource = "*"` in IAM policies
+- Suppress errors with `|| true`
+- Skip validation before pushing
+- Commit directly to main (use MRs)
+- Use placeholder ARNs (123456789012)
+- Make changes without running Checkov
+- Forget to update documentation
+
+## Cheat Sheet
+
+```bash
+# Validate everything
+terraform fmt -check && terraform validate
+
+# Format code
+terraform fmt -recursive
+
+# Security scan
+checkov -d . --framework terraform --compact
+
+# Test example
+terraform plan -var-file=examples/1-hello-world/terraform.tfvars
+
+# View outputs
+terraform output
+
+# Get help
+terraform --help
+```
+
+## Getting Help
+
+1. Check `CLAUDE.md` - AI agent development rules
+2. Check `docs/architecture.md` - System design
+3. Check `docs/adr/` - Architecture decisions
+4. Create GitLab issue for bugs/features
+
+## Next Steps
+
+1. Complete quick start
+2. Read `CLAUDE.md`
+3. Review `examples/`
+4. Try modifying an example
+5. Create your first MR
+6. Deploy to dev
+
+Welcome to the team!

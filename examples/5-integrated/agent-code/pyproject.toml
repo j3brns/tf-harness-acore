@@ -1,0 +1,15 @@
+[project]
+name = "integrated-demo-agent"
+version = "1.0.0"
+description = "Integrated demo agent using S3 and Titanic MCP servers"
+requires-python = ">=3.12"
+dependencies = []  # No external dependencies
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

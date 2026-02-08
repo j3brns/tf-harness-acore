@@ -1,0 +1,63 @@
+# Checkov Configuration for Bedrock AgentCore Terraform
+# https://www.checkov.io/
+
+# Framework to scan
+framework:
+  - terraform
+
+# Directories to scan
+directory:
+  - .
+
+# Skip specific directories
+skip-path:
+  - .terraform
+  - .git
+  - node_modules
+  - examples/3-deepresearch/agent-code  # Python code, not Terraform
+
+# Output format
+output:
+  - cli
+  - junitxml
+
+# Compact output
+compact: true
+
+# Soft fail (don't exit non-zero) - set to false for CI
+soft-fail: false
+
+# Check IDs to skip (with justification)
+skip-check:
+  # CKV_AWS_144: S3 cross-region replication - single region design decision (ADR-0007)
+  - CKV_AWS_144
+
+  # CKV_AWS_145: S3 KMS encryption - using AWS-managed SSE-S3 (ADR-0008)
+  - CKV_AWS_145
+
+  # CKV2_AWS_62: S3 event notifications - not required for deployment bucket
+  - CKV2_AWS_62
+
+  # CKV2_AWS_61: S3 lifecycle configuration - handled separately
+  - CKV2_AWS_61
+
+# Download external modules for scanning
+download-external-modules: false
+
+# Evaluate variables
+evaluate-variables: true
+
+# Enable secrets scanning
+enable-secret-scan-all-files: true
+
+# Block list for secrets (patterns to flag)
+block-list-secret-scan:
+  - "aws_access_key_id"
+  - "aws_secret_access_key"
+  - "password"
+  - "secret"
+  - "token"
+  - "api_key"
+
+# Summary position
+summary-position: bottom

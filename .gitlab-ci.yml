@@ -1,0 +1,480 @@
+# GitLab CI/CD Pipeline for Bedrock AgentCore Terraform
+# Uses Web Identity Federation (WIF) for AWS authentication
+
+image: amazon/aws-cli:latest
+
+stages:
+  - validate     # Terraform syntax, formatting (no AWS)
+  - lint         # Security scanning, best practices (no AWS)
+  - test         # Example validation, Cedar policies (no AWS)
+  - deploy-dev   # Auto-deploy to dev (AWS dev account)
+  - deploy-test  # Manual deploy to test (AWS test account)
+  - deploy-prod  # Manual deploy to prod (AWS prod account)
+
+variables:
+  TF_ROOT: ${CI_PROJECT_DIR}
+  TF_VERSION: "1.14.4"
+  AWS_DEFAULT_REGION: us-east-1
+
+# =============================================================================
+# Template: Common setup for all jobs
+# =============================================================================
+.terraform_setup:
+  before_script:
+    - apk add --no-cache bash git wget unzip jq python3 py3-pip
+    # Install Terraform
+    - wget -q https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip
+    - unzip -q terraform_${TF_VERSION}_linux_amd64.zip
+    - mv terraform /usr/local/bin/
+    - terraform version
+    # Verify WIF credentials if available
+    - |
+      if [ -n "$CI_JOB_JWT_V2" ]; then
+        export AWS_WEB_IDENTITY_TOKEN=$CI_JOB_JWT_V2
+        export AWS_ROLE_SESSION_NAME="gitlab-${CI_PROJECT_PATH_SLUG}-${CI_PIPELINE_ID}"
+        aws sts get-caller-identity || echo "WIF not configured"
+      fi
+
+# =============================================================================
+# STAGE 1: VALIDATE (No AWS resources)
+# =============================================================================
+
+validate:fmt:
+  stage: validate
+  extends: .terraform_setup
+  script:
+    - cd $TF_ROOT
+    - terraform fmt -check -recursive
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH
+
+validate:syntax:
+  stage: validate
+  extends: .terraform_setup
+  script:
+    - cd $TF_ROOT
+    - terraform init -backend=false
+    - terraform validate
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH
+
+validate:plan:
+  stage: validate
+  extends: .terraform_setup
+  script:
+    - cd $TF_ROOT
+    - terraform init -backend=false
+    - |
+      if [ -f "examples/1-hello-world/terraform.tfvars" ]; then
+        terraform plan -var-file=examples/1-hello-world/terraform.tfvars -input=false -out=test.tfplan
+        terraform show test.tfplan
+      else
+        echo "No example tfvars found, skipping plan"
+      fi
+  artifacts:
+    paths:
+      - $TF_ROOT/test.tfplan
+    expire_in: 1 hour
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# =============================================================================
+# STAGE 2: LINT (No AWS resources)
+# =============================================================================
+
+lint:tflint:
+  stage: lint
+  extends: .terraform_setup
+  before_script:
+    - apk add --no-cache bash git wget unzip curl
+    # Install TFLint
+    - curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+  script:
+    - cd $TF_ROOT
+    - tflint --init || echo "TFLint init skipped"
+    - tflint --recursive --format compact || echo "TFLint warnings found"
+  allow_failure: true  # Warning only initially
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+lint:checkov:
+  stage: lint
+  image: bridgecrew/checkov:latest
+  script:
+    - cd $TF_ROOT
+    - checkov -d . --framework terraform --quiet --compact --output cli --output junitxml > checkov-report.xml || true
+    - checkov -d . --framework terraform --quiet --compact
+  artifacts:
+    reports:
+      junit: $TF_ROOT/checkov-report.xml
+    paths:
+      - $TF_ROOT/checkov-report.xml
+    expire_in: 30 days
+  allow_failure: false  # Must pass
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# =============================================================================
+# STAGE 3: TEST (No AWS resources)
+# =============================================================================
+
+test:examples:
+  stage: test
+  extends: .terraform_setup
+  script:
+    - cd $TF_ROOT
+    - terraform init -backend=false
+    - |
+      for example in examples/*.tfvars examples/*/terraform.tfvars; do
+        if [ -f "$example" ]; then
+          echo "Validating: $example"
+          terraform plan -var-file="$example" -input=false -out=test.tfplan || exit 1
+          rm -f test.tfplan
+        fi
+      done
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+test:cedar-policies:
+  stage: test
+  extends: .terraform_setup
+  script:
+    - cd $TF_ROOT
+    - |
+      POLICY_DIR="modules/agentcore-governance/cedar_policies"
+      if [ -d "$POLICY_DIR" ]; then
+        echo "Validating Cedar policies..."
+        for policy in "$POLICY_DIR"/*.cedar; do
+          if [ -f "$policy" ]; then
+            echo "Checking: $(basename $policy)"
+            # Basic syntax check (braces balance)
+            OPEN=$(grep -o "{" "$policy" | wc -l)
+            CLOSE=$(grep -o "}" "$policy" | wc -l)
+            if [ "$OPEN" -ne "$CLOSE" ]; then
+              echo "ERROR: Unbalanced braces in $policy"
+              exit 1
+            fi
+            echo "  PASS"
+          fi
+        done
+      else
+        echo "No Cedar policies directory found"
+      fi
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+test:python-hello-world:
+  stage: test
+  image: python:3.12-slim
+  before_script:
+    - pip install --upgrade pip
+  script:
+    - cd $TF_ROOT/examples/1-hello-world/agent-code
+    - pip install -e ".[dev]"
+    - python -m pytest tests/ -v --tb=short --junitxml=test-results.xml
+  artifacts:
+    reports:
+      junit: $TF_ROOT/examples/1-hello-world/agent-code/test-results.xml
+    expire_in: 7 days
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - changes:
+        - examples/1-hello-world/**/*
+
+test:python-gateway-tool:
+  stage: test
+  image: python:3.12-slim
+  before_script:
+    - pip install --upgrade pip
+  script:
+    - cd $TF_ROOT/examples/2-gateway-tool/agent-code
+    - pip install -e ".[dev]"
+    - python -m pytest tests/ -v --tb=short --junitxml=test-results.xml
+  artifacts:
+    reports:
+      junit: $TF_ROOT/examples/2-gateway-tool/agent-code/test-results.xml
+    expire_in: 7 days
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - changes:
+        - examples/2-gateway-tool/**/*
+
+test:python-deepresearch-unit:
+  stage: test
+  image: python:3.12-slim
+  before_script:
+    - pip install --upgrade pip
+  script:
+    - cd $TF_ROOT/examples/3-deepresearch/agent-code
+    - pip install -e ".[dev]"
+    - python -m pytest tests/unit -v --tb=short --junitxml=unit-results.xml
+  artifacts:
+    reports:
+      junit: $TF_ROOT/examples/3-deepresearch/agent-code/unit-results.xml
+    expire_in: 7 days
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - changes:
+        - examples/3-deepresearch/**/*
+
+test:python-deepresearch-integration:
+  stage: test
+  image: python:3.12-slim
+  before_script:
+    - pip install --upgrade pip
+  script:
+    - cd $TF_ROOT/examples/3-deepresearch/agent-code
+    - pip install -e ".[dev]"
+    - python -m pytest tests/integration -v --tb=short --junitxml=integration-results.xml
+  artifacts:
+    reports:
+      junit: $TF_ROOT/examples/3-deepresearch/agent-code/integration-results.xml
+    expire_in: 7 days
+  allow_failure: true  # Integration tests may need external dependencies
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - changes:
+        - examples/3-deepresearch/**/*
+
+test:python-research:
+  stage: test
+  image: python:3.12-slim
+  before_script:
+    - pip install --upgrade pip
+  script:
+    - cd $TF_ROOT/examples/4-research/agent-code
+    - pip install -e ".[dev]"
+    - python -m pytest tests/ -v --tb=short --junitxml=test-results.xml
+  artifacts:
+    reports:
+      junit: $TF_ROOT/examples/4-research/agent-code/test-results.xml
+    expire_in: 7 days
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - changes:
+        - examples/4-research/**/*
+
+test:documentation:
+  stage: test
+  script:
+    - cd $TF_ROOT
+    - |
+      echo "Checking documentation..."
+      for doc in README.md CLAUDE.md DEVELOPER_GUIDE.md; do
+        if [ -f "$doc" ]; then
+          echo "Found: $doc"
+        else
+          echo "WARNING: Missing $doc"
+        fi
+      done
+  allow_failure: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# =============================================================================
+# STAGE 4: DEPLOY DEV (Auto on main merge)
+# =============================================================================
+
+deploy:dev:
+  stage: deploy-dev
+  extends: .terraform_setup
+  environment:
+    name: dev
+    url: https://console.aws.amazon.com/bedrock/
+  variables:
+    TF_VAR_environment: "dev"
+  before_script:
+    - !reference [.terraform_setup, before_script]
+    - export AWS_ROLE_ARN=${CI_ENVIRONMENT_ROLE_ARN_DEV}
+    - export AWS_WEB_IDENTITY_TOKEN_FILE=/tmp/token
+    - echo "$CI_JOB_JWT_V2" > /tmp/token
+  script:
+    - cd $TF_ROOT
+    # Generate backend config
+    - |
+      cat > backend.tf <<EOF
+      terraform {
+        backend "s3" {
+          bucket       = "${TF_STATE_BUCKET_DEV}"
+          key          = "agentcore/terraform.tfstate"
+          region       = "${AWS_DEFAULT_REGION}"
+          encrypt      = true
+          use_lockfile = true
+        }
+      }
+      EOF
+    - terraform init -reconfigure
+    - terraform plan -var-file=examples/1-hello-world/terraform.tfvars -out=dev.tfplan
+    - terraform apply -auto-approve dev.tfplan
+    - terraform output -json > outputs-dev.json
+  artifacts:
+    paths:
+      - $TF_ROOT/outputs-dev.json
+    expire_in: 7 days
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: on_success
+
+# =============================================================================
+# STAGE 5: DEPLOY TEST (Manual approval)
+# =============================================================================
+
+deploy:test:
+  stage: deploy-test
+  extends: .terraform_setup
+  environment:
+    name: test
+    url: https://console.aws.amazon.com/bedrock/
+  variables:
+    TF_VAR_environment: "test"
+  before_script:
+    - !reference [.terraform_setup, before_script]
+    - export AWS_ROLE_ARN=${CI_ENVIRONMENT_ROLE_ARN_TEST}
+    - export AWS_WEB_IDENTITY_TOKEN_FILE=/tmp/token
+    - echo "$CI_JOB_JWT_V2" > /tmp/token
+  script:
+    - cd $TF_ROOT
+    - |
+      cat > backend.tf <<EOF
+      terraform {
+        backend "s3" {
+          bucket       = "${TF_STATE_BUCKET_TEST}"
+          key          = "agentcore/terraform.tfstate"
+          region       = "${AWS_DEFAULT_REGION}"
+          encrypt      = true
+          use_lockfile = true
+        }
+      }
+      EOF
+    - terraform init -reconfigure
+    - terraform plan -var-file=examples/2-gateway-tool/terraform.tfvars -out=test.tfplan
+    - terraform apply -auto-approve test.tfplan
+    - terraform output -json > outputs-test.json
+  artifacts:
+    paths:
+      - $TF_ROOT/outputs-test.json
+    expire_in: 30 days
+  when: manual
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^release\/.*/
+
+# =============================================================================
+# STAGE 6: DEPLOY PROD (Manual approval, tags only)
+# =============================================================================
+
+deploy:prod:
+  stage: deploy-prod
+  extends: .terraform_setup
+  environment:
+    name: production
+    url: https://console.aws.amazon.com/bedrock/
+  variables:
+    TF_VAR_environment: "prod"
+  before_script:
+    - !reference [.terraform_setup, before_script]
+    - export AWS_ROLE_ARN=${CI_ENVIRONMENT_ROLE_ARN_PROD}
+    - export AWS_WEB_IDENTITY_TOKEN_FILE=/tmp/token
+    - echo "$CI_JOB_JWT_V2" > /tmp/token
+  script:
+    - cd $TF_ROOT
+    - |
+      cat > backend.tf <<EOF
+      terraform {
+        backend "s3" {
+          bucket       = "${TF_STATE_BUCKET_PROD}"
+          key          = "agentcore/terraform.tfstate"
+          region       = "${AWS_DEFAULT_REGION}"
+          encrypt      = true
+          use_lockfile = true
+        }
+      }
+      EOF
+    - terraform init -reconfigure
+    - terraform plan -var-file=examples/3-deepresearch/terraform.tfvars -out=prod.tfplan
+    - echo "Waiting for manual approval..."
+    - terraform apply -auto-approve prod.tfplan
+    - terraform output -json > outputs-prod.json
+  artifacts:
+    paths:
+      - $TF_ROOT/outputs-prod.json
+    expire_in: 90 days
+  when: manual
+  rules:
+    - if: $CI_COMMIT_TAG
+
+# =============================================================================
+# SCHEDULED JOBS
+# =============================================================================
+
+drift:detection:
+  stage: test
+  extends: .terraform_setup
+  variables:
+    TF_VAR_environment: "dev"
+  before_script:
+    - !reference [.terraform_setup, before_script]
+    - export AWS_ROLE_ARN=${CI_ENVIRONMENT_ROLE_ARN_DEV}
+    - export AWS_WEB_IDENTITY_TOKEN_FILE=/tmp/token
+    - echo "$CI_JOB_JWT_V2" > /tmp/token
+  script:
+    - cd $TF_ROOT
+    - |
+      cat > backend.tf <<EOF
+      terraform {
+        backend "s3" {
+          bucket       = "${TF_STATE_BUCKET_DEV}"
+          key          = "agentcore/terraform.tfstate"
+          region       = "${AWS_DEFAULT_REGION}"
+          encrypt      = true
+          use_lockfile = true
+        }
+      }
+      EOF
+    - terraform init -reconfigure
+    - |
+      # Exit code 0 = no changes, 1 = error, 2 = changes detected
+      if terraform plan -detailed-exitcode -var-file=examples/1-hello-world/terraform.tfvars; then
+        echo "No drift detected"
+      else
+        EXIT_CODE=$?
+        if [ $EXIT_CODE -eq 2 ]; then
+          echo "DRIFT DETECTED - Infrastructure differs from Terraform state"
+          echo "Review the plan output above and take corrective action"
+          exit 1
+        else
+          echo "Terraform plan failed with error"
+          exit 1
+        fi
+      fi
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+  allow_failure: true
+
+test:mcp-servers:
+  stage: test
+  extends: .terraform_setup
+  script:
+    - cd $TF_ROOT/examples/mcp-servers/terraform
+    - terraform init -backend=false
+    - terraform validate
+    - terraform fmt -check
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - changes:
+        - examples/mcp-servers/**/*

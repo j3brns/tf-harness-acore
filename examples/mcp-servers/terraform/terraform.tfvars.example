@@ -1,0 +1,36 @@
+# MCP Servers Terraform Configuration Example
+# Copy to terraform.tfvars and customize
+
+# Environment name (dev, test, prod)
+environment = "dev"
+
+# Resource name prefix
+name_prefix = "agentcore-mcp"
+
+# Deploy S3 Tools MCP Server
+deploy_s3_tools = true
+
+# Deploy Titanic Data MCP Server
+deploy_titanic_data = true
+
+# Optional: Restrict S3 tools to specific buckets
+# Leave empty for access to all buckets
+s3_tools_allowed_buckets = [
+  # "arn:aws:s3:::my-bucket-1",
+  # "arn:aws:s3:::my-bucket-1/*",
+  # "arn:aws:s3:::my-bucket-2",
+  # "arn:aws:s3:::my-bucket-2/*",
+]
+
+# Lambda configuration
+lambda_timeout = 30      # seconds
+lambda_memory  = 256     # MB
+
+# CloudWatch log retention
+log_retention_days = 30
+
+# Tags for all resources
+tags = {
+  Project = "bedrock-agentcore"
+  Owner   = "your-team@example.com"
+}

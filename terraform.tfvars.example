@@ -1,0 +1,86 @@
+# Example Terraform variables for AgentCore deployment
+# Copy this file to terraform.tfvars and update values as needed
+
+region      = "us-east-1"
+environment = "dev"
+agent_name  = "my-research-agent"
+
+# Tags
+tags = {
+  Team        = "AI/ML"
+  CostCenter  = "Engineering"
+  Owner       = "your-name@example.com"
+}
+
+# Foundation - Gateway (MCP Tool Integration)
+enable_gateway       = true
+gateway_name         = "my-agent-gateway"
+gateway_search_type  = "HYBRID"
+
+# Example MCP targets (Lambda-based tools)
+mcp_targets = {
+  web_search = {
+    name       = "web-search-tool"
+    lambda_arn = "arn:aws:lambda:us-east-1:123456789012:function:web-search-mcp"
+  }
+  code_executor = {
+    name       = "code-executor-tool"
+    lambda_arn = "arn:aws:lambda:us-east-1:123456789012:function:code-executor-mcp"
+  }
+}
+
+# Foundation - Identity
+enable_identity      = false
+oauth_return_urls    = []
+
+# Foundation - Observability
+enable_observability = true
+enable_xray          = true
+log_retention_days   = 30
+
+# Foundation - Encryption
+enable_kms           = true
+
+# Tools - Code Interpreter
+enable_code_interpreter       = true
+code_interpreter_network_mode = "SANDBOX"
+
+# Tools - Browser
+enable_browser                = false
+browser_network_mode          = "SANDBOX"
+enable_browser_recording      = false
+
+# Runtime - Agent Execution
+enable_runtime      = true
+runtime_source_path = "./agent-code"
+runtime_entry_file  = "runtime.py"
+runtime_config = {
+  max_iterations = 10
+  timeout_seconds = 300
+}
+
+# Runtime - Memory
+enable_memory = true
+memory_type   = "BOTH"
+
+# Runtime - Packaging
+enable_packaging = true
+python_version   = "3.12"
+
+# Governance - Policy Engine
+enable_policy_engine  = false
+cedar_policy_files = {
+  # pii_protection = "${path.module}/modules/agentcore-governance/cedar_policies/pii-protection.cedar"
+  # rate_limiting = "${path.module}/modules/agentcore-governance/cedar_policies/rate-limiting.cedar"
+}
+
+# Governance - Evaluations
+enable_evaluations     = false
+evaluation_type        = "TOOL_CALL"
+evaluator_model_id     = "anthropic.claude-sonnet-4-5"
+evaluation_prompt      = "Evaluate the agent's response for accuracy and relevance."
+evaluation_criteria = {
+  accuracy = "Response factual correctness"
+  relevance = "Response relevance to query"
+  clarity = "Response clarity and completeness"
+}
