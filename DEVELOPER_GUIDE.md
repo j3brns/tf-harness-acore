@@ -16,7 +16,7 @@ This guide will get you from zero to deploying agents in under 30 minutes.
 ### Optional
 - Docker (for local testing)
 - Go 1.20+ (for Terratest)
-- pre-commit (`pip install pre-commit`)
+- pre-commit (`uv tool install pre-commit` recommended on Windows)
 - TFLint
 - Checkov
 
@@ -28,7 +28,7 @@ git clone <repo-url>
 cd terraform
 
 # 2. Install pre-commit hooks (optional but recommended)
-pip install pre-commit
+uv tool install pre-commit
 pre-commit install
 
 # 3. Validate everything works
@@ -92,6 +92,11 @@ tflint --recursive
 ```
 
 **Key Point**: You can validate everything locally without an AWS account!
+
+### Windows Notes (pre-commit + Terraform hooks)
+Terraform pre-commit hooks run via bash. On Windows:
+- For full checks, run `pre-commit` from **Git Bash or WSL**.
+- For a Windows-native minimal check, use `validate_windows.bat` (runs `terraform fmt` + `pre-commit` with Terraform hooks skipped).
 
 ## Project Structure
 

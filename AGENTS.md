@@ -195,6 +195,16 @@ tflint --recursive
 pre-commit run --all-files
 ```
 
+### Windows Notes (Pre-commit + Terraform Hooks)
+- Terraform-related pre-commit hooks require **bash**. On Windows, run `pre-commit` from **Git Bash or WSL** for full checks.
+- For a Windows-native minimal check, use `validate_windows.bat` (runs `terraform fmt` + `pre-commit` with Terraform hooks skipped).
+
+### YAML Rule for Pre-commit Entries
+- If a `pre-commit` hook `entry:` contains `:` or complex shell, use a block scalar (`>-`) to avoid YAML parse errors.
+
+### Binary Hygiene
+- Do not commit tool binaries. Keep `.tools/` ignored and download tooling via scripts when needed.
+
 ---
 
 ## KEY DECISIONS (ADRs)
