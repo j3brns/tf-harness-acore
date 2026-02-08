@@ -50,9 +50,13 @@ terraform/
 │   └── runbooks/               # Operational procedures
 ├── main.tf                     # Root module
 ├── variables.tf                # Input variables
-├── CLAUDE.md                   # AI agent development rules
+├── AGENTS.md                   # Universal AI agent codex (hardlinked)
+├── CLAUDE.md                   # → AGENTS.md (hardlink)
+├── GEMINI.md                   # → AGENTS.md (hardlink)
 └── DEVELOPER_GUIDE.md          # Team onboarding
 ```
+
+**Note**: `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` are hardlinked to the same file. They contain universal development rules and principles that apply to all AI coding agents (Claude, Gemini, etc.). Editing any one file updates all three.
 
 ## Prerequisites
 
@@ -374,11 +378,13 @@ Varies by usage and region.
 ## Documentation
 
 - **[DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md)** - Team onboarding and common tasks
-- **[CLAUDE.md](./CLAUDE.md)** - AI agent development rules and patterns
+- **[AGENTS.md](./AGENTS.md)** / **[CLAUDE.md](./CLAUDE.md)** / **[GEMINI.md](./GEMINI.md)** - Universal AI agent development rules (hardlinked files - same content)
 - **[docs/architecture.md](./docs/architecture.md)** - System design and data flows
 - **[docs/adr/](./docs/adr/)** - Architecture Decision Records
 - **[docs/runbooks/](./docs/runbooks/)** - Operational procedures
 - **[docs/WIF_SETUP.md](./docs/WIF_SETUP.md)** - GitLab CI/CD with Web Identity Federation
+
+**Note on Agent Files**: `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` are hardlinked (same file, different names). They serve as a Universal Codex containing development rules, security requirements, and architectural patterns that apply to all AI coding agents. Claude Code auto-loads `CLAUDE.md`, while other AI assistants may reference `AGENTS.md` or `GEMINI.md`.
 
 ## Troubleshooting
 
