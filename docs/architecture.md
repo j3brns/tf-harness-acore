@@ -17,34 +17,35 @@ This Terraform implementation provisions AWS Bedrock AgentCore infrastructure fo
 ## Project Structure
 
 ```
-terraform/
-├── modules/
-│   ├── agentcore-foundation/   # Gateway, Identity, Observability
-│   ├── agentcore-tools/        # Code Interpreter, Browser
-│   ├── agentcore-runtime/      # Runtime, Memory, Packaging
-│   └── agentcore-governance/   # Policies, Evaluations
+repo-root/
+├── terraform/
+│   ├── modules/
+│   │   ├── agentcore-foundation/   # Gateway, Identity, Observability
+│   │   ├── agentcore-tools/        # Code Interpreter, Browser
+│   │   ├── agentcore-runtime/      # Runtime, Memory, Packaging
+│   │   └── agentcore-governance/   # Policies, Evaluations
+│   ├── tests/
+│   │   ├── validation/             # Terraform validation scripts
+│   │   └── security/               # Security scanning scripts
+│   ├── scripts/                    # Helper utilities
+│   ├── main.tf                     # Module composition
+│   ├── variables.tf                # Root variables
+│   ├── outputs.tf                  # Root outputs
+│   └── versions.tf                 # Provider configuration
 ├── examples/
-│   ├── 1-hello-world/          # Basic S3 explorer agent
-│   ├── 2-gateway-tool/         # MCP gateway with Titanic analysis
-│   ├── 3-deepresearch/         # Full Strands DeepAgents implementation
-│   ├── 4-research/             # Simplified research agent
-│   ├── 5-integrated/           # Module composition (RECOMMENDED)
-│   └── mcp-servers/            # Lambda MCP servers + local dev
+│   ├── 1-hello-world/              # Basic S3 explorer agent
+│   ├── 2-gateway-tool/             # MCP gateway with Titanic analysis
+│   ├── 3-deepresearch/             # Full Strands DeepAgents implementation
+│   ├── 4-research/                 # Simplified research agent
+│   ├── 5-integrated/               # Module composition (RECOMMENDED)
+│   └── mcp-servers/                # Lambda MCP servers + local dev
 ├── docs/
-│   ├── adr/                    # Architecture Decision Records
-│   ├── runbooks/               # Operational runbooks
-│   └── architecture.md         # This file
-├── tests/
-│   ├── validation/             # Terraform validation scripts
-│   └── security/               # Security scanning scripts
-├── scripts/                    # Helper utilities
-├── main.tf                     # Module composition
-├── variables.tf                # Root variables
-├── outputs.tf                  # Root outputs
-├── versions.tf                 # Provider configuration
-├── CLAUDE.md                   # AI development rules
-├── DEVELOPER_GUIDE.md          # Team onboarding
-└── README.md                   # User documentation
+│   ├── adr/                        # Architecture Decision Records
+│   ├── runbooks/                   # Operational runbooks
+│   └── architecture.md             # This file
+├── CLAUDE.md                       # AI development rules
+├── DEVELOPER_GUIDE.md              # Team onboarding
+└── README.md                       # User documentation
 ```
 
 ## High-Level Architecture

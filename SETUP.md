@@ -70,10 +70,10 @@ terraform init
 
 ```bash
 # For research agent
-cp examples/research-agent.tfvars terraform.tfvars
+cp ../examples/research-agent.tfvars terraform.tfvars
 
 # For support agent
-cp examples/support-agent.tfvars terraform.tfvars
+cp ../examples/support-agent.tfvars terraform.tfvars
 
 # OR use template
 cp terraform.tfvars.example terraform.tfvars
@@ -520,7 +520,7 @@ aws iam list-attached-user-policies --user-name <your-username>
 
 - **Full Documentation**: `README.md`
 - **Quick Reference**: `QUICK_REFERENCE.md`
-- **Implementation Details**: `IMPLEMENTATION_SUMMARY.md`
+- **Implementation Details**: `docs/archive/IMPLEMENTATION_SUMMARY.md` (archived)
 
 ## Success Checklist
 

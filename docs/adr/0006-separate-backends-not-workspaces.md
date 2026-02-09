@@ -93,6 +93,7 @@ terraform/
 ### Switching Environments
 ```bash
 # Switch to dev
+cd terraform
 rm -rf .terraform
 terraform init -backend-config=backend-dev.tf
 
@@ -141,4 +142,4 @@ But NOT for:
 
 - [Terraform Workspaces](https://developer.hashicorp.com/terraform/language/state/workspaces)
 - [Backend Configuration](https://developer.hashicorp.com/terraform/language/settings/backends/configuration)
-- [Multi-Environment Best Practices](https://developer.hashicorp.com/terraform/tutorials/modules/organize-configuration)
+- [Multi-Environment Best Practices](https://developer.hashicorp.com/terraform/tutorials/terraform/modules/organize-configuration)

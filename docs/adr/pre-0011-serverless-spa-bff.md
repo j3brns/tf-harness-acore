@@ -50,4 +50,4 @@ graph LR
 
 ## 5. Next Steps
 *   Formalize in **ADR 0011**.
-*   Implement `modules/spa-bff` Terraform module.
+*   Implement `terraform/modules/spa-bff` Terraform module.

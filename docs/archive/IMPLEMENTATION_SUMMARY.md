@@ -316,58 +316,59 @@ browser_network_mode = "VPC"
 ## File Structure
 
 ```
-terraform/
-├── main.tf                          # Root orchestration
-├── variables.tf                     # 50+ input variables
-├── outputs.tf                       # 30+ output values
-├── versions.tf                      # Provider configuration
-├── terraform.tfvars.example         # Example variables
-├── Makefile                         # Development commands
-├── README.md                        # Comprehensive guide
-├── IMPLEMENTATION_SUMMARY.md        # This file
+repo-root/
+├── terraform/
+│   ├── main.tf                          # Root orchestration
+│   ├── variables.tf                     # 50+ input variables
+│   ├── outputs.tf                       # 30+ output values
+│   ├── versions.tf                      # Provider configuration
+│   ├── terraform.tfvars.example         # Example variables
+│   │
+│   ├── modules/
+│   │   ├── agentcore-foundation/
+│   │   │   ├── gateway.tf              # MCP gateway + targets
+│   │   │   ├── identity.tf             # Workload identity
+│   │   │   ├── observability.tf        # CloudWatch + X-Ray
+│   │   │   ├── iam.tf                  # Roles and policies
+│   │   │   ├── data.tf                 # Data sources
+│   │   │   ├── variables.tf            # Module variables
+│   │   │   └── outputs.tf              # Module outputs
+│   │   │
+│   │   ├── agentcore-tools/
+│   │   │   ├── code_interpreter.tf     # Python sandbox
+│   │   │   ├── browser.tf              # Web browser
+│   │   │   ├── iam.tf                  # Roles and policies
+│   │   │   ├── data.tf                 # Data sources
+│   │   │   ├── variables.tf            # Module variables
+│   │   │   └── outputs.tf              # Module outputs
+│   │   │
+│   │   ├── agentcore-runtime/
+│   │   │   ├── runtime.tf              # Agent runtime (CLI)
+│   │   │   ├── memory.tf               # Agent memory (CLI)
+│   │   │   ├── packaging.tf            # Two-stage build
+│   │   │   ├── s3.tf                   # Deployment bucket
+│   │   │   ├── iam.tf                  # Roles and policies
+│   │   │   ├── data.tf                 # Data sources
+│   │   │   ├── variables.tf            # Module variables
+│   │   │   └── outputs.tf              # Module outputs
+│   │   │
+│   │   └── agentcore-governance/
+│   │       ├── policy.tf               # Policy engine (CLI)
+│   │       ├── evaluations.tf          # Evaluators (CLI)
+│   │       ├── iam.tf                  # Roles and policies
+│   │       ├── data.tf                 # Data sources
+│   │       ├── variables.tf            # Module variables
+│   │       ├── outputs.tf              # Module outputs
+│   │       └── cedar_policies/
+│   │           ├── pii-protection.cedar
+│   │           └── rate-limiting.cedar
 │
-├── modules/
-│   ├── agentcore-foundation/
-│   │   ├── gateway.tf              # MCP gateway + targets
-│   │   ├── identity.tf             # Workload identity
-│   │   ├── observability.tf        # CloudWatch + X-Ray
-│   │   ├── iam.tf                  # Roles and policies
-│   │   ├── data.tf                 # Data sources
-│   │   ├── variables.tf            # Module variables
-│   │   └── outputs.tf              # Module outputs
-│   │
-│   ├── agentcore-tools/
-│   │   ├── code_interpreter.tf     # Python sandbox
-│   │   ├── browser.tf              # Web browser
-│   │   ├── iam.tf                  # Roles and policies
-│   │   ├── data.tf                 # Data sources
-│   │   ├── variables.tf            # Module variables
-│   │   └── outputs.tf              # Module outputs
-│   │
-│   ├── agentcore-runtime/
-│   │   ├── runtime.tf              # Agent runtime (CLI)
-│   │   ├── memory.tf               # Agent memory (CLI)
-│   │   ├── packaging.tf            # Two-stage build
-│   │   ├── s3.tf                   # Deployment bucket
-│   │   ├── iam.tf                  # Roles and policies
-│   │   ├── data.tf                 # Data sources
-│   │   ├── variables.tf            # Module variables
-│   │   └── outputs.tf              # Module outputs
-│   │
-│   └── agentcore-governance/
-│       ├── policy.tf               # Policy engine (CLI)
-│       ├── evaluations.tf          # Evaluators (CLI)
-│       ├── iam.tf                  # Roles and policies
-│       ├── data.tf                 # Data sources
-│       ├── variables.tf            # Module variables
-│       ├── outputs.tf              # Module outputs
-│       └── cedar_policies/
-│           ├── pii-protection.cedar
-│           └── rate-limiting.cedar
-│
-└── examples/
-    ├── research-agent.tfvars       # Research agent example
-    └── support-agent.tfvars        # Support agent example
+├── examples/
+│   ├── research-agent.tfvars           # Research agent example
+│   └── support-agent.tfvars            # Support agent example
+├── Makefile                             # Development commands
+├── README.md                            # Comprehensive guide
+└── IMPLEMENTATION_SUMMARY.md            # This file
 ```
 
 ## Validation Against Plan

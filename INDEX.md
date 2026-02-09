@@ -17,15 +17,31 @@ A comprehensive, production-ready Terraform implementation of AWS Bedrock AgentC
 | `README.md` | Comprehensive architecture guide | Everyone |
 | `QUICK_REFERENCE.md` | Quick command reference | Operators |
 | `SETUP.md` | Step-by-step setup guide | New users |
-| `IMPLEMENTATION_SUMMARY.md` | What was built and why | Architects |
+| `docs/archive/IMPLEMENTATION_SUMMARY.md` | What was built and why (archived) | Architects |
 | `INDEX.md` | This file - complete file listing | Reference |
+
+### Archived Documentation
+
+| File | Purpose |
+|------|---------|
+| `docs/archive/IMPLEMENTATION_PLAN.md` | Historical test & validation plan |
+| `docs/archive/README.old.md` | Legacy README snapshot |
+| `docs/archive/README_IMPROVEMENT_PLAN.md` | Historical README improvement notes |
+| `docs/archive/README_SUGGESTIONS_V2.md` | Historical README suggestions |
+| `docs/archive/DELIVERY_SUMMARY.txt` | Historical delivery summary |
+
+### Audit Reports
+
+| File | Purpose |
+|------|---------|
+| `docs/audits/SECURITY_AUDIT_2026-02-08.md` | Security audit findings (2026-02-08) |
 
 ### How to Use Documentation
 
 1. **First time?** → Start with `SETUP.md`
 2. **Need quick answers?** → Use `QUICK_REFERENCE.md`
 3. **Want to understand architecture?** → Read `README.md`
-4. **Need implementation details?** → Check `IMPLEMENTATION_SUMMARY.md`
+4. **Need implementation details?** → Check `docs/archive/IMPLEMENTATION_SUMMARY.md`
 5. **Looking for specific file?** → Use this `INDEX.md`
 
 ---
@@ -44,20 +60,20 @@ terraform/
 ```
 
 **Key Points:**
-- `versions.tf`: Defines Terraform and provider versions
-- `main.tf`: Instantiates 4 modules with dependencies
-- `variables.tf`: All configurable options for users
-- `outputs.tf`: What gets exposed after deployment
+- `terraform/versions.tf`: Defines Terraform and provider versions
+- `terraform/main.tf`: Instantiates 4 modules with dependencies
+- `terraform/variables.tf`: All configurable options for users
+- `terraform/outputs.tf`: What gets exposed after deployment
 
 ### Development Tools
 
 ```
-terraform/
+repo-root/
 ├── Makefile                 # Make targets for common operations
 ├── README.md                # Full documentation (500+ lines)
 ├── QUICK_REFERENCE.md       # Command cheat sheet
 ├── SETUP.md                 # Step-by-step setup guide
-└── IMPLEMENTATION_SUMMARY.md # Technical details
+└── docs/archive/IMPLEMENTATION_SUMMARY.md # Technical details (archived)
 ```
 
 ---
@@ -66,7 +82,7 @@ terraform/
 
 ### 1. agentcore-foundation (Terraform-Native) ✅
 
-**Location**: `modules/agentcore-foundation/`
+**Location**: `terraform/modules/agentcore-foundation/`
 
 **Files:**
 - `variables.tf` - Module configuration (20+ variables)
@@ -95,7 +111,7 @@ terraform/
 
 ### 2. agentcore-tools (Terraform-Native) ✅
 
-**Location**: `modules/agentcore-tools/`
+**Location**: `terraform/modules/agentcore-tools/`
 
 **Files:**
 - `variables.tf` - Module configuration (15+ variables)
@@ -123,7 +139,7 @@ terraform/
 
 ### 3. agentcore-runtime (CLI-Based) ✅
 
-**Location**: `modules/agentcore-runtime/`
+**Location**: `terraform/modules/agentcore-runtime/`
 
 **Files:**
 - `variables.tf` - Module configuration (20+ variables)
@@ -157,7 +173,7 @@ terraform/
 
 ### 4. agentcore-governance (CLI-Based) ✅
 
-**Location**: `modules/agentcore-governance/`
+**Location**: `terraform/modules/agentcore-governance/`
 
 **Files:**
 - `variables.tf` - Module configuration (15+ variables)
@@ -210,7 +226,7 @@ Features:
 
 Use:
 ```bash
-terraform apply -var-file="examples/research-agent.tfvars"
+terraform apply -var-file="../examples/research-agent.tfvars"
 ```
 
 ### support-agent.tfvars
@@ -225,7 +241,7 @@ Features:
 
 Use:
 ```bash
-terraform apply -var-file="examples/support-agent.tfvars"
+terraform apply -var-file="../examples/support-agent.tfvars"
 ```
 
 ---
@@ -235,26 +251,26 @@ terraform apply -var-file="examples/support-agent.tfvars"
 ### By Type
 
 #### Terraform Configuration Files (.tf)
-- `versions.tf` - Provider setup
-- `main.tf` - Module orchestration
-- `variables.tf` - Input variables
-- `outputs.tf` - Output values
-- `modules/*/*.tf` - Module-specific resources
+- `terraform/versions.tf` - Provider setup
+- `terraform/main.tf` - Module orchestration
+- `terraform/variables.tf` - Input variables
+- `terraform/outputs.tf` - Output values
+- `terraform/modules/*/*.tf` - Module-specific resources
 
 #### Terraform Variables Files (.tfvars)
-- `terraform.tfvars.example` - Template for custom config
+- `terraform/terraform.tfvars.example` - Template for custom config
 - `examples/research-agent.tfvars` - Complete example
 - `examples/support-agent.tfvars` - Complete example
 
 #### Cedar Policy Files (.cedar)
-- `modules/agentcore-governance/cedar_policies/pii-protection.cedar`
-- `modules/agentcore-governance/cedar_policies/rate-limiting.cedar`
+- `terraform/modules/agentcore-governance/cedar_policies/pii-protection.cedar`
+- `terraform/modules/agentcore-governance/cedar_policies/rate-limiting.cedar`
 
 #### Documentation Files (.md)
 - `README.md` - Full documentation
 - `QUICK_REFERENCE.md` - Command reference
 - `SETUP.md` - Setup guide
-- `IMPLEMENTATION_SUMMARY.md` - Technical details
+- `docs/archive/IMPLEMENTATION_SUMMARY.md` - Technical details (archived)
 - `INDEX.md` - This file
 
 #### Make Files
@@ -296,22 +312,22 @@ terraform apply -var-file="examples/support-agent.tfvars"
 ### I need to...
 
 **Configure the agent**
-→ Edit `terraform.tfvars` (or copy from `terraform.tfvars.example`)
+→ Edit `terraform/terraform.tfvars` (or copy from `terraform/terraform.tfvars.example`)
 
 **Enable/disable features**
-→ Edit `variables.tf` in root or `terraform.tfvars`
+→ Edit `terraform/variables.tf` or `terraform/terraform.tfvars`
 
 **Add MCP tools**
-→ Modify `mcp_targets` in `terraform.tfvars` and update `modules/agentcore-foundation/variables.tf`
+→ Modify `mcp_targets` in `terraform/terraform.tfvars` and update `terraform/modules/agentcore-foundation/variables.tf`
 
 **Change network settings**
-→ Edit `code_interpreter_network_mode` in `terraform.tfvars`
+→ Edit `code_interpreter_network_mode` in `terraform/terraform.tfvars`
 
 **Create policies**
-→ Add `.cedar` files to `modules/agentcore-governance/cedar_policies/`
+→ Add `.cedar` files to `terraform/modules/agentcore-governance/cedar_policies/`
 
 **Monitor deployment**
-→ Check `modules/agentcore-foundation/observability.tf` and CloudWatch logs
+→ Check `terraform/modules/agentcore-foundation/observability.tf` and CloudWatch logs
 
 **Troubleshoot issues**
 → Read `SETUP.md` troubleshooting section or `README.md` advanced section
@@ -376,7 +392,7 @@ agentcore-foundation (no dependencies)
 ### Option 2: Use Example
 1. `cd terraform`
 2. `terraform init`
-3. `terraform apply -var-file="examples/research-agent.tfvars"`
+3. `terraform apply -var-file="../examples/research-agent.tfvars"`
 
 ### Option 3: Step-by-Step
 1. Read `SETUP.md`
@@ -401,18 +417,18 @@ agentcore-foundation (no dependencies)
 ## File Checklist
 
 ### Essential Files (Must Have)
-- [x] versions.tf
-- [x] main.tf
-- [x] variables.tf
-- [x] outputs.tf
-- [x] terraform.tfvars.example
+- [x] terraform/versions.tf
+- [x] terraform/main.tf
+- [x] terraform/variables.tf
+- [x] terraform/outputs.tf
+- [x] terraform/terraform.tfvars.example
 - [x] All module directories
 
 ### Documentation (Should Have)
 - [x] README.md
 - [x] QUICK_REFERENCE.md
 - [x] SETUP.md
-- [x] IMPLEMENTATION_SUMMARY.md
+- [x] docs/archive/IMPLEMENTATION_SUMMARY.md
 
 ### Development Files (Nice to Have)
 - [x] Makefile
@@ -428,8 +444,8 @@ agentcore-foundation (no dependencies)
 
 ### When to Update Files
 
-- **variables.tf**: When adding new configuration options
-- **main.tf**: When adding new modules
+- **terraform/variables.tf**: When adding new configuration options
+- **terraform/main.tf**: When adding new modules
 - **Module files**: When changing resource behavior
 - **Documentation**: After any significant changes
 - **Examples**: When adding new agent types
@@ -450,7 +466,7 @@ agentcore-foundation (no dependencies)
 | Step-by-step setup | `SETUP.md` |
 | Quick answers | `QUICK_REFERENCE.md` |
 | Full documentation | `README.md` |
-| Implementation details | `IMPLEMENTATION_SUMMARY.md` |
+| Implementation details | `docs/archive/IMPLEMENTATION_SUMMARY.md` (archived) |
 | File locations | `INDEX.md` (this file) |
 | Command help | `Makefile` (`make help`) |
 | Example configs | `examples/*.tfvars` |

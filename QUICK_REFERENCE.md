@@ -3,23 +3,25 @@
 ## Project Structure
 
 ```
-terraform/
-├── modules/
-│   ├── agentcore-foundation/    ← Gateway, Identity, Observability
-│   ├── agentcore-tools/         ← Code Interpreter, Browser
-│   ├── agentcore-runtime/       ← Runtime, Memory, Packaging
-│   └── agentcore-governance/    ← Policies, Evaluations
-├── examples/                    ← Configuration examples
-├── main.tf                      ← Compose modules
-├── variables.tf                 ← All configuration options
-├── outputs.tf                   ← What gets deployed
-└── README.md                    ← Detailed documentation
+repo-root/
+├── terraform/
+│   ├── modules/
+│   │   ├── agentcore-foundation/    ← Gateway, Identity, Observability
+│   │   ├── agentcore-tools/         ← Code Interpreter, Browser
+│   │   ├── agentcore-runtime/       ← Runtime, Memory, Packaging
+│   │   └── agentcore-governance/    ← Policies, Evaluations
+│   ├── main.tf                      ← Compose modules
+│   ├── variables.tf                 ← All configuration options
+│   └── outputs.tf                   ← What gets deployed
+├── examples/                        ← Configuration examples
+└── README.md                        ← Detailed documentation
 ```
 
 ## Quick Deploy
 
 ```bash
 # 1. Initialize
+cd terraform
 terraform init
 
 # 2. Configure
@@ -172,10 +174,10 @@ terraform apply \
 
 ```bash
 # Research Agent (web browsing + code)
-terraform apply -var-file="examples/research-agent.tfvars"
+terraform apply -var-file="../examples/research-agent.tfvars"
 
 # Support Agent (CRM + policies)
-terraform apply -var-file="examples/support-agent.tfvars"
+terraform apply -var-file="../examples/support-agent.tfvars"
 ```
 
 ## Output Values
@@ -264,7 +266,7 @@ aws xray batch-get-traces \
 terraform validate
 
 # Check specific module
-cd modules/agentcore-foundation
+cd terraform/modules/agentcore-foundation
 terraform validate
 ```
 
@@ -288,7 +290,7 @@ aws iam get-role --role-name <agent-name>-runtime-role
 # Review cedar_policies/*.cedar files
 
 # Check policy engine was created
-cat modules/agentcore-governance/.terraform/policy_engine_id.txt
+cat terraform/modules/agentcore-governance/.terraform/policy_engine_id.txt
 ```
 
 ### Memory Creation Failed
@@ -415,9 +417,9 @@ runtime_inline_policies = {
 ## Support & Documentation
 
 - Full docs: `README.md`
-- Implementation details: `IMPLEMENTATION_SUMMARY.md`
+- Implementation details: `docs/archive/IMPLEMENTATION_SUMMARY.md` (archived)
 - Example configs: `examples/*.tfvars`
-- Module code: `modules/*/`
+- Module code: `terraform/modules/*/`
 
 ---
 

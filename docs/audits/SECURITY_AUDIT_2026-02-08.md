@@ -25,7 +25,7 @@ All critical security issues have been remediated or were not applicable. The co
 
 **Evidence**:
 ```bash
-$ grep -n 'Resource.*=.*"\*"' modules/agentcore-foundation/iam.tf
+$ grep -n 'Resource.*=.*"\*"' terraform/modules/agentcore-foundation/iam.tf
 104:        Resource = "*"
 ```
 
@@ -55,10 +55,10 @@ Resource = "*"
 
 **Evidence**:
 ```bash
-$ grep -n "dynamic.*kms_key_arn" modules/agentcore-foundation/gateway.tf
+$ grep -n "dynamic.*kms_key_arn" terraform/modules/agentcore-foundation/gateway.tf
 (no matches)
 
-$ grep -n "kms_key_arn" modules/agentcore-foundation/gateway.tf
+$ grep -n "kms_key_arn" terraform/modules/agentcore-foundation/gateway.tf
 (no matches)
 ```
 
@@ -89,7 +89,7 @@ Success! The configuration is valid.
 
 **Evidence**:
 ```bash
-$ grep -n "|| true\|2>/dev/null" modules/agentcore-runtime/packaging.tf modules/agentcore-runtime/runtime.tf
+$ grep -n "|| true\|2>/dev/null" terraform/modules/agentcore-runtime/packaging.tf terraform/modules/agentcore-runtime/runtime.tf
 (no matches)
 ```
 
@@ -110,7 +110,7 @@ $ grep -n "|| true\|2>/dev/null" modules/agentcore-runtime/packaging.tf modules/
 
 **Evidence**:
 ```bash
-$ grep -n "head -20\|head -n 20" modules/agentcore-runtime/packaging.tf
+$ grep -n "head -20\|head -n 20" terraform/modules/agentcore-runtime/packaging.tf
 (no matches)
 ```
 
@@ -195,7 +195,7 @@ All critical issues are resolved. No immediate action needed.
 
 3. **Review SEC-006 Mystery**:
    - Investigate git history to see if dynamic block was removed
-   - Update IMPLEMENTATION_PLAN.md to mark as "Previously Fixed" or "False Alarm"
+   - Update docs/archive/IMPLEMENTATION_PLAN.md to mark as "Previously Fixed" or "False Alarm"
 
 ---
 
@@ -213,7 +213,7 @@ All critical security issues (SEC-001 through SEC-006) have been either:
 
 ## Next Steps
 
-1. Update IMPLEMENTATION_PLAN.md with security audit results
+1. Update docs/archive/IMPLEMENTATION_PLAN.md with security audit results
 2. Mark Phase 0 security fixes as ✅ COMPLETE
 3. Proceed with backend setup verification (Phase 3)
 4. Consider adding automated security scanning to CI/CD

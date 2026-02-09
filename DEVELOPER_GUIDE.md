@@ -8,7 +8,7 @@ This guide will get you from zero to deploying agents in under 30 minutes.
 
 ### Required
 - Git installed
-- Terraform >= 1.5.0 (use `.terraform-version` with tfenv)
+- Terraform >= 1.5.0 (use `terraform/.terraform-version` with tfenv)
 - AWS CLI configured
 - Python 3.12+
 - Text editor (VS Code recommended)
@@ -25,6 +25,7 @@ This guide will get you from zero to deploying agents in under 30 minutes.
 ```bash
 # 1. Clone repository
 git clone <repo-url>
+cd <repo-name>
 cd terraform
 
 # 2. Install pre-commit hooks (optional but recommended)
@@ -37,10 +38,10 @@ terraform validate
 terraform fmt -check
 
 # 4. Run security scan
-checkov -d . --framework terraform --compact
+checkov -d . --framework terraform --compact --config-file .checkov.yaml
 
 # 5. Test with example
-terraform plan -var-file=examples/1-hello-world/terraform.tfvars
+terraform plan -var-file=../examples/1-hello-world/terraform.tfvars
 ```
 
 If all commands succeed, you're ready to develop!
@@ -57,12 +58,13 @@ git checkout -b feature/add-new-capability
 # Edit files...
 
 # 3. Validate locally (NO AWS needed)
+cd terraform
 terraform fmt -recursive
 terraform validate
 terraform plan -backend=false
 
 # 4. Security scan
-checkov -d . --framework terraform --compact
+checkov -d . --framework terraform --compact --config-file .checkov.yaml
 
 # 5. Commit (pre-commit hooks run automatically)
 git add .
@@ -76,16 +78,17 @@ git push origin feature/add-new-capability
 
 ```bash
 # Format check
+cd terraform
 terraform fmt -check -recursive
 
 # Syntax validation
 terraform validate
 
 # Generate plan (dry-run)
-terraform plan -backend=false -var-file=examples/1-hello-world/terraform.tfvars
+terraform plan -backend=false -var-file=../examples/1-hello-world/terraform.tfvars
 
 # Security scan
-checkov -d . --framework terraform --compact
+checkov -d . --framework terraform --compact --config-file .checkov.yaml
 
 # Lint
 tflint --recursive
@@ -101,12 +104,26 @@ Terraform pre-commit hooks run via bash. On Windows:
 ## Project Structure
 
 ```
-terraform/
-+-- modules/              # Core modules (require approval for changes)
-|   +-- agentcore-foundation/
-|   +-- agentcore-tools/
-|   +-- agentcore-runtime/
-|   +-- agentcore-governance/
+repo-root/
++-- terraform/            # Terraform root module + tooling
+|   +-- modules/           # Core modules (require approval for changes)
+|   |   +-- agentcore-foundation/
+|   |   +-- agentcore-tools/
+|   |   +-- agentcore-runtime/
+|   |   +-- agentcore-governance/
+|   |
+|   +-- scripts/           # Helper scripts
+|   |   +-- validate_examples.sh
+|   |
+|   +-- tests/             # Test suite
+|   |   +-- validation/
+|   |   +-- security/
+|   |
+|   +-- main.tf            # Module composition
+|   +-- variables.tf       # Input variables
+|   +-- outputs.tf         # Output values
+|   +-- versions.tf        # Provider versions
+|   +-- .terraform-version # Pinned Terraform version
 |
 +-- examples/             # Example agents
 |   +-- 1-hello-world/    # Basic S3 explorer agent
@@ -119,18 +136,6 @@ terraform/
 |   +-- architecture.md   # System architecture
 |   +-- runbooks/         # Operational runbooks
 |
-+-- scripts/              # Helper scripts
-|   +-- validate_examples.sh
-|
-+-- tests/                # Test suite
-|   +-- validation/
-|   +-- security/
-|
-+-- main.tf               # Module composition
-+-- variables.tf          # Input variables
-+-- outputs.tf            # Output values
-+-- versions.tf           # Provider versions
-+-- .terraform-version    # Pinned Terraform version
 +-- CLAUDE.md             # AI agent development rules
 +-- DEVELOPER_GUIDE.md    # This file
 +-- README.md             # User documentation
@@ -166,13 +171,14 @@ environment         = "dev"
 
 enable_gateway      = true
 enable_runtime      = true
-runtime_source_path = "./examples/5-my-agent/agent-code"
+runtime_source_path = "../examples/5-my-agent/agent-code"
 
 enable_observability = true
 EOF
 
 # 4. Test it
-terraform plan -var-file=examples/5-my-agent/terraform.tfvars
+cd terraform
+terraform plan -var-file=../examples/5-my-agent/terraform.tfvars
 ```
 
 ### Task 2: Add a New Variable
@@ -191,7 +197,7 @@ variable "my_setting" {
 }
 
 # 2. Use in module resources
-# modules/agentcore-foundation/gateway.tf
+# terraform/modules/agentcore-foundation/gateway.tf
 resource "null_resource" "gateway" {
   triggers = {
     name = var.my_setting
@@ -199,14 +205,14 @@ resource "null_resource" "gateway" {
   # See Rule 3.1 in AGENTS.md for the full pattern
 }
 
-# 3. Add to root variables.tf
+# 3. Add to root variables.tf (terraform/variables.tf)
 variable "my_setting" {
   description = "My new setting"
   type        = string
   default     = "default-value"
 }
 
-# 4. Pass to module in main.tf
+# 4. Pass to module in main.tf (terraform/main.tf)
 module "agentcore_foundation" {
   source = "./modules/agentcore-foundation"
   my_setting = var.my_setting

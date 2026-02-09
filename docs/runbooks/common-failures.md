@@ -25,7 +25,7 @@ aws lambda update-function-configuration \
   --timeout 60
 
 # 3. Or update in Terraform
-# terraform/examples/mcp-servers/terraform/main.tf
+# examples/mcp-servers/terraform/main.tf
 # variable "lambda_timeout" default = 60
 ```
 
@@ -45,7 +45,7 @@ aws iam list-role-policies --role-name <ROLE_NAME>
 aws iam list-attached-role-policies --role-name <ROLE_NAME>
 
 # 3. Add missing policy via Terraform
-# Update modules/agentcore-foundation/iam.tf
+# Update terraform/modules/agentcore-foundation/iam.tf
 ```
 
 ---

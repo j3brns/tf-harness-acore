@@ -75,35 +75,39 @@ flowchart LR
 ## Project Structure
 
 ```
-terraform/
-├── modules/
-│   ├── agentcore-foundation/   # Gateway, Identity, Observability
-│   ├── agentcore-tools/        # Code Interpreter, Browser
-│   ├── agentcore-runtime/      # Runtime, Memory, Packaging
-│   └── agentcore-governance/   # Policy Engine, Evaluations
+repo-root/
+├── terraform/
+│   ├── modules/
+│   │   ├── agentcore-foundation/   # Gateway, Identity, Observability
+│   │   ├── agentcore-tools/        # Code Interpreter, Browser
+│   │   ├── agentcore-runtime/      # Runtime, Memory, Packaging
+│   │   └── agentcore-governance/   # Policy Engine, Evaluations
+│   ├── scripts/                    # Validation helpers
+│   ├── tests/                      # Terraform-focused tests
+│   ├── main.tf                     # Root module
+│   ├── variables.tf                # Input variables
+│   └── terraform.tfvars.example    # Example config
 ├── examples/
-│   ├── 1-hello-world/          # Basic S3 explorer
-│   ├── 2-gateway-tool/         # MCP gateway with Lambda
-│   ├── 3-deepresearch/         # Full research agent
-│   ├── 5-integrated/           # Recommended module composition
-│   └── mcp-servers/            # Lambda-based MCP tools
+│   ├── 1-hello-world/              # Basic S3 explorer
+│   ├── 2-gateway-tool/             # MCP gateway with Lambda
+│   ├── 3-deepresearch/             # Full research agent
+│   ├── 5-integrated/               # Recommended module composition
+│   └── mcp-servers/                # Lambda-based MCP tools
 ├── docs/
-│   ├── adr/                    # Architecture Decision Records
-│   ├── architecture.md         # System design
-│   └── runbooks/               # Operational procedures
-├── main.tf                     # Root module
-├── variables.tf                # Input variables
-├── AGENTS.md                   # Universal AI agent codex (hardlinked)
-├── CLAUDE.md                   # → AGENTS.md (hardlink)
-├── GEMINI.md                   # → AGENTS.md (hardlink)
-└── DEVELOPER_GUIDE.md          # Team onboarding
+│   ├── adr/                        # Architecture Decision Records
+│   ├── architecture.md             # System design
+│   └── runbooks/                   # Operational procedures
+├── AGENTS.md                       # Universal AI agent codex (hardlinked)
+├── CLAUDE.md                       # → AGENTS.md (hardlink)
+├── GEMINI.md                       # → AGENTS.md (hardlink)
+└── DEVELOPER_GUIDE.md              # Team onboarding
 ```
 
 **Note**: `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` are hardlinked to the same file. They contain universal development rules and principles that apply to all AI coding agents (Claude, Gemini, etc.). Editing any one file updates all three.
 
 ## Prerequisites
 
-- Terraform >= 1.10.0 (for native S3 state locking)
+- Terraform 1.14.4 (see `terraform/.terraform-version`)
 - AWS CLI >= 2.0
 - Python 3.12+
 - AWS account with Bedrock AgentCore permissions
@@ -420,7 +424,7 @@ Varies by usage and region.
 
 ## Documentation
 
-- **[IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md)** - Comprehensive test & validation plan with phases
+- **[docs/archive/IMPLEMENTATION_PLAN.md](./docs/archive/IMPLEMENTATION_PLAN.md)** - Historical test & validation plan (archived)
 - **[DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md)** - Team onboarding and common tasks
 - **[AGENTS.md](./AGENTS.md)** / **[CLAUDE.md](./CLAUDE.md)** / **[GEMINI.md](./GEMINI.md)** - Universal AI agent development rules (hardlinked files - same content)
 - **[docs/architecture.md](./docs/architecture.md)** - System design and data flows
