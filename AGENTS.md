@@ -171,6 +171,18 @@ AI Agents MUST create comprehensive GitHub issues. Every issue MUST include:
 
 ---
 
+## RULE 13: Repo Layout & Reorg Guardrails
+
+**Layout**: Terraform core is in `terraform/`. Examples live in `examples/`. Docs live at repo root and `docs/`.
+
+**Rules**:
+- Do not move docs into `terraform/`.
+- Keep examples adjacent at repo root.
+- If you move Terraform files, update references in `README.md`, `DEVELOPER_GUIDE.md`, `Makefile`, `validate_windows.bat`, `scripts/`, and `tests/`.
+- Run the preflight tests in `docs/runbooks/repo-restructure.md` before and after any move.
+
+---
+
 ## DECISION FRAMEWORK
 
 | Question | Answer |
@@ -187,11 +199,11 @@ AI Agents MUST create comprehensive GitHub issues. Every issue MUST include:
 ## CHECKLIST: Before Every Commit
 
 ```bash
-terraform fmt -check -recursive
-terraform validate
-terraform plan -backend=false -var-file=examples/research-agent.tfvars
-checkov -d . --framework terraform --compact
-tflint --recursive
+terraform -chdir=terraform fmt -check -recursive
+terraform -chdir=terraform validate
+terraform -chdir=terraform plan -backend=false -var-file=../examples/research-agent.tfvars
+checkov -d terraform --framework terraform --compact --config-file terraform/.checkov.yaml
+tflint --chdir=terraform --recursive --config terraform/.tflint.hcl
 pre-commit run --all-files
 ```
 
