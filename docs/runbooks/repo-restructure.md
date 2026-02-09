@@ -89,3 +89,14 @@ repo-root/
 - Examples remain at repo root. Do not move them into `terraform/`.
 - Docs remain at repo root. Do not move docs under `terraform/`.
 - Always rerun preflight tests after each checkpoint.
+
+## Post-Move Validation Notes
+- Date: 2026-02-09
+- Status: Not run (not requested)
+- Expected commands:
+  - `terraform -chdir=terraform fmt -check -recursive`
+  - `terraform -chdir=terraform validate`
+  - `terraform/scripts/validate_examples.sh`
+  - `terraform/tests/security/tflint_scan.sh`
+  - `terraform/tests/security/checkov_scan.sh`
+  - `uv tool run pre-commit run --all-files`
