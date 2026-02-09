@@ -1,19 +1,19 @@
 locals {
   code_interpreter_subnet_arns = var.code_interpreter_vpc_config != null ? [
     for subnet_id in var.code_interpreter_vpc_config.subnet_ids :
-    "arn:aws:ec2:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:subnet/${subnet_id}"
+    "arn:aws:ec2:${var.region}:${data.aws_caller_identity.current.account_id}:subnet/${subnet_id}"
   ] : []
   code_interpreter_security_group_arns = var.code_interpreter_vpc_config != null ? [
     for sg_id in var.code_interpreter_vpc_config.security_group_ids :
-    "arn:aws:ec2:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:security-group/${sg_id}"
+    "arn:aws:ec2:${var.region}:${data.aws_caller_identity.current.account_id}:security-group/${sg_id}"
   ] : []
   browser_subnet_arns = var.browser_vpc_config != null ? [
     for subnet_id in var.browser_vpc_config.subnet_ids :
-    "arn:aws:ec2:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:subnet/${subnet_id}"
+    "arn:aws:ec2:${var.region}:${data.aws_caller_identity.current.account_id}:subnet/${subnet_id}"
   ] : []
   browser_security_group_arns = var.browser_vpc_config != null ? [
     for sg_id in var.browser_vpc_config.security_group_ids :
-    "arn:aws:ec2:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:security-group/${sg_id}"
+    "arn:aws:ec2:${var.region}:${data.aws_caller_identity.current.account_id}:security-group/${sg_id}"
   ] : []
 }
 
@@ -29,6 +29,12 @@ resource "aws_iam_role" "code_interpreter" {
       Effect = "Allow"
       Principal = {
         Service = "bedrock-agentcore.amazonaws.com"
+      }
+      # Rule 7.1: ABAC Scoping
+      Condition = {
+        StringEquals = {
+          "aws:PrincipalTag/Project" = var.tags["Project"]
+        }
       }
     }]
   })
@@ -53,7 +59,7 @@ resource "aws_iam_role_policy" "code_interpreter" {
             "logs:CreateLogStream",
             "logs:PutLogEvents"
           ]
-          Resource = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/code-interpreter/*"
+          Resource = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/code-interpreter/*"
         }
       ],
       # AWS-REQUIRED: EC2 network interface APIs do not support resource-level scoping.
@@ -103,6 +109,12 @@ resource "aws_iam_role" "browser" {
       Principal = {
         Service = "bedrock-agentcore.amazonaws.com"
       }
+      # Rule 7.1: ABAC Scoping
+      Condition = {
+        StringEquals = {
+          "aws:PrincipalTag/Project" = var.tags["Project"]
+        }
+      }
     }]
   })
 
@@ -126,7 +138,7 @@ resource "aws_iam_role_policy" "browser" {
             "logs:CreateLogStream",
             "logs:PutLogEvents"
           ]
-          Resource = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/browser/*"
+          Resource = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/browser/*"
         }
       ],
       var.enable_browser_recording && var.browser_recording_s3_bucket != "" ? [
