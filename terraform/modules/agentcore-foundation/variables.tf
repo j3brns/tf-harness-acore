@@ -32,9 +32,24 @@ variable "gateway_name" {
   default     = ""
 }
 
+variable "gateway_role_arn" {
+  description = "IAM role ARN for the gateway (if not provided, one will be created)"
+  type        = string
+  default     = ""
+}
+
 # Encryption configuration
-# Note: Customer-managed KMS has been removed in favor of AWS-managed encryption (SSE-S3/AES256)
-# See ADR docs/adr/0008-aws-managed-encryption.md for details
+variable "enable_kms" {
+  description = "Enable KMS encryption for logs and artifacts (Note: Managed encryption preferred)"
+  type        = bool
+  default     = false
+}
+
+variable "kms_key_arn" {
+  description = "KMS key ARN for encryption (required if enable_kms is true)"
+  type        = string
+  default     = ""
+}
 
 variable "mcp_targets" {
   description = "MCP targets configuration. Use alias ARNs (not function ARNs) for version pinning and rollback capability."
@@ -119,7 +134,3 @@ variable "xray_sampling_rate" {
     error_message = "X-Ray sampling rate must be between 0.0 and 1.0."
   }
 }
-
-# Encryption configuration
-# Note: Customer-managed KMS has been removed in favor of AWS-managed encryption (SSE-S3/AES256)
-# See ADR docs/adr/0008-aws-managed-encryption.md for details
