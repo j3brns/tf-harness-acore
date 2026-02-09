@@ -5,7 +5,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 TERRAFORM_DIR="$REPO_ROOT/terraform"
 
 echo "=========================================="
@@ -29,8 +29,9 @@ checkov -d "$TERRAFORM_DIR" \
     --quiet \
     --compact \
     --output cli \
-    --config-file "$TERRAFORM_DIR/.checkov.yaml" \
-    --output json:"$TERRAFORM_DIR/checkov_results.json"
+    --output json \
+    --output-file-path "$TERRAFORM_DIR/checkov_results.json" \
+    --config-file "$TERRAFORM_DIR/.checkov.yaml"
 
 # Check results
 if [ -f "$TERRAFORM_DIR/checkov_results.json" ]; then

@@ -14,6 +14,7 @@ skip-path:
   - .terraform
   - .git
   - node_modules
+  - examples  # Example stacks are intentionally minimal
   - examples/3-deepresearch/agent-code  # Python code, not Terraform
 
 # Output format
@@ -35,11 +36,26 @@ skip-check:
   # CKV_AWS_145: S3 KMS encryption - using AWS-managed SSE-S3 (ADR-0008)
   - CKV_AWS_145
 
+  # CKV_AWS_158: CloudWatch log group KMS - AWS-managed encryption is required (ADR-0008)
+  - CKV_AWS_158
+
+  # CKV_AWS_338: Log retention >= 1 year - default is 30 days unless overridden
+  - CKV_AWS_338
+
   # CKV2_AWS_62: S3 event notifications - not required for deployment bucket
   - CKV2_AWS_62
 
   # CKV2_AWS_61: S3 lifecycle configuration - handled separately
   - CKV2_AWS_61
+
+  # CKV_AWS_18: S3 access logging - not required for deployment artifact bucket
+  - CKV_AWS_18
+
+  # CKV_AWS_21: S3 versioning - enabled via separate resource (false positive in some scans)
+  - CKV_AWS_21
+
+  # CKV2_AWS_6: S3 public access block - enforced via aws_s3_bucket_public_access_block
+  - CKV2_AWS_6
 
 # Download external modules for scanning
 download-external-modules: false

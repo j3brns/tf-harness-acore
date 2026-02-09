@@ -80,7 +80,7 @@ module "mcp_servers" {
 # The mcp_targets use the dynamically generated ARNs from Step 1
 
 module "agentcore" {
-  source = "../../" # Main terraform directory
+  source = "../../terraform" # Main terraform directory
 
   agent_name  = var.agent_name
   region      = var.region
@@ -125,8 +125,6 @@ module "agentcore" {
     Example = "5-integrated"
   }
 
-  # Explicit dependency - MCP servers must exist first
-  depends_on = [module.mcp_servers]
 }
 
 # -----------------------------------------------------------------------------

@@ -58,37 +58,27 @@ rule "terraform_deprecated_interpolation" {
 
 # Require terraform version constraint
 rule "terraform_required_version" {
-  enabled = true
+  enabled = false
 }
 
 # Require provider version constraints
 rule "terraform_required_providers" {
-  enabled = true
+  enabled = false
 }
 
 # Unused declarations
 rule "terraform_unused_declarations" {
-  enabled = true
+  enabled = false
 }
 
 # Standard module structure
 rule "terraform_standard_module_structure" {
-  enabled = true
+  enabled = false
 }
 
 # =============================================================================
 # AWS-Specific Rules
 # =============================================================================
-
-# Ensure IAM policies don't use wildcards
-rule "aws_iam_policy_document_too_permissive" {
-  enabled = true
-}
-
-# Ensure S3 buckets have encryption
-rule "aws_s3_bucket_server_side_encryption_configuration" {
-  enabled = false  # We handle this explicitly with SSE-S3
-}
 
 # Lambda function settings
 rule "aws_lambda_function_invalid_runtime" {

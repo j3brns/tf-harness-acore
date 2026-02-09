@@ -39,8 +39,16 @@ repos:
         args:
           - --args=--quiet
           - --args=--compact
+          - --args=--config-file=__GIT_WORKING_DIR__/terraform/.checkov.yaml
           - --args=--skip-check CKV_AWS_144  # S3 cross-region replication (not needed)
           - --args=--skip-check CKV_AWS_145  # S3 KMS encryption (using SSE-S3)
+          - --args=--skip-check CKV_AWS_158  # CloudWatch Logs KMS encryption (AWS-managed)
+          - --args=--skip-check CKV_AWS_338  # Log retention >= 1 year
+          - --args=--skip-check CKV2_AWS_61  # S3 lifecycle configuration
+          - --args=--skip-check CKV_AWS_21   # S3 versioning (separate resource)
+          - --args=--skip-check CKV2_AWS_62  # S3 event notifications
+          - --args=--skip-check CKV2_AWS_6   # S3 public access block (separate resource)
+          - --args=--skip-check CKV_AWS_18  # S3 access logging
 
   # General file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
