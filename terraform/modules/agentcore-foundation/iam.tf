@@ -1,3 +1,7 @@
+locals {
+  project_tag = lookup(var.tags, "Project", "AgentCore")
+}
+
 # IAM Role for Bedrock AgentCore Gateway
 resource "aws_iam_role" "gateway" {
   count = var.gateway_role_arn == "" ? 1 : 0
@@ -14,7 +18,7 @@ resource "aws_iam_role" "gateway" {
       # Rule 7.1: ABAC Scoping
       Condition = {
         StringEquals = {
-          "aws:PrincipalTag/Project" = lookup(var.tags, "Project", "AgentCore")
+          "aws:PrincipalTag/Project" = local.project_tag
         }
       }
     }]
@@ -81,7 +85,7 @@ resource "aws_iam_role" "cloudwatch_logs" {
       # Rule 7.1: ABAC Scoping
       Condition = {
         StringEquals = {
-          "aws:PrincipalTag/Project" = lookup(var.tags, "Project", "AgentCore")
+          "aws:PrincipalTag/Project" = local.project_tag
         }
       }
     }]
@@ -129,7 +133,7 @@ resource "aws_iam_role" "workload_identity" {
       # Rule 7.1: ABAC Scoping
       Condition = {
         StringEquals = {
-          "aws:PrincipalTag/Project" = lookup(var.tags, "Project", "AgentCore")
+          "aws:PrincipalTag/Project" = local.project_tag
         }
       }
     }]
@@ -154,7 +158,7 @@ resource "aws_iam_role_policy" "workload_identity" {
         # Rule 7.2: Resource-level ABAC
         Condition = {
           StringEquals = {
-            "aws:ResourceTag/Project" = lookup(var.tags, "Project", "AgentCore")
+            "aws:ResourceTag/Project" = local.project_tag
           }
         }
       },

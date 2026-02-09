@@ -1,4 +1,6 @@
 locals {
+  project_tag = lookup(var.tags, "Project", "AgentCore")
+
   code_interpreter_subnet_arns = var.code_interpreter_vpc_config != null ? [
     for subnet_id in var.code_interpreter_vpc_config.subnet_ids :
     "arn:aws:ec2:${var.region}:${data.aws_caller_identity.current.account_id}:subnet/${subnet_id}"
@@ -33,7 +35,7 @@ resource "aws_iam_role" "code_interpreter" {
       # Rule 7.1: ABAC Scoping
       Condition = {
         StringEquals = {
-          "aws:PrincipalTag/Project" = lookup(var.tags, "Project", "AgentCore")
+          "aws:PrincipalTag/Project" = local.project_tag
         }
       }
     }]
@@ -112,7 +114,7 @@ resource "aws_iam_role" "browser" {
       # Rule 7.1: ABAC Scoping
       Condition = {
         StringEquals = {
-          "aws:PrincipalTag/Project" = lookup(var.tags, "Project", "AgentCore")
+          "aws:PrincipalTag/Project" = local.project_tag
         }
       }
     }]

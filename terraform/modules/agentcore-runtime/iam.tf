@@ -1,3 +1,7 @@
+locals {
+  project_tag = lookup(var.tags, "Project", "AgentCore")
+}
+
 # IAM Role for Agent Runtime
 resource "aws_iam_role" "runtime" {
   count = var.enable_runtime && var.runtime_role_arn == "" ? 1 : 0
@@ -14,7 +18,7 @@ resource "aws_iam_role" "runtime" {
       # Rule 7.1: ABAC Scoping
       Condition = {
         StringEquals = {
-          "aws:PrincipalTag/Project" = lookup(var.tags, "Project", "AgentCore")
+          "aws:PrincipalTag/Project" = local.project_tag
         }
       }
     }]

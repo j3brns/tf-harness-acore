@@ -1,3 +1,7 @@
+locals {
+  project_tag = lookup(var.tags, "Project", "AgentCore")
+}
+
 # IAM Role for Policy Engine
 resource "aws_iam_role" "policy_engine" {
   count = var.enable_policy_engine && var.policy_engine_role_arn == "" ? 1 : 0
@@ -14,7 +18,7 @@ resource "aws_iam_role" "policy_engine" {
       # Rule 7.1: ABAC Scoping - Prevent lateral movement
       Condition = {
         StringEquals = {
-          "aws:PrincipalTag/Project" = lookup(var.tags, "Project", "AgentCore")
+          "aws:PrincipalTag/Project" = local.project_tag
         }
       }
     }]
@@ -61,7 +65,7 @@ resource "aws_iam_role" "evaluator" {
       # Rule 7.1: ABAC Scoping
       Condition = {
         StringEquals = {
-          "aws:PrincipalTag/Project" = lookup(var.tags, "Project", "AgentCore")
+          "aws:PrincipalTag/Project" = local.project_tag
         }
       }
     }]
