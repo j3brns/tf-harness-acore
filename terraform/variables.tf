@@ -284,6 +284,62 @@ variable "policy_engine_role_arn" {
   default     = ""
 }
 
+variable "enable_guardrails" {
+  description = "Enable Bedrock Guardrails"
+  type        = bool
+  default     = false
+}
+
+variable "guardrail_name" {
+  description = "Name of the guardrail"
+  type        = string
+  default     = ""
+}
+
+variable "guardrail_description" {
+  description = "Description of the guardrail"
+  type        = string
+  default     = "AgentCore Bedrock Guardrail"
+}
+
+variable "guardrail_blocked_input_messaging" {
+  description = "Message to return when input is blocked by guardrail"
+  type        = string
+  default     = "I'm sorry, I cannot process this request due to safety policies."
+}
+
+variable "guardrail_blocked_outputs_messaging" {
+  description = "Message to return when output is blocked by guardrail"
+  type        = string
+  default     = "I'm sorry, I cannot provide a response due to safety policies."
+}
+
+variable "guardrail_filters" {
+  description = "Content filters for the guardrail"
+  type = list(object({
+    type            = string # HATE, INSULT, SEXUAL, VIOLENCE, MISCONDUCT, PROMPT_ATTACK
+    input_strength  = string # NONE, LOW, MEDIUM, HIGH
+    output_strength = string # NONE, LOW, MEDIUM, HIGH
+  }))
+  default = [
+    { type = "HATE", input_strength = "HIGH", output_strength = "HIGH" },
+    { type = "INSULT", input_strength = "HIGH", output_strength = "HIGH" },
+    { type = "SEXUAL", input_strength = "HIGH", output_strength = "HIGH" },
+    { type = "VIOLENCE", input_strength = "HIGH", output_strength = "HIGH" },
+    { type = "MISCONDUCT", input_strength = "HIGH", output_strength = "HIGH" },
+    { type = "PROMPT_ATTACK", input_strength = "HIGH", output_strength = "NONE" }
+  ]
+}
+
+variable "guardrail_sensitive_info_filters" {
+  description = "Sensitive information filters (PII)"
+  type = list(object({
+    type   = string # EMAIL, ADDRESS, PHONE, etc.
+    action = string # BLOCK, ANONYMIZE
+  }))
+  default = []
+}
+
 variable "enable_evaluations" {
   description = "Enable agent evaluation system"
   type        = bool

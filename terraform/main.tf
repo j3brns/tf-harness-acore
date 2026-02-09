@@ -98,6 +98,15 @@ module "agentcore_governance" {
   policy_engine_schema   = var.policy_engine_schema
   policy_engine_role_arn = var.policy_engine_role_arn
 
+  # Guardrails
+  enable_guardrails                   = var.enable_guardrails
+  guardrail_name                      = var.guardrail_name
+  guardrail_description               = var.guardrail_description
+  guardrail_blocked_input_messaging   = var.guardrail_blocked_input_messaging
+  guardrail_blocked_outputs_messaging = var.guardrail_blocked_outputs_messaging
+  guardrail_filters                   = var.guardrail_filters
+  guardrail_sensitive_info_filters    = var.guardrail_sensitive_info_filters
+
   # Evaluations
   enable_evaluations  = var.enable_evaluations
   evaluation_type     = var.evaluation_type
