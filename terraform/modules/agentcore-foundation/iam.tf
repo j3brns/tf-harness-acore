@@ -11,6 +11,12 @@ resource "aws_iam_role" "gateway" {
       Principal = {
         Service = "bedrock-agentcore.amazonaws.com"
       }
+      # Rule 7.1: ABAC Scoping - Prevent lateral movement
+      Condition = {
+        StringEquals = {
+          "aws:PrincipalTag/Project" = var.tags["Project"]
+        }
+      }
     }]
   })
 
@@ -80,6 +86,12 @@ resource "aws_iam_role" "workload_identity" {
       Principal = {
         Service = "bedrock-agentcore.amazonaws.com"
       }
+      # Rule 7.1: ABAC Scoping
+      Condition = {
+        StringEquals = {
+          "aws:PrincipalTag/Project" = var.tags["Project"]
+        }
+      }
     }]
   })
 
@@ -131,6 +143,12 @@ resource "aws_iam_role" "cloudwatch_logs" {
       Effect = "Allow"
       Principal = {
         Service = "bedrock-agentcore.amazonaws.com"
+      }
+      # Rule 7.1: ABAC Scoping
+      Condition = {
+        StringEquals = {
+          "aws:PrincipalTag/Project" = var.tags["Project"]
+        }
       }
     }]
   })

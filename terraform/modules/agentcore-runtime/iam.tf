@@ -11,6 +11,12 @@ resource "aws_iam_role" "runtime" {
       Principal = {
         Service = "bedrock-agentcore.amazonaws.com"
       }
+      # Rule 7.1: ABAC Scoping
+      Condition = {
+        StringEquals = {
+          "aws:PrincipalTag/Project" = var.tags["Project"]
+        }
+      }
     }]
   })
 
