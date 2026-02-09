@@ -22,18 +22,14 @@ module "agentcore_foundation" {
   enable_observability = var.enable_observability
   log_retention_days   = var.log_retention_days
   enable_xray          = var.enable_xray
-
-  # Encryption
-  enable_kms = var.enable_kms
 }
 
 module "agentcore_tools" {
   source = "./modules/agentcore-tools"
 
-  agent_name  = var.agent_name
-  region      = var.region
-  environment = var.environment
-  tags        = var.tags
+  agent_name = var.agent_name
+  region     = var.region
+  tags       = var.tags
 
   # Code interpreter
   enable_code_interpreter       = var.enable_code_interpreter
@@ -46,24 +42,18 @@ module "agentcore_tools" {
   browser_vpc_config          = var.browser_vpc_config
   enable_browser_recording    = var.enable_browser_recording
   browser_recording_s3_bucket = var.browser_recording_s3_bucket
-
-  # Encryption
-  enable_kms  = var.enable_kms
-  kms_key_arn = module.agentcore_foundation.kms_key_arn
 }
 
 module "agentcore_runtime" {
   source = "./modules/agentcore-runtime"
 
-  agent_name  = var.agent_name
-  region      = var.region
-  environment = var.environment
-  tags        = var.tags
+  agent_name = var.agent_name
+  region     = var.region
+  tags       = var.tags
 
   # Runtime configuration
   enable_runtime      = var.enable_runtime
   runtime_source_path = var.runtime_source_path
-  runtime_entry_file  = var.runtime_entry_file
   runtime_config      = var.runtime_config
 
   # Memory configuration
@@ -73,7 +63,6 @@ module "agentcore_runtime" {
   # S3 deployment
   deployment_bucket_name = var.deployment_bucket_name
   enable_s3_encryption   = var.enable_s3_encryption
-  kms_key_arn            = module.agentcore_foundation.kms_key_arn
 
   # Packaging
   enable_packaging = var.enable_packaging
@@ -87,10 +76,9 @@ module "agentcore_runtime" {
 module "agentcore_governance" {
   source = "./modules/agentcore-governance"
 
-  agent_name  = var.agent_name
-  region      = var.region
-  environment = var.environment
-  tags        = var.tags
+  agent_name = var.agent_name
+  region     = var.region
+  tags       = var.tags
 
   # Policy engine
   enable_policy_engine = var.enable_policy_engine

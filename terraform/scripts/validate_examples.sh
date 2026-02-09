@@ -4,12 +4,17 @@
 
 set -e
 
+# Robust path detection
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 TERRAFORM_DIR="$REPO_ROOT/terraform"
+EXAMPLES_DIR="$REPO_ROOT/examples"
 
 echo "=========================================="
 echo "Validating example configurations"
+echo "  Root: $REPO_ROOT"
+echo "  Terraform: $TERRAFORM_DIR"
+echo "  Examples: $EXAMPLES_DIR"
 echo "=========================================="
 
 cd "$TERRAFORM_DIR"
@@ -19,17 +24,15 @@ echo ""
 echo "Initializing Terraform..."
 terraform init -backend=false -input=false
 
-# Find and validate each example
-EXAMPLES_DIR="$REPO_ROOT/examples"
+# Counter and tracking
 EXAMPLE_COUNT=0
 PASS_COUNT=0
 FAIL_COUNT=0
 SKIP_COUNT=0
-declare -A SEEN_FILES
 
 validate_example() {
     local example_file=$1
-    local example_name=$(basename "$example_file" .tfvars)
+    local example_name=$(basename "$example_file")
 
     echo ""
     echo "Testing: $example_name"
@@ -38,13 +41,13 @@ validate_example() {
     # Validate syntax with plan
     set +e
     local output
-    output=$(AWS_EC2_METADATA_DISABLED=true terraform -chdir="$TERRAFORM_DIR" plan -var-file="$example_file" -input=false -out="test-${example_name}.tfplan" 2>&1)
+    output=$(AWS_EC2_METADATA_DISABLED=true terraform plan -var-file="$example_file" -input=false -out="test-${example_name}.tfplan" 2>&1)
     local status=$?
     set -e
 
     if [ "$status" -eq 0 ]; then
         echo "  PASS: Plan generated successfully"
-        rm -f "$TERRAFORM_DIR/test-${example_name}.tfplan"
+        rm -f "test-${example_name}.tfplan"
         ((PASS_COUNT++))
         return 0
     elif echo "$output" | grep -qE "No valid credential sources found|failed to refresh cached credentials"; then
@@ -59,35 +62,15 @@ validate_example() {
     fi
 }
 
-# Process all .tfvars and .tfvars.example files in examples directory
+# Use find to locate all .tfvars and .tfvars.example files recursively in the examples directory
 if [ -d "$EXAMPLES_DIR" ]; then
-    for example_file in "$EXAMPLES_DIR"/*.tfvars "$EXAMPLES_DIR"/*.tfvars.example; do
-        if [ -f "$example_file" ]; then
-            if [ -z "${SEEN_FILES[$example_file]+x}" ]; then
-                SEEN_FILES["$example_file"]=1
-                ((EXAMPLE_COUNT++))
-                validate_example "$example_file"
-            fi
-        fi
-    done
+    while IFS= read -r example_file; do
+        ((EXAMPLE_COUNT++))
+        validate_example "$example_file"
+    done < <(find "$EXAMPLES_DIR" -name "*.tfvars" -o -name "*.tfvars.example")
 else
     echo "WARN: Examples directory not found: $EXAMPLES_DIR"
 fi
-
-# Process example subdirectories
-    for example_dir in "$EXAMPLES_DIR"/*/; do
-        if [ -d "$example_dir" ]; then
-            for tfvars_file in "$example_dir"terraform.tfvars "$example_dir"*.tfvars "$example_dir"*.tfvars.example; do
-                if [ -f "$tfvars_file" ]; then
-                    if [ -z "${SEEN_FILES[$tfvars_file]+x}" ]; then
-                        SEEN_FILES["$tfvars_file"]=1
-                        ((EXAMPLE_COUNT++))
-                        validate_example "$tfvars_file"
-                    fi
-                fi
-            done
-        fi
-    done
 
 echo ""
 echo "=========================================="
@@ -106,6 +89,7 @@ fi
 
 if [ "$EXAMPLE_COUNT" -eq 0 ]; then
     echo "WARN: No example configurations found"
+    # Don't exit error if no examples, but maybe we should?
     exit 0
 fi
 
