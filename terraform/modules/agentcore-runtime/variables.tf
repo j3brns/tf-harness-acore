@@ -8,11 +8,6 @@ variable "region" {
   type        = string
 }
 
-variable "environment" {
-  description = "Environment name"
-  type        = string
-}
-
 variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)
@@ -29,12 +24,6 @@ variable "enable_runtime" {
 variable "runtime_source_path" {
   description = "Path to agent source code directory"
   type        = string
-}
-
-variable "runtime_entry_file" {
-  description = "Entry point file for agent runtime (e.g., runtime.py)"
-  type        = string
-  default     = "runtime.py"
 }
 
 variable "runtime_config" {
@@ -80,12 +69,6 @@ variable "enable_s3_encryption" {
   default     = true
 }
 
-variable "kms_key_arn" {
-  description = "DEPRECATED: Customer-managed KMS is no longer used. AWS-managed encryption is applied."
-  type        = string
-  default     = ""
-}
-
 variable "log_retention_days" {
   description = "CloudWatch log retention in days"
   type        = number
@@ -127,15 +110,4 @@ variable "python_version" {
   description = "Python version for packaging (e.g., 3.11, 3.12)"
   type        = string
   default     = "3.12"
-}
-
-variable "package_cache_ttl_hours" {
-  description = "TTL in hours for dependency package cache"
-  type        = number
-  default     = 24
-
-  validation {
-    condition     = var.package_cache_ttl_hours > 0
-    error_message = "Cache TTL must be positive."
-  }
 }

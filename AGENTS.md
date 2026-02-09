@@ -76,6 +76,11 @@ cp -r "${local.source_path}"/* "$BUILD_DIR/code/"
 
 **Why**: Error suppression masks deployment failures.
 
+#### Rule 1.8: Bedrock Guardrails (Secure by Default)
+- **Policy**: Bedrock Guardrails are ENABLED by default for all agent aliases.
+- **Active Rejection**: Disabling guardrails requires an explicit `enable_guardrails = false` toggle AND a documented justification in the configuration (e.g., in `terraform.tfvars` or a comment).
+- **Enforcement**: Guardrails must be defined in the `agentcore-governance` module. If rejected, the configuration must explain why content filtering, PII masking, or contextual grounding is not required for the specific use case.
+
 ---
 
 ## RULE 2: Module Architecture is FIXED
@@ -87,7 +92,7 @@ Module boundaries:
 - **foundation**: Gateway, Identity, Observability
 - **tools**: Code Interpreter, Browser
 - **runtime**: Runtime, Memory, Packaging
-- **governance**: Policies, Evaluations
+- **governance**: Policies, Evaluations, Guardrails
 
 Reference: `docs/architecture.md`
 
@@ -160,7 +165,7 @@ The following resources MUST use the `null_resource` + AWS CLI pattern due to pr
 
 ---
 
-## RULE 12: Comprehensive Issue Reporting
+## RULE 12: Comprehensive Issue Reporting & Verification
 
 ### Rule 12.1: Issue Structure
 AI Agents MUST create comprehensive GitHub issues. Every issue MUST include:
@@ -169,17 +174,21 @@ AI Agents MUST create comprehensive GitHub issues. Every issue MUST include:
 - **Implementation Tasks**: A checklist of specific actionable items.
 - **Acceptance Criteria**: Verifiable outcomes (e.g., "Exit code 0", "Test passes").
 
+### Rule 12.2: Issue Atomicity (One Defect = One Issue)
+- **Requirement**: Do not bundle unrelated defects or architectural changes into a single issue. 
+- **Why**: Allows for independent verification, parallel development, and clear rollback paths. 
+
+### Rule 12.3: Post-Commit Verification
+- **Mandatory**: After every `git push`, AI agents MUST check the CI logs (via `gh run list/view`) to ensure all automated checks passed.
+- **Action**: If CI fails, the agent MUST investigate the logs, identify the root cause, and propose/apply a fix in the next turn.
+
 ---
 
 ## RULE 13: Repo Layout & Reorg Guardrails
 
-**Layout**: Terraform core is in `terraform/`. Examples live in `examples/`. Docs live at repo root and `docs/`.
-
-**Rules**:
-- Do not move docs into `terraform/`.
-- Keep examples adjacent at repo root.
-- If you move Terraform files, update references in `README.md`, `DEVELOPER_GUIDE.md`, `Makefile`, `validate_windows.bat`, `scripts/`, and `tests/`.
-- Run the preflight tests in `docs/runbooks/repo-restructure.md` before and after any move.
+### Rule 13.1: Maintain Logical Separation
+- **Requirement**: Keep modules, examples, and documentation in their respective root-level directories.
+- **Forbidden**: Deeply nested logic that bypasses the 4-module architecture.
 
 ---
 
@@ -199,23 +208,13 @@ AI Agents MUST create comprehensive GitHub issues. Every issue MUST include:
 ## CHECKLIST: Before Every Commit
 
 ```bash
-terraform -chdir=terraform fmt -check -recursive
-terraform -chdir=terraform validate
-terraform -chdir=terraform plan -backend=false -var-file=../examples/research-agent.tfvars
-checkov -d terraform --framework terraform --compact --config-file terraform/.checkov.yaml
-tflint --chdir=terraform --recursive --config terraform/.tflint.hcl
+terraform fmt -check -recursive
+terraform validate
+terraform plan -backend=false -var-file=examples/research-agent.tfvars
+checkov -d . --framework terraform --compact
+tflint --recursive
 pre-commit run --all-files
 ```
-
-### Windows Notes (Pre-commit + Terraform Hooks)
-- Terraform-related pre-commit hooks require **bash**. On Windows, run `pre-commit` from **Git Bash or WSL** for full checks.
-- For a Windows-native minimal check, use `validate_windows.bat` (runs `terraform fmt` + `pre-commit` with Terraform hooks skipped).
-
-### YAML Rule for Pre-commit Entries
-- If a `pre-commit` hook `entry:` contains `:` or complex shell, use a block scalar (`>-`) to avoid YAML parse errors.
-
-### Binary Hygiene
-- Do not commit tool binaries. Keep `.tools/` ignored and download tooling via scripts when needed.
 
 ---
 

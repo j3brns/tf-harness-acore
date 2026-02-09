@@ -32,16 +32,9 @@ variable "gateway_name" {
   default     = ""
 }
 
-variable "gateway_protocol" {
-  description = "Gateway protocol type (MCP)"
-  type        = string
-  default     = "MCP"
-
-  validation {
-    condition     = var.gateway_protocol == "MCP"
-    error_message = "Currently only MCP protocol is supported."
-  }
-}
+# Encryption configuration
+# Note: Customer-managed KMS has been removed in favor of AWS-managed encryption (SSE-S3/AES256)
+# See ADR docs/adr/0008-aws-managed-encryption.md for details
 
 variable "mcp_targets" {
   description = "MCP targets configuration. Use alias ARNs (not function ARNs) for version pinning and rollback capability."
@@ -130,15 +123,3 @@ variable "xray_sampling_rate" {
 # Encryption configuration
 # Note: Customer-managed KMS has been removed in favor of AWS-managed encryption (SSE-S3/AES256)
 # See ADR docs/adr/0008-aws-managed-encryption.md for details
-
-variable "enable_kms" {
-  description = "DEPRECATED: Customer-managed KMS is no longer used. AWS-managed encryption is applied by default."
-  type        = bool
-  default     = false
-}
-
-variable "kms_key_deletion_window" {
-  description = "DEPRECATED: Not used since customer-managed KMS was removed."
-  type        = number
-  default     = 7
-}

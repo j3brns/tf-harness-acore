@@ -59,9 +59,9 @@ validate_example() {
     fi
 }
 
-# Process all .tfvars files in examples directory
+# Process all .tfvars and .tfvars.example files in examples directory
 if [ -d "$EXAMPLES_DIR" ]; then
-    for example_file in "$EXAMPLES_DIR"/*.tfvars; do
+    for example_file in "$EXAMPLES_DIR"/*.tfvars "$EXAMPLES_DIR"/*.tfvars.example; do
         if [ -f "$example_file" ]; then
             if [ -z "${SEEN_FILES[$example_file]+x}" ]; then
                 SEEN_FILES["$example_file"]=1
@@ -74,10 +74,10 @@ else
     echo "WARN: Examples directory not found: $EXAMPLES_DIR"
 fi
 
-# Process example subdirectories (e.g., examples/1-hello-world/terraform.tfvars)
+# Process example subdirectories
     for example_dir in "$EXAMPLES_DIR"/*/; do
         if [ -d "$example_dir" ]; then
-            for tfvars_file in "$example_dir"terraform.tfvars "$example_dir"*.tfvars; do
+            for tfvars_file in "$example_dir"terraform.tfvars "$example_dir"*.tfvars "$example_dir"*.tfvars.example; do
                 if [ -f "$tfvars_file" ]; then
                     if [ -z "${SEEN_FILES[$tfvars_file]+x}" ]; then
                         SEEN_FILES["$tfvars_file"]=1

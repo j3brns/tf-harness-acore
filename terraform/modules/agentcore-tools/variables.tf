@@ -8,11 +8,6 @@ variable "region" {
   type        = string
 }
 
-variable "environment" {
-  description = "Environment name"
-  type        = string
-}
-
 variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)
@@ -43,17 +38,6 @@ variable "code_interpreter_network_mode" {
       length(var.code_interpreter_vpc_config.security_group_ids) > 0
     )
     error_message = "VPC network mode requires code_interpreter_vpc_config with subnet_ids and security_group_ids."
-  }
-}
-
-variable "code_interpreter_execution_timeout" {
-  description = "Execution timeout in seconds for code interpreter"
-  type        = number
-  default     = 300
-
-  validation {
-    condition     = var.code_interpreter_execution_timeout > 0 && var.code_interpreter_execution_timeout <= 3600
-    error_message = "Execution timeout must be between 1 and 3600 seconds."
   }
 }
 
@@ -122,23 +106,16 @@ variable "browser_recording_s3_prefix" {
   default     = "browser-sessions/"
 }
 
-# KMS encryption
+# Encryption configuration
+# Note: Customer-managed KMS is deprecated in favor of AWS-managed encryption.
 variable "enable_kms" {
-  description = "Enable KMS encryption"
+  description = "DEPRECATED: Use AWS-managed encryption."
   type        = bool
   default     = false
 }
 
 variable "kms_key_arn" {
-  description = "ARN of KMS key for encryption"
+  description = "DEPRECATED: Use AWS-managed encryption."
   type        = string
   default     = ""
-
-  validation {
-    condition = !var.enable_kms || (
-      var.kms_key_arn != "" &&
-      !can(regex("123456789012|999999999999|000000000000", var.kms_key_arn))
-    )
-    error_message = "kms_key_arn must be set to a real ARN when enable_kms is true."
-  }
 }
