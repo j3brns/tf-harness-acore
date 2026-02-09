@@ -17,23 +17,23 @@ resource "null_resource" "custom_evaluator" {
     command = <<-EOT
       set -e
 
-      echo "Creating custom evaluator for ${var.agent_name}..."
+      echo "Creating custom evaluator for ${self.triggers.agent_name}..."
 
       # Prepare evaluation criteria
       CRITERIA='${jsonencode(var.evaluation_criteria)}'
 
       # Create evaluator
       aws bedrock-agentcore-control create-evaluator \
-        --name "${var.agent_name}-evaluator" \
-        --agent-name "${var.agent_name}" \
-        --evaluation-level ${var.evaluation_type} \
+        --name "${self.triggers.agent_name}-evaluator" \
+        --agent-name "${self.triggers.agent_name}" \
+        --evaluation-level ${self.triggers.evaluation_type} \
         --evaluation-role-arn "${var.evaluator_role_arn != "" ? var.evaluator_role_arn : aws_iam_role.evaluator[0].arn}" \
-        --model-id "${var.evaluator_model_id}" \
+        --model-id "${self.triggers.model_id}" \
         --prompt "${var.evaluation_prompt}" \
         %{if length(var.evaluation_criteria) > 0}
         --criteria "$CRITERIA" \
         %{endif}
-        --region ${var.region} \
+        --region ${self.triggers.region} \
         --output json > "${path.module}/.terraform/evaluator.json"
 
       # Rule 1.2: Fail Fast
@@ -53,11 +53,11 @@ resource "null_resource" "custom_evaluator" {
       # Rule 5.1: SSM Persistence
       echo "Persisting Evaluator ID to SSM..."
       aws ssm put-parameter \
-        --name "/agentcore/${var.agent_name}/evaluator/id" \
+        --name "/agentcore/${self.triggers.agent_name}/evaluator/id" \
         --value "$EVALUATOR_ID" \
         --type "String" \
         --overwrite \
-        --region ${var.region}
+        --region ${self.triggers.region}
 
       echo "$EVALUATOR_ID" > "${path.module}/.terraform/evaluator_id.txt"
       echo "Custom evaluator created successfully"

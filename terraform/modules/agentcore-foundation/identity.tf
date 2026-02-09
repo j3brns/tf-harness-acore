@@ -3,8 +3,10 @@ resource "null_resource" "workload_identity" {
   count = var.enable_identity ? 1 : 0
 
   triggers = {
-    name = "${var.agent_name}-workload-identity"
-    urls = join(",", var.oauth_return_urls)
+    agent_name = var.agent_name
+    region     = var.region
+    name       = "${var.agent_name}-workload-identity"
+    urls       = join(",", var.oauth_return_urls)
   }
 
   provisioner "local-exec" {
@@ -14,7 +16,7 @@ resource "null_resource" "workload_identity" {
       aws bedrock-agentcore-control create-workload-identity \
         --name "${self.triggers.name}" \
         --allowed-resource-oauth2-return-urls ${jsonencode(var.oauth_return_urls)} \
-        --region ${var.region} \
+        --region ${self.triggers.region} \
         --output json > "${path.module}/.terraform/identity_output.json"
 
       # Rule 1.2: Fail Fast
@@ -28,11 +30,11 @@ resource "null_resource" "workload_identity" {
       # Rule 5.1: SSM Persistence Pattern
       echo "Persisting Workload Identity ID to SSM..."
       aws ssm put-parameter \
-        --name "/agentcore/${var.agent_name}/identity/id" \
+        --name "/agentcore/${self.triggers.agent_name}/identity/id" \
         --value "$IDENTITY_ID" \
         --type "String" \
         --overwrite \
-        --region ${var.region}
+        --region ${self.triggers.region}
     EOT
 
     interpreter = ["bash", "-c"]
@@ -43,12 +45,12 @@ resource "null_resource" "workload_identity" {
     when    = destroy
     command = <<-EOT
       set +e
-      IDENTITY_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.name}/identity/id" --query "Parameter.Value" --output text --region ${var.region} 2>/dev/null)
+      IDENTITY_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/identity/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
       
       if [ -n "$IDENTITY_ID" ]; then
         echo "Deleting Workload Identity $IDENTITY_ID..."
-        aws bedrock-agentcore-control delete-workload-identity --workload-identity-identifier "$IDENTITY_ID" --region ${var.region}
-        aws ssm delete-parameter --name "/agentcore/${self.triggers.name}/identity/id" --region ${var.region}
+        aws bedrock-agentcore-control delete-workload-identity --workload-identity-identifier "$IDENTITY_ID" --region ${self.triggers.region}
+        aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/identity/id" --region ${self.triggers.region}
       fi
     EOT
 

@@ -16,20 +16,20 @@ resource "null_resource" "agent_runtime" {
     command = <<-EOT
       set -e
 
-      echo "Creating agent runtime for ${var.agent_name}..."
+      echo "Creating agent runtime for ${self.triggers.agent_name}..."
 
       # Get deployment package from S3
       DEPLOYMENT_S3_URI="s3://${local.deployment_bucket}"
 
       # Create runtime using AWS CLI
       aws bedrock-agentcore-control create-agent-runtime \
-        --name "${var.agent_name}-runtime" \
-        --agent-name "${var.agent_name}" \
+        --name "${self.triggers.agent_name}-runtime" \
+        --agent-name "${self.triggers.agent_name}" \
         --role-arn "${var.runtime_role_arn != "" ? var.runtime_role_arn : aws_iam_role.runtime[0].arn}" \
         --artifact-s3-uri "$DEPLOYMENT_S3_URI" \
         --artifact-s3-key "${local.deployment_key}" \
         --execution-role-arn "${var.runtime_role_arn != "" ? var.runtime_role_arn : aws_iam_role.runtime[0].arn}" \
-        --region ${var.region} \
+        --region ${self.triggers.region} \
         --output json > "${path.module}/.terraform/runtime_output.json"
 
       # Rule 1.2: Fail Fast
@@ -56,11 +56,11 @@ resource "null_resource" "agent_runtime" {
       # Rule 5.1: SSM Persistence
       echo "Persisting Runtime ID to SSM..."
       aws ssm put-parameter \
-        --name "/agentcore/${var.agent_name}/runtime/id" \
+        --name "/agentcore/${self.triggers.agent_name}/runtime/id" \
         --value "$RUNTIME_ID" \
         --type "String" \
         --overwrite \
-        --region ${var.region}
+        --region ${self.triggers.region}
 
       echo "$RUNTIME_ID" > "${path.module}/.terraform/runtime_id.txt"
       echo "Agent runtime created successfully"
@@ -108,17 +108,17 @@ resource "null_resource" "agent_memory" {
     command = <<-EOT
       set -e
 
-      echo "Setting up agent memory for ${var.agent_name}..."
+      echo "Setting up agent memory for ${self.triggers.agent_name}..."
 
       # Short-term memory
-      if [[ "${var.memory_type}" == "SHORT_TERM" || "${var.memory_type}" == "BOTH" ]]; then
+      if [[ "${self.triggers.memory_type}" == "SHORT_TERM" || "${self.triggers.memory_type}" == "BOTH" ]]; then
         aws bedrock-agentcore-control create-memory \
-          --name "${var.agent_name}-short-term-memory" \
-          --agent-name "${var.agent_name}" \
+          --name "${self.triggers.agent_name}-short-term-memory" \
+          --agent-name "${self.triggers.agent_name}" \
           --memory-type "SHORT_TERM" \
           --storage-type "IN_MEMORY" \
           --ttl-minutes 60 \
-          --region ${var.region} \
+          --region ${self.triggers.region} \
           --output json > "${path.module}/.terraform/short_term_memory.json"
 
         if [ ! -s "${path.module}/.terraform/short_term_memory.json" ]; then
@@ -128,21 +128,21 @@ resource "null_resource" "agent_memory" {
         
         ST_MEMORY_ID=$(jq -r '.memoryId' < "${path.module}/.terraform/short_term_memory.json")
         aws ssm put-parameter \
-          --name "/agentcore/${var.agent_name}/memory/short-term/id" \
+          --name "/agentcore/${self.triggers.agent_name}/memory/short-term/id" \
           --value "$ST_MEMORY_ID" \
           --type "String" \
           --overwrite \
-          --region ${var.region}
+          --region ${self.triggers.region}
       fi
 
       # Long-term memory
-      if [[ "${var.memory_type}" == "LONG_TERM" || "${var.memory_type}" == "BOTH" ]]; then
+      if [[ "${self.triggers.memory_type}" == "LONG_TERM" || "${self.triggers.memory_type}" == "BOTH" ]]; then
         aws bedrock-agentcore-control create-memory \
-          --name "${var.agent_name}-long-term-memory" \
-          --agent-name "${var.agent_name}" \
+          --name "${self.triggers.agent_name}-long-term-memory" \
+          --agent-name "${self.triggers.agent_name}" \
           --memory-type "LONG_TERM" \
           --storage-type "PERSISTENT" \
-          --region ${var.region} \
+          --region ${self.triggers.region} \
           --output json > "${path.module}/.terraform/long_term_memory.json"
 
         if [ ! -s "${path.module}/.terraform/long_term_memory.json" ]; then
@@ -152,11 +152,11 @@ resource "null_resource" "agent_memory" {
         
         LT_MEMORY_ID=$(jq -r '.memoryId' < "${path.module}/.terraform/long_term_memory.json")
         aws ssm put-parameter \
-          --name "/agentcore/${var.agent_name}/memory/long-term/id" \
+          --name "/agentcore/${self.triggers.agent_name}/memory/long-term/id" \
           --value "$LT_MEMORY_ID" \
           --type "String" \
           --overwrite \
-          --region ${var.region}
+          --region ${self.triggers.region}
       fi
 
       echo "Agent memory setup complete"

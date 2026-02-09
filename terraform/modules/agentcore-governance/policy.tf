@@ -6,6 +6,7 @@ resource "null_resource" "policy_engine" {
 
   triggers = {
     agent_name  = var.agent_name
+    region      = var.region
     schema_hash = var.policy_engine_schema != "" ? sha256(var.policy_engine_schema) : "no-schema"
   }
 
@@ -13,15 +14,15 @@ resource "null_resource" "policy_engine" {
     command = <<-EOT
       set -e
 
-      echo "Creating policy engine for ${var.agent_name}..."
+      echo "Creating policy engine for ${self.triggers.agent_name}..."
 
       # Create policy engine
       aws bedrock-agentcore-control create-policy-engine \
-        --name "${var.agent_name}-policy-engine" \
+        --name "${self.triggers.agent_name}-policy-engine" \
         %{if var.policy_engine_schema != ""}
         --schema '${var.policy_engine_schema}' \
         %{endif}
-        --region ${var.region} \
+        --region ${self.triggers.region} \
         --output json > "${path.module}/.terraform/policy_engine.json"
 
       # Rule 1.2: Fail Fast
@@ -40,11 +41,11 @@ resource "null_resource" "policy_engine" {
       # Rule 5.1: SSM Persistence
       echo "Persisting Policy Engine ID to SSM..."
       aws ssm put-parameter \
-        --name "/agentcore/${var.agent_name}/policy-engine/id" \
+        --name "/agentcore/${self.triggers.agent_name}/policy-engine/id" \
         --value "$POLICY_ENGINE_ID" \
         --type "String" \
         --overwrite \
-        --region ${var.region}
+        --region ${self.triggers.region}
 
       # Local fallback for same-run consumption
       echo "$POLICY_ENGINE_ID" > "${path.module}/.terraform/policy_engine_id.txt"
@@ -58,12 +59,12 @@ resource "null_resource" "policy_engine" {
     when    = destroy
     command = <<-EOT
       set +e
-      POLICY_ENGINE_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/policy-engine/id" --query "Parameter.Value" --output text --region ${var.region} 2>/dev/null)
+      POLICY_ENGINE_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/policy-engine/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
       
       if [ -n "$POLICY_ENGINE_ID" ]; then
         echo "Deleting Policy Engine $POLICY_ENGINE_ID..."
-        aws bedrock-agentcore-control delete-policy-engine --policy-engine-identifier "$POLICY_ENGINE_ID" --region ${var.region}
-        aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/policy-engine/id" --region ${var.region}
+        aws bedrock-agentcore-control delete-policy-engine --policy-engine-identifier "$POLICY_ENGINE_ID" --region ${self.triggers.region}
+        aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/policy-engine/id" --region ${self.triggers.region}
       fi
     EOT
 
@@ -86,6 +87,8 @@ resource "null_resource" "cedar_policies" {
   for_each = var.enable_policy_engine ? var.cedar_policy_files : {}
 
   triggers = {
+    agent_name       = var.agent_name
+    region           = var.region
     policy_name      = each.key
     policy_content   = filesha256(each.value)
     policy_engine_id = var.enable_policy_engine ? data.aws_ssm_parameter.policy_engine_id[0].value : ""
@@ -105,7 +108,7 @@ resource "null_resource" "cedar_policies" {
         --policy-engine-identifier "${self.triggers.policy_engine_id}" \
         --name "${self.triggers.policy_name}" \
         --policy-statements "$POLICY_CONTENT" \
-        --region ${var.region} \
+        --region ${self.triggers.region} \
         --output json > "${path.module}/.terraform/policy_${self.triggers.policy_name}.json"
 
       # Rule 1.2: Fail Fast
@@ -118,11 +121,11 @@ resource "null_resource" "cedar_policies" {
       
       # Persist Policy ID
       aws ssm put-parameter \
-        --name "/agentcore/${var.agent_name}/policies/${self.triggers.policy_name}/id" \
+        --name "/agentcore/${self.triggers.agent_name}/policies/${self.triggers.policy_name}/id" \
         --value "$POLICY_ID" \
         --type "String" \
         --overwrite \
-        --region ${var.region}
+        --region ${self.triggers.region}
     EOT
 
     interpreter = ["bash", "-c"]
@@ -132,15 +135,15 @@ resource "null_resource" "cedar_policies" {
     when    = destroy
     command = <<-EOT
       set +e
-      POLICY_ID=$(aws ssm get-parameter --name "/agentcore/${var.agent_name}/policies/${self.triggers.policy_name}/id" --query "Parameter.Value" --output text --region ${var.region} 2>/dev/null)
+      POLICY_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/policies/${self.triggers.policy_name}/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
       
       if [ -n "$POLICY_ID" ]; then
         echo "Deleting Policy $POLICY_ID from Engine ${self.triggers.policy_engine_id}..."
         aws bedrock-agentcore-control delete-policy \
           --policy-engine-identifier "${self.triggers.policy_engine_id}" \
           --policy-identifier "$POLICY_ID" \
-          --region ${var.region}
-        aws ssm delete-parameter --name "/agentcore/${var.agent_name}/policies/${self.triggers.policy_name}/id" --region ${var.region}
+          --region ${self.triggers.region}
+        aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/policies/${self.triggers.policy_name}/id" --region ${self.triggers.region}
       fi
     EOT
 

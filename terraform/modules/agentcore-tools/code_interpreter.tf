@@ -16,7 +16,7 @@ resource "null_resource" "code_interpreter" {
       aws bedrock-agentcore-control create-code-interpreter \
         --name "${self.triggers.name}" \
         --role-arn "${self.triggers.execution_role_arn}" \
-        --region ${var.region} \
+        --region ${self.triggers.region} \
         --output json > "${path.module}/.terraform/interpreter_output.json"
 
       # Rule 1.2: Fail Fast
@@ -30,11 +30,11 @@ resource "null_resource" "code_interpreter" {
       # Rule 5.1: SSM Persistence
       echo "Persisting Interpreter ID to SSM..."
       aws ssm put-parameter \
-        --name "/agentcore/${var.agent_name}/interpreter/id" \
+        --name "/agentcore/${self.triggers.agent_name}/interpreter/id" \
         --value "$INTERPRETER_ID" \
         --type "String" \
         --overwrite \
-        --region ${var.region}
+        --region ${self.triggers.region}
     EOT
 
     interpreter = ["bash", "-c"]

@@ -16,7 +16,7 @@ resource "null_resource" "browser" {
       aws bedrock-agentcore-control create-browser \
         --name "${self.triggers.name}" \
         --role-arn "${self.triggers.execution_role_arn}" \
-        --region ${var.region} \
+        --region ${self.triggers.region} \
         --output json > "${path.module}/.terraform/browser_output.json"
 
       # Rule 1.2: Fail Fast
@@ -30,11 +30,11 @@ resource "null_resource" "browser" {
       # Rule 5.1: SSM Persistence
       echo "Persisting Browser ID to SSM..."
       aws ssm put-parameter \
-        --name "/agentcore/${var.agent_name}/browser/id" \
+        --name "/agentcore/${self.triggers.agent_name}/browser/id" \
         --value "$BROWSER_ID" \
         --type "String" \
         --overwrite \
-        --region ${var.region}
+        --region ${self.triggers.region}
     EOT
 
     interpreter = ["bash", "-c"]
@@ -99,6 +99,7 @@ resource "aws_s3_bucket_policy" "browser_recording" {
           "s3:PutObject",
           "s3:PutObjectAcl"
         ]
+        # AWS-REQUIRED: Policy requires specific resource scoping for security
         Resource = "arn:aws:s3:::${var.browser_recording_s3_bucket}/${var.browser_recording_s3_prefix}*"
       }
     ]

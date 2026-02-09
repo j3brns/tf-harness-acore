@@ -6,6 +6,8 @@ resource "null_resource" "gateway" {
   count = var.enable_gateway ? 1 : 0
 
   triggers = {
+    agent_name    = var.agent_name
+    region        = var.region
     name          = var.gateway_name != "" ? var.gateway_name : "${var.agent_name}-gateway"
     role_arn      = aws_iam_role.gateway[0].arn
     protocol_type = "MCP"
@@ -24,7 +26,7 @@ resource "null_resource" "gateway" {
         --role-arn "${self.triggers.role_arn}" \
         --protocol-type "MCP" \
         --protocol-configuration "{\"mcp\":{\"searchType\":\"${self.triggers.search_type}\",\"supportedVersions\":${jsonencode(var.gateway_mcp_versions)}}}" \
-        --region ${var.region} \
+        --region ${self.triggers.region} \
         --output json > "${path.module}/.terraform/gateway_output.json"
 
       # Rule 1.2: Fail Fast
@@ -39,11 +41,11 @@ resource "null_resource" "gateway" {
       # Rule 5.1: SSM Persistence Pattern
       echo "Persisting Gateway ID to SSM..."
       aws ssm put-parameter \
-        --name "/agentcore/${var.agent_name}/gateway/id" \
+        --name "/agentcore/${self.triggers.agent_name}/gateway/id" \
         --value "$GATEWAY_ID" \
         --type "String" \
         --overwrite \
-        --region ${var.region}
+        --region ${self.triggers.region}
 
       # Temporary local storage for immediate data source consumption in same plan
       echo "$GATEWAY_ID" > "${path.module}/.terraform/gateway_id.txt"
@@ -57,20 +59,17 @@ resource "null_resource" "gateway" {
     when    = destroy
     command = <<-EOT
       set +e
-      # Capture the ID from SSM if possible, otherwise use local fallback
-      # In destroy, we might not have path.module access the same way, 
-      # but we can try to fetch from SSM based on naming convention
       
-      GATEWAY_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.name}/gateway/id" --query "Parameter.Value" --output text --region ${var.region} 2>/dev/null)
+      GATEWAY_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/gateway/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
       
       if [ -z "$GATEWAY_ID" ]; then
-        echo "WARN: Could not find Gateway ID in SSM for ${self.triggers.name}, skipping AWS resource deletion"
+        echo "WARN: Could not find Gateway ID in SSM for ${self.triggers.agent_name}, skipping AWS resource deletion"
       else
         echo "Deleting Gateway $GATEWAY_ID..."
-        aws bedrock-agentcore-control delete-gateway --gateway-identifier "$GATEWAY_ID" --region ${var.region}
+        aws bedrock-agentcore-control delete-gateway --gateway-identifier "$GATEWAY_ID" --region ${self.triggers.region}
         
         echo "Cleaning up SSM parameter..."
-        aws ssm delete-parameter --name "/agentcore/${self.triggers.name}/gateway/id" --region ${var.region}
+        aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/gateway/id" --region ${self.triggers.region}
       fi
     EOT
 
@@ -84,13 +83,10 @@ resource "null_resource" "gateway" {
 }
 
 # Data source to read the ID from SSM (Rule 5.1)
-# Note: This will only work on subsequent runs OR if the parameter exists.
-# For the first run, we still need the data "external" or local file for outputs.
 data "aws_ssm_parameter" "gateway_id" {
   count = var.enable_gateway ? 1 : 0
   name  = "/agentcore/${var.agent_name}/gateway/id"
   
-  # Ensure we don't try to read it before it might be created in this run
   depends_on = [null_resource.gateway]
 }
 
@@ -99,9 +95,10 @@ resource "null_resource" "gateway_target" {
   for_each = var.enable_gateway ? var.mcp_targets : {}
 
   triggers = {
+    agent_name   = var.agent_name
+    region       = var.region
     name         = each.value.name
     lambda_arn   = each.value.lambda_arn
-    gateway_name = var.gateway_name != "" ? var.gateway_name : "${var.agent_name}-gateway"
     gateway_id   = var.enable_gateway ? data.aws_ssm_parameter.gateway_id[0].value : ""
   }
 
@@ -109,17 +106,17 @@ resource "null_resource" "gateway_target" {
     command = <<-EOT
       set -e
 
-      echo "Creating Gateway Target: ${each.value.name}..."
+      echo "Creating Gateway Target: ${self.triggers.name}..."
 
       aws bedrock-agentcore-control create-gateway-target \
-        --name "${each.value.name}" \
+        --name "${self.triggers.name}" \
         --gateway-identifier "${self.triggers.gateway_id}" \
-        --target-configuration "{\"mcp\":{\"lambda\":{\"lambdaArn\":\"${each.value.lambda_arn}\"}}}" \
-        --region ${var.region} \
+        --target-configuration "{\"mcp\":{\"lambda\":{\"lambdaArn\":\"${self.triggers.lambda_arn}\"}}}" \
+        --region ${self.triggers.region} \
         --output json > "${path.module}/.terraform/target_${each.key}.json"
 
       if [ ! -s "${path.module}/.terraform/target_${each.key}.json" ]; then
-        echo "ERROR: Failed to create target ${each.value.name}"
+        echo "ERROR: Failed to create target ${self.triggers.name}"
         exit 1
       fi
       
@@ -127,11 +124,11 @@ resource "null_resource" "gateway_target" {
       
       # Persist Target ID
       aws ssm put-parameter \
-        --name "/agentcore/${var.agent_name}/gateway/targets/${each.key}/id" \
+        --name "/agentcore/${self.triggers.agent_name}/gateway/targets/${each.key}/id" \
         --value "$TARGET_ID" \
         --type "String" \
         --overwrite \
-        --region ${var.region}
+        --region ${self.triggers.region}
     EOT
 
     interpreter = ["bash", "-c"]
@@ -141,13 +138,12 @@ resource "null_resource" "gateway_target" {
     when    = destroy
     command = <<-EOT
       set +e
-      # Try to find ID in SSM
-      TARGET_ID=$(aws ssm get-parameter --name "/agentcore/${var.agent_name}/gateway/targets/${each.key}/id" --query "Parameter.Value" --output text --region ${var.region} 2>/dev/null)
+      TARGET_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/gateway/targets/${each.key}/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
       
       if [ -n "$TARGET_ID" ]; then
         echo "Deleting Gateway Target $TARGET_ID..."
-        aws bedrock-agentcore-control delete-gateway-target --gateway-identifier "${self.triggers.gateway_id}" --target-identifier "$TARGET_ID" --region ${var.region}
-        aws ssm delete-parameter --name "/agentcore/${var.agent_name}/gateway/targets/${each.key}/id" --region ${var.region}
+        aws bedrock-agentcore-control delete-gateway-target --gateway-identifier "${self.triggers.gateway_id}" --target-identifier "$TARGET_ID" --region ${self.triggers.region}
+        aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/gateway/targets/${each.key}/id" --region ${self.triggers.region}
       fi
     EOT
 
