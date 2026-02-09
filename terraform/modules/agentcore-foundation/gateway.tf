@@ -86,7 +86,7 @@ resource "null_resource" "gateway" {
 data "aws_ssm_parameter" "gateway_id" {
   count = var.enable_gateway ? 1 : 0
   name  = "/agentcore/${var.agent_name}/gateway/id"
-  
+
   depends_on = [null_resource.gateway]
 }
 
@@ -95,11 +95,12 @@ resource "null_resource" "gateway_target" {
   for_each = var.enable_gateway ? var.mcp_targets : {}
 
   triggers = {
-    agent_name   = var.agent_name
-    region       = var.region
-    name         = each.value.name
-    lambda_arn   = each.value.lambda_arn
-    gateway_id   = var.enable_gateway ? data.aws_ssm_parameter.gateway_id[0].value : ""
+    agent_name = var.agent_name
+    region     = var.region
+    name       = each.value.name
+    lambda_arn = each.value.lambda_arn
+    gateway_id = var.enable_gateway ? data.aws_ssm_parameter.gateway_id[0].value : ""
+    target_key = each.key
   }
 
   provisioner "local-exec" {
@@ -113,18 +114,18 @@ resource "null_resource" "gateway_target" {
         --gateway-identifier "${self.triggers.gateway_id}" \
         --target-configuration "{\"mcp\":{\"lambda\":{\"lambdaArn\":\"${self.triggers.lambda_arn}\"}}}" \
         --region ${self.triggers.region} \
-        --output json > "${path.module}/.terraform/target_${each.key}.json"
+        --output json > "${path.module}/.terraform/target_${self.triggers.target_key}.json"
 
-      if [ ! -s "${path.module}/.terraform/target_${each.key}.json" ]; then
+      if [ ! -s "${path.module}/.terraform/target_${self.triggers.target_key}.json" ]; then
         echo "ERROR: Failed to create target ${self.triggers.name}"
         exit 1
       fi
       
-      TARGET_ID=$(jq -r '.targetId' < "${path.module}/.terraform/target_${each.key}.json")
+      TARGET_ID=$(jq -r '.targetId' < "${path.module}/.terraform/target_${self.triggers.target_key}.json")
       
       # Persist Target ID
       aws ssm put-parameter \
-        --name "/agentcore/${self.triggers.agent_name}/gateway/targets/${each.key}/id" \
+        --name "/agentcore/${self.triggers.agent_name}/gateway/targets/${self.triggers.target_key}/id" \
         --value "$TARGET_ID" \
         --type "String" \
         --overwrite \
@@ -138,12 +139,12 @@ resource "null_resource" "gateway_target" {
     when    = destroy
     command = <<-EOT
       set +e
-      TARGET_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/gateway/targets/${each.key}/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
+      TARGET_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/gateway/targets/${self.triggers.target_key}/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
       
       if [ -n "$TARGET_ID" ]; then
         echo "Deleting Gateway Target $TARGET_ID..."
         aws bedrock-agentcore-control delete-gateway-target --gateway-identifier "${self.triggers.gateway_id}" --target-identifier "$TARGET_ID" --region ${self.triggers.region}
-        aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/gateway/targets/${each.key}/id" --region ${self.triggers.region}
+        aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/gateway/targets/${self.triggers.target_key}/id" --region ${self.triggers.region}
       fi
     EOT
 
