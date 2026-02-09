@@ -1,106 +1,107 @@
 .PHONY: help init plan apply destroy validate fmt lint docs clean test
 
 # Variables
-TERRAFORM_DIR = .
-TF_FILES = $(TERRAFORM_DIR)/**/*.tf
-MODULES = agentcore-foundation agentcore-tools agentcore-runtime agentcore-governance
+ROOT_DIR := $(abspath .)
+TERRAFORM_DIR := $(ROOT_DIR)/terraform
+TF_FILES := $(TERRAFORM_DIR)/**/*.tf
+MODULES := agentcore-foundation agentcore-tools agentcore-runtime agentcore-governance
 
 help: ## Show this help message
 	@echo "Available targets:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-25s %s\n", $$1, $$2}'
 
 init: ## Initialize Terraform
-	terraform init
+	terraform -chdir=$(TERRAFORM_DIR) init
 
 fmt: ## Format Terraform files
-	terraform fmt -recursive
+	terraform -chdir=$(TERRAFORM_DIR) fmt -recursive
 
 validate: ## Validate Terraform configuration
-	terraform validate
+	terraform -chdir=$(TERRAFORM_DIR) validate
 	@echo "✓ Terraform configuration is valid"
 
 plan: ## Create Terraform plan
-	terraform plan -out=tfplan
+	terraform -chdir=$(TERRAFORM_DIR) plan -out=$(TERRAFORM_DIR)/tfplan
 
 plan-destroy: ## Create plan for destroying all resources
-	terraform plan -destroy -out=tfplan
+	terraform -chdir=$(TERRAFORM_DIR) plan -destroy -out=$(TERRAFORM_DIR)/tfplan
 
 apply: ## Apply Terraform changes
 	@echo "Applying Terraform changes..."
-	terraform apply tfplan
+	terraform -chdir=$(TERRAFORM_DIR) apply $(TERRAFORM_DIR)/tfplan
 
 apply-no-verify: ## Apply without plan verification
-	terraform apply -auto-approve
+	terraform -chdir=$(TERRAFORM_DIR) apply -auto-approve
 
 destroy: ## Destroy all Terraform resources
 	@echo "WARNING: This will destroy all resources. Type 'yes' to confirm."
-	terraform destroy
+	terraform -chdir=$(TERRAFORM_DIR) destroy
 
 # Environment-specific targets
 plan-dev:
-	terraform plan -var-file="examples/1-hello-world/terraform.tfvars" -out=tfplan-dev
+	terraform -chdir=$(TERRAFORM_DIR) plan -var-file="$(ROOT_DIR)/examples/1-hello-world/terraform.tfvars" -out=$(TERRAFORM_DIR)/tfplan-dev
 
 apply-dev: plan-dev
-	terraform apply tfplan-dev
+	terraform -chdir=$(TERRAFORM_DIR) apply $(TERRAFORM_DIR)/tfplan-dev
 
 plan-hello-world: ## Plan hello-world example
-	terraform plan -var-file="examples/1-hello-world/terraform.tfvars" -out=tfplan-hello
+	terraform -chdir=$(TERRAFORM_DIR) plan -var-file="$(ROOT_DIR)/examples/1-hello-world/terraform.tfvars" -out=$(TERRAFORM_DIR)/tfplan-hello
 
 plan-gateway-tool: ## Plan gateway-tool example
-	terraform plan -var-file="examples/2-gateway-tool/terraform.tfvars" -out=tfplan-gateway
+	terraform -chdir=$(TERRAFORM_DIR) plan -var-file="$(ROOT_DIR)/examples/2-gateway-tool/terraform.tfvars" -out=$(TERRAFORM_DIR)/tfplan-gateway
 
 plan-deepresearch: ## Plan deepresearch example
-	terraform plan -var-file="examples/3-deepresearch/terraform.tfvars" -out=tfplan-deepresearch
+	terraform -chdir=$(TERRAFORM_DIR) plan -var-file="$(ROOT_DIR)/examples/3-deepresearch/terraform.tfvars" -out=$(TERRAFORM_DIR)/tfplan-deepresearch
 
 plan-research: ## Plan simple research example
-	terraform plan -var-file="examples/4-research/terraform.tfvars" -out=tfplan-research
+	terraform -chdir=$(TERRAFORM_DIR) plan -var-file="$(ROOT_DIR)/examples/4-research/terraform.tfvars" -out=$(TERRAFORM_DIR)/tfplan-research
 
 # Output targets
 output: ## Show Terraform outputs
-	terraform output
+	terraform -chdir=$(TERRAFORM_DIR) output
 
 output-json: ## Show outputs as JSON
-	terraform output -json
+	terraform -chdir=$(TERRAFORM_DIR) output -json
 
 # State management
 state-list: ## List resources in state
-	terraform state list
+	terraform -chdir=$(TERRAFORM_DIR) state list
 
 state-show: ## Show resource details (specify RESOURCE=...)
-	terraform state show $(RESOURCE)
+	terraform -chdir=$(TERRAFORM_DIR) state show $(RESOURCE)
 
 state-backup: ## Create backup of Terraform state
 	mkdir -p backups
-	cp terraform.tfstate backups/terraform.tfstate.backup-$(shell date +%s)
+	cp $(TERRAFORM_DIR)/terraform.tfstate backups/terraform.tfstate.backup-$(shell date +%s)
 
 # Validation and security scanning
 security-scan: ## Run Checkov security scan
-	checkov -d . --framework terraform
+	checkov -d $(TERRAFORM_DIR) --framework terraform --config-file $(TERRAFORM_DIR)/.checkov.yaml
 
 tflint: ## Run TFLint for style checking
-	tflint --init
-	tflint
+	tflint --chdir=$(TERRAFORM_DIR) --init
+	tflint --chdir=$(TERRAFORM_DIR) --format compact --config $(TERRAFORM_DIR)/.tflint.hcl
 
 # Documentation
 docs: ## Generate Terraform documentation
 	@echo "Generating documentation..."
-	terraform-docs markdown . > docs/terraform.md
+	terraform-docs markdown $(TERRAFORM_DIR) > docs/terraform.md
 	@echo "✓ Documentation generated to docs/terraform.md"
 
 # Module management
 module-list: ## List all modules
 	@echo "AgentCore Modules:"
 	@for module in $(MODULES); do \
-		echo "  - modules/$$module"; \
+		echo "  - terraform/modules/$$module"; \
 		echo "    Resources:"; \
-		grep -r "^resource " modules/$$module/*.tf 2>/dev/null | sed 's/.* "/      /' | sort | uniq; \
+		grep -r "^resource " $(TERRAFORM_DIR)/modules/$$module/*.tf 2>/dev/null | sed 's/.* "/      /' | sort | uniq; \
 	done
 
 module-validate: ## Validate all modules
 	@echo "Validating modules..."
 	@for module in $(MODULES); do \
 		echo "  Validating $$module..."; \
-		cd modules/$$module && terraform validate && cd ../../ && echo "    ✓ Valid"; \
+		terraform -chdir=$(TERRAFORM_DIR)/modules/$$module validate && echo "    ✓ Valid"; \
 	done
 
 # Testing - Terraform
@@ -108,20 +109,20 @@ test: test-validate test-security test-examples test-cedar
 	@echo "✓ All Terraform tests passed"
 
 test-validate: ## Run Terraform validation tests
-	terraform fmt -check -recursive
-	terraform validate
+	terraform -chdir=$(TERRAFORM_DIR) fmt -check -recursive
+	terraform -chdir=$(TERRAFORM_DIR) validate
 	@echo "✓ Terraform validation passed"
 
 test-security: ## Run security scans
-	checkov -d . --framework terraform --compact --config-file .checkov.yaml
+	checkov -d $(TERRAFORM_DIR) --framework terraform --compact --config-file $(TERRAFORM_DIR)/.checkov.yaml
 	@echo "✓ Security scan passed"
 
 test-examples: ## Validate all example configurations
-	bash scripts/validate_examples.sh
+	bash $(TERRAFORM_DIR)/scripts/validate_examples.sh
 	@echo "✓ All examples validated"
 
 test-cedar: ## Validate Cedar policies
-	bash scripts/validate_cedar_policies.sh
+	bash $(TERRAFORM_DIR)/scripts/validate_cedar_policies.sh
 	@echo "✓ Cedar policies validated"
 
 # Testing - Python (All example agents)
@@ -189,33 +190,33 @@ logs-evaluator: ## Tail evaluator logs
 
 # Cleanup
 clean: ## Clean Terraform cache and temporary files
-	rm -rf .terraform
-	rm -f tfplan tfplan-*
-	rm -f terraform.tfstate*
+	rm -rf $(TERRAFORM_DIR)/.terraform
+	rm -f $(TERRAFORM_DIR)/tfplan $(TERRAFORM_DIR)/tfplan-*
+	rm -f $(TERRAFORM_DIR)/terraform.tfstate*
 	rm -rf backups
 
 clean-outputs: ## Clean generated CLI output files
-	find modules -name ".terraform" -type d -exec rm -rf {} +
-	find modules -name "*.json" -path "*/.terraform/*" -delete
-	find modules -name "*.txt" -path "*/.terraform/*" -delete
+	find $(TERRAFORM_DIR)/modules -name ".terraform" -type d -exec rm -rf {} +
+	find $(TERRAFORM_DIR)/modules -name "*.json" -path "*/.terraform/*" -delete
+	find $(TERRAFORM_DIR)/modules -name "*.txt" -path "*/.terraform/*" -delete
 
 # Development helpers
 format-check: ## Check if files are properly formatted
-	terraform fmt -check -recursive
+	terraform -chdir=$(TERRAFORM_DIR) fmt -check -recursive
 
 update-providers: ## Update provider versions
-	terraform init -upgrade
+	terraform -chdir=$(TERRAFORM_DIR) init -upgrade
 
 debug: ## Enable debug logging
 	export TF_LOG=DEBUG
-	terraform plan
+	terraform -chdir=$(TERRAFORM_DIR) plan
 
 # Quick start
 quickstart: init validate
 	@echo "✓ Terraform initialized and validated"
 	@echo "Next steps:"
-	@echo "  1. Copy terraform.tfvars.example to terraform.tfvars"
-	@echo "  2. Edit terraform.tfvars with your configuration"
+	@echo "  1. Copy terraform/terraform.tfvars.example to terraform/terraform.tfvars"
+	@echo "  2. Edit terraform/terraform.tfvars with your configuration"
 	@echo "  3. Run 'make plan' to review changes"
 	@echo "  4. Run 'make apply' to deploy"
 

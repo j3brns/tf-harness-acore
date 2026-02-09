@@ -31,7 +31,7 @@ repos:
         name: TFLint
         description: Linter for Terraform
         args:
-          - --args=--config=__GIT_WORKING_DIR__/.tflint.hcl
+          - --args=--config=__GIT_WORKING_DIR__/terraform/.tflint.hcl
 
       - id: terraform_checkov
         name: Checkov Security Scan
@@ -111,7 +111,7 @@ repos:
         name: Check Tests Updated With Terraform Changes
         description: Ensures tests are updated when Terraform changes
         entry: >-
-          bash -c 'if git diff --cached --name-only | grep -qE "\.tf$"; then git diff --cached --name-only | grep -qE "^(tests/|scripts/validate_examples\.sh|examples/.*/agent-code/tests/|examples/.*/tests/)" || { echo "ERROR: Terraform changed without tests"; exit 1; }; fi'
+          bash -c 'if git diff --cached --name-only | grep -qE "\.tf$"; then git diff --cached --name-only | grep -qE "^(terraform/tests/|terraform/scripts/validate_examples\.sh|examples/.*/agent-code/tests/|examples/.*/tests/)" || { echo "ERROR: Terraform changed without tests"; exit 1; }; fi'
         language: system
         pass_filenames: false
         always_run: true

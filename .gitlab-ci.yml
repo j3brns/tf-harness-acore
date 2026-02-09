@@ -12,7 +12,8 @@ stages:
   - deploy-prod  # Manual deploy to prod (AWS prod account)
 
 variables:
-  TF_ROOT: ${CI_PROJECT_DIR}
+  REPO_ROOT: ${CI_PROJECT_DIR}
+  TF_ROOT: ${CI_PROJECT_DIR}/terraform
   TF_VERSION: "1.14.4"
   AWS_DEFAULT_REGION: us-east-1
 
@@ -69,8 +70,8 @@ validate:plan:
     - cd $TF_ROOT
     - terraform init -backend=false
     - |
-      if [ -f "examples/1-hello-world/terraform.tfvars" ]; then
-        terraform plan -var-file=examples/1-hello-world/terraform.tfvars -input=false -out=test.tfplan
+      if [ -f "$REPO_ROOT/examples/1-hello-world/terraform.tfvars" ]; then
+        terraform plan -var-file="$REPO_ROOT/examples/1-hello-world/terraform.tfvars" -input=false -out="$TF_ROOT/test.tfplan"
         terraform show test.tfplan
       else
         echo "No example tfvars found, skipping plan"
@@ -87,7 +88,7 @@ validate:docs-and-tests:
   stage: validate
   extends: .terraform_setup
   script:
-    - cd $TF_ROOT
+    - cd $REPO_ROOT
     - |
       set -euo pipefail
       TARGET="${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-$CI_DEFAULT_BRANCH}"
@@ -95,7 +96,7 @@ validate:docs-and-tests:
       CHANGED=$(git diff --name-only "origin/$TARGET"...HEAD)
       if printf '%s\n' "$CHANGED" | grep -qE "\.tf$"; then
         printf '%s\n' "$CHANGED" | grep -qE "\.md$" || { echo "ERROR: Terraform changed without docs"; exit 1; }
-        printf '%s\n' "$CHANGED" | grep -qE "^(tests/|scripts/validate_examples\.sh|examples/.*/agent-code/tests/|examples/.*/tests/)" || { echo "ERROR: Terraform changed without tests"; exit 1; }
+        printf '%s\n' "$CHANGED" | grep -qE "^(terraform/tests/|terraform/scripts/validate_examples\.sh|examples/.*/agent-code/tests/|examples/.*/tests/)" || { echo "ERROR: Terraform changed without tests"; exit 1; }
       fi
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -115,7 +116,7 @@ lint:tflint:
   script:
     - cd $TF_ROOT
     - tflint --init || echo "TFLint init skipped"
-    - tflint --recursive --format compact || echo "TFLint warnings found"
+    - tflint --recursive --format compact --config $TF_ROOT/.tflint.hcl || echo "TFLint warnings found"
   allow_failure: true  # Warning only initially
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -126,8 +127,8 @@ lint:checkov:
   image: bridgecrew/checkov:latest
   script:
     - cd $TF_ROOT
-    - checkov -d . --framework terraform --quiet --compact --output cli --output junitxml > checkov-report.xml || true
-    - checkov -d . --framework terraform --quiet --compact
+    - checkov -d $TF_ROOT --framework terraform --quiet --compact --config-file $TF_ROOT/.checkov.yaml --output cli --output junitxml > checkov-report.xml || true
+    - checkov -d $TF_ROOT --framework terraform --quiet --compact --config-file $TF_ROOT/.checkov.yaml
   artifacts:
     reports:
       junit: $TF_ROOT/checkov-report.xml
@@ -150,11 +151,11 @@ test:examples:
     - cd $TF_ROOT
     - terraform init -backend=false
     - |
-      for example in examples/*.tfvars examples/*/terraform.tfvars; do
+      for example in "$REPO_ROOT"/examples/*.tfvars "$REPO_ROOT"/examples/*/terraform.tfvars; do
         if [ -f "$example" ]; then
           echo "Validating: $example"
-          terraform plan -var-file="$example" -input=false -out=test.tfplan || exit 1
-          rm -f test.tfplan
+          terraform plan -var-file="$example" -input=false -out="$TF_ROOT/test.tfplan" || exit 1
+          rm -f "$TF_ROOT/test.tfplan"
         fi
       done
   rules:
@@ -167,7 +168,7 @@ test:cedar-policies:
   script:
     - cd $TF_ROOT
     - |
-      POLICY_DIR="modules/agentcore-governance/cedar_policies"
+      POLICY_DIR="$TF_ROOT/modules/agentcore-governance/cedar_policies"
       if [ -d "$POLICY_DIR" ]; then
         echo "Validating Cedar policies..."
         for policy in "$POLICY_DIR"/*.cedar; do
@@ -196,12 +197,12 @@ test:python-hello-world:
   before_script:
     - pip install --upgrade pip
   script:
-    - cd $TF_ROOT/examples/1-hello-world/agent-code
+    - cd $REPO_ROOT/examples/1-hello-world/agent-code
     - pip install -e ".[dev]"
     - python -m pytest tests/ -v --tb=short --junitxml=test-results.xml
   artifacts:
     reports:
-      junit: $TF_ROOT/examples/1-hello-world/agent-code/test-results.xml
+      junit: $REPO_ROOT/examples/1-hello-world/agent-code/test-results.xml
     expire_in: 7 days
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -215,12 +216,12 @@ test:python-gateway-tool:
   before_script:
     - pip install --upgrade pip
   script:
-    - cd $TF_ROOT/examples/2-gateway-tool/agent-code
+    - cd $REPO_ROOT/examples/2-gateway-tool/agent-code
     - pip install -e ".[dev]"
     - python -m pytest tests/ -v --tb=short --junitxml=test-results.xml
   artifacts:
     reports:
-      junit: $TF_ROOT/examples/2-gateway-tool/agent-code/test-results.xml
+      junit: $REPO_ROOT/examples/2-gateway-tool/agent-code/test-results.xml
     expire_in: 7 days
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -234,12 +235,12 @@ test:python-deepresearch-unit:
   before_script:
     - pip install --upgrade pip
   script:
-    - cd $TF_ROOT/examples/3-deepresearch/agent-code
+    - cd $REPO_ROOT/examples/3-deepresearch/agent-code
     - pip install -e ".[dev]"
     - python -m pytest tests/unit -v --tb=short --junitxml=unit-results.xml
   artifacts:
     reports:
-      junit: $TF_ROOT/examples/3-deepresearch/agent-code/unit-results.xml
+      junit: $REPO_ROOT/examples/3-deepresearch/agent-code/unit-results.xml
     expire_in: 7 days
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -253,12 +254,12 @@ test:python-deepresearch-integration:
   before_script:
     - pip install --upgrade pip
   script:
-    - cd $TF_ROOT/examples/3-deepresearch/agent-code
+    - cd $REPO_ROOT/examples/3-deepresearch/agent-code
     - pip install -e ".[dev]"
     - python -m pytest tests/integration -v --tb=short --junitxml=integration-results.xml
   artifacts:
     reports:
-      junit: $TF_ROOT/examples/3-deepresearch/agent-code/integration-results.xml
+      junit: $REPO_ROOT/examples/3-deepresearch/agent-code/integration-results.xml
     expire_in: 7 days
   allow_failure: true  # Integration tests may need external dependencies
   rules:
@@ -273,12 +274,12 @@ test:python-research:
   before_script:
     - pip install --upgrade pip
   script:
-    - cd $TF_ROOT/examples/4-research/agent-code
+    - cd $REPO_ROOT/examples/4-research/agent-code
     - pip install -e ".[dev]"
     - python -m pytest tests/ -v --tb=short --junitxml=test-results.xml
   artifacts:
     reports:
-      junit: $TF_ROOT/examples/4-research/agent-code/test-results.xml
+      junit: $REPO_ROOT/examples/4-research/agent-code/test-results.xml
     expire_in: 7 days
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -487,7 +488,7 @@ test:mcp-servers:
   stage: test
   extends: .terraform_setup
   script:
-    - cd $TF_ROOT/examples/mcp-servers/terraform
+    - cd $REPO_ROOT/examples/mcp-servers/terraform
     - terraform init -backend=false
     - terraform validate
     - terraform fmt -check

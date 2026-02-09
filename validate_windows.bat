@@ -3,6 +3,7 @@ setlocal enabledelayedexpansion
 
 rem Run from repo root regardless of invocation directory
 pushd "%~dp0"
+set "TF_DIR=%~dp0terraform"
 
 rem Resolve Terraform binary
 set "TERRAFORM=terraform"
@@ -20,13 +21,17 @@ if errorlevel 1 (
 if /I "%~1"=="--fix" (
   echo === Minimal validation (with auto-fix^) ===
   echo Running: terraform fmt -recursive
+  pushd "%TF_DIR%"
   "%TERRAFORM%" fmt -recursive
+  popd
   if errorlevel 1 goto :fail
 )
 
 echo === Minimal validation ===
 echo Running: terraform fmt -check -recursive
+pushd "%TF_DIR%"
 "%TERRAFORM%" fmt -check -recursive
+popd
 if errorlevel 1 goto :fail
 
 set "PRECOMMIT_CMD="
