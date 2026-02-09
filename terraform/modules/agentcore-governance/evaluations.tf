@@ -5,6 +5,8 @@ resource "null_resource" "custom_evaluator" {
   count = var.enable_evaluations ? 1 : 0
 
   triggers = {
+    agent_name      = var.agent_name
+    region          = var.region
     model_id        = var.evaluator_model_id
     evaluation_type = var.evaluation_type
     prompt_hash     = sha256(var.evaluation_prompt)
@@ -32,15 +34,50 @@ resource "null_resource" "custom_evaluator" {
         --criteria "$CRITERIA" \
         %{endif}
         --region ${var.region} \
-        --output json > ${path.module}/.terraform/evaluator.json 2>/dev/null || true
+        --output json > "${path.module}/.terraform/evaluator.json"
 
-      # Extract evaluator ID
-      EVALUATOR_ID=$(cat ${path.module}/.terraform/evaluator.json 2>/dev/null | jq -r '.evaluatorId // empty' || echo "")
-      if [ -n "$EVALUATOR_ID" ]; then
-        echo "$EVALUATOR_ID" > ${path.module}/.terraform/evaluator_id.txt
+      # Rule 1.2: Fail Fast
+      if [ ! -s "${path.module}/.terraform/evaluator.json" ]; then
+        echo "ERROR: Failed to create custom evaluator"
+        exit 1
       fi
 
+      # Extract evaluator ID
+      EVALUATOR_ID=$(jq -r '.evaluatorId // empty' < "${path.module}/.terraform/evaluator.json")
+      
+      if [ -z "$EVALUATOR_ID" ]; then
+        echo "ERROR: Evaluator ID missing from output"
+        exit 1
+      fi
+
+      # Rule 5.1: SSM Persistence
+      echo "Persisting Evaluator ID to SSM..."
+      aws ssm put-parameter \
+        --name "/agentcore/${var.agent_name}/evaluator/id" \
+        --value "$EVALUATOR_ID" \
+        --type "String" \
+        --overwrite \
+        --region ${var.region}
+
+      echo "$EVALUATOR_ID" > "${path.module}/.terraform/evaluator_id.txt"
       echo "Custom evaluator created successfully"
+    EOT
+
+    interpreter = ["bash", "-c"]
+  }
+
+  # Rule 6.1: Cleanup Hooks
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      set +e
+      EVALUATOR_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/evaluator/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
+      
+      if [ -n "$EVALUATOR_ID" ]; then
+        echo "Deleting Evaluator $EVALUATOR_ID..."
+        aws bedrock-agentcore-control delete-evaluator --evaluator-identifier "$EVALUATOR_ID" --region ${self.triggers.region}
+        aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/evaluator/id" --region ${self.triggers.region}
+      fi
     EOT
 
     interpreter = ["bash", "-c"]

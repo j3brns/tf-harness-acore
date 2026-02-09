@@ -1,8 +1,10 @@
-# Browser - CLI-based provisioning
+# Browser - CLI-based provisioning with SSM Persistence (Rule 5)
 resource "null_resource" "browser" {
   count = var.enable_browser ? 1 : 0
 
   triggers = {
+    agent_name         = var.agent_name
+    region             = var.region
     name               = "${var.agent_name}-browser"
     execution_role_arn = aws_iam_role.browser[0].arn
   }
@@ -15,10 +17,40 @@ resource "null_resource" "browser" {
         --name "${self.triggers.name}" \
         --role-arn "${self.triggers.execution_role_arn}" \
         --region ${var.region} \
-        --output json > ${path.module}/.terraform/browser_output.json
+        --output json > "${path.module}/.terraform/browser_output.json"
 
+      # Rule 1.2: Fail Fast
       if [ ! -s "${path.module}/.terraform/browser_output.json" ]; then
+        echo "ERROR: Failed to create browser"
         exit 1
+      fi
+      
+      BROWSER_ID=$(jq -r '.browserId' < "${path.module}/.terraform/browser_output.json")
+      
+      # Rule 5.1: SSM Persistence
+      echo "Persisting Browser ID to SSM..."
+      aws ssm put-parameter \
+        --name "/agentcore/${var.agent_name}/browser/id" \
+        --value "$BROWSER_ID" \
+        --type "String" \
+        --overwrite \
+        --region ${var.region}
+    EOT
+
+    interpreter = ["bash", "-c"]
+  }
+
+  # Rule 6.1: Cleanup Hooks
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      set +e
+      BROWSER_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/browser/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
+      
+      if [ -n "$BROWSER_ID" ]; then
+        echo "Deleting Browser $BROWSER_ID..."
+        aws bedrock-agentcore-control delete-browser --browser-identifier "$BROWSER_ID" --region ${self.triggers.region}
+        aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/browser/id" --region ${self.triggers.region}
       fi
     EOT
 

@@ -1,10 +1,11 @@
-# Policy Engine - CLI-based provisioning
+# Policy Engine - CLI-based provisioning with SSM Persistence (Rule 5)
 # Note: Native aws_bedrockagentcore_policy_engine resource not yet available in Terraform
 
 resource "null_resource" "policy_engine" {
   count = var.enable_policy_engine ? 1 : 0
 
   triggers = {
+    agent_name  = var.agent_name
     schema_hash = var.policy_engine_schema != "" ? sha256(var.policy_engine_schema) : "no-schema"
   }
 
@@ -21,23 +22,49 @@ resource "null_resource" "policy_engine" {
         --schema '${var.policy_engine_schema}' \
         %{endif}
         --region ${var.region} \
-        --output json > ${path.module}/.terraform/policy_engine.json
+        --output json > "${path.module}/.terraform/policy_engine.json"
 
-      # Verify output file exists and is not empty
+      # Rule 1.2: Fail Fast
       if [ ! -s "${path.module}/.terraform/policy_engine.json" ]; then
         echo "ERROR: Failed to create policy engine - no output received"
         exit 1
       fi
 
       # Extract policy engine ID
-      POLICY_ENGINE_ID=$(jq -r '.policyEngineId // empty' < ${path.module}/.terraform/policy_engine.json)
+      POLICY_ENGINE_ID=$(jq -r '.policyEngineId // empty' < "${path.module}/.terraform/policy_engine.json")
       if [ -z "$POLICY_ENGINE_ID" ]; then
         echo "ERROR: Policy engine ID missing from output"
         exit 1
       fi
 
-      echo "$POLICY_ENGINE_ID" > ${path.module}/.terraform/policy_engine_id.txt
-      echo "Policy engine created successfully"
+      # Rule 5.1: SSM Persistence
+      echo "Persisting Policy Engine ID to SSM..."
+      aws ssm put-parameter \
+        --name "/agentcore/${var.agent_name}/policy-engine/id" \
+        --value "$POLICY_ENGINE_ID" \
+        --type "String" \
+        --overwrite \
+        --region ${var.region}
+
+      # Local fallback for same-run consumption
+      echo "$POLICY_ENGINE_ID" > "${path.module}/.terraform/policy_engine_id.txt"
+    EOT
+
+    interpreter = ["bash", "-c"]
+  }
+
+  # Rule 6.1: Cleanup Hooks
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      set +e
+      POLICY_ENGINE_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/policy-engine/id" --query "Parameter.Value" --output text --region ${var.region} 2>/dev/null)
+      
+      if [ -n "$POLICY_ENGINE_ID" ]; then
+        echo "Deleting Policy Engine $POLICY_ENGINE_ID..."
+        aws bedrock-agentcore-control delete-policy-engine --policy-engine-identifier "$POLICY_ENGINE_ID" --region ${var.region}
+        aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/policy-engine/id" --region ${var.region}
+      fi
     EOT
 
     interpreter = ["bash", "-c"]
@@ -48,45 +75,72 @@ resource "null_resource" "policy_engine" {
   ]
 }
 
+data "aws_ssm_parameter" "policy_engine_id" {
+  count = var.enable_policy_engine ? 1 : 0
+  name  = "/agentcore/${var.agent_name}/policy-engine/id"
+  depends_on = [null_resource.policy_engine]
+}
+
 # Cedar Policies
 resource "null_resource" "cedar_policies" {
   for_each = var.enable_policy_engine ? var.cedar_policy_files : {}
 
   triggers = {
-    policy_content = filesha256(each.value)
+    policy_name      = each.key
+    policy_content   = filesha256(each.value)
+    policy_engine_id = var.enable_policy_engine ? data.aws_ssm_parameter.policy_engine_id[0].value : ""
   }
 
   provisioner "local-exec" {
     command = <<-EOT
       set -e
 
-      echo "Creating Cedar policy: ${each.key}..."
+      echo "Creating Cedar policy: ${self.triggers.policy_name}..."
 
       # Read policy file
-      POLICY_CONTENT=$(cat "${each.value}")
+      POLICY_CONTENT=$(cat "${var.cedar_policy_files[self.triggers.policy_name]}")
 
-      # Check if policy engine exists
-      if [ -f "${path.module}/.terraform/policy_engine_id.txt" ]; then
-        POLICY_ENGINE_ID=$(cat ${path.module}/.terraform/policy_engine_id.txt)
+      # Create policy
+      aws bedrock-agentcore-control create-policy \
+        --policy-engine-identifier "${self.triggers.policy_engine_id}" \
+        --name "${self.triggers.policy_name}" \
+        --policy-statements "$POLICY_CONTENT" \
+        --region ${var.region} \
+        --output json > "${path.module}/.terraform/policy_${self.triggers.policy_name}.json"
 
-        # Create policy
-        aws bedrock-agentcore-control create-policy \
-          --policy-engine-identifier "$POLICY_ENGINE_ID" \
-          --name "${each.key}" \
-          --policy-statements "$POLICY_CONTENT" \
-          --region ${var.region} \
-          --output json > ${path.module}/.terraform/policy_${each.key}.json
-
-        # Verify output file
-        if [ ! -s "${path.module}/.terraform/policy_${each.key}.json" ]; then
-          echo "ERROR: Failed to create policy ${each.key}"
-          exit 1
-        fi
-
-        echo "Policy ${each.key} created"
-      else
-        echo "ERROR: Policy engine ID not found. Ensure policy engine was created first."
+      # Rule 1.2: Fail Fast
+      if [ ! -s "${path.module}/.terraform/policy_${self.triggers.policy_name}.json" ]; then
+        echo "ERROR: Failed to create policy ${self.triggers.policy_name}"
         exit 1
+      fi
+      
+      POLICY_ID=$(jq -r '.policyId' < "${path.module}/.terraform/policy_${self.triggers.policy_name}.json")
+      
+      # Persist Policy ID
+      aws ssm put-parameter \
+        --name "/agentcore/${var.agent_name}/policies/${self.triggers.policy_name}/id" \
+        --value "$POLICY_ID" \
+        --type "String" \
+        --overwrite \
+        --region ${var.region}
+    EOT
+
+    interpreter = ["bash", "-c"]
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      set +e
+      POLICY_ID=$(aws ssm get-parameter --name "/agentcore/${var.agent_name}/policies/${self.triggers.policy_name}/id" --query "Parameter.Value" --output text --region ${var.region} 2>/dev/null)
+      
+      if [ -n "$POLICY_ID" ]; then
+        echo "Deleting Policy $POLICY_ID from Engine ${self.triggers.policy_engine_id}..."
+        aws bedrock-agentcore-control delete-policy \
+          --policy-engine-identifier "${self.triggers.policy_engine_id}" \
+          --policy-identifier "$POLICY_ID" \
+          --region ${var.region}
+        aws ssm delete-parameter --name "/agentcore/${var.agent_name}/policies/${self.triggers.policy_name}/id" --region ${var.region}
       fi
     EOT
 
