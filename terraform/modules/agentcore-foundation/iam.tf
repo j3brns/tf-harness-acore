@@ -14,7 +14,7 @@ resource "aws_iam_role" "gateway" {
       # Rule 7.1: ABAC Scoping
       Condition = {
         StringEquals = {
-          "aws:PrincipalTag/Project" = var.tags["Project"]
+          "aws:PrincipalTag/Project" = lookup(var.tags, "Project", "AgentCore")
         }
       }
     }]
@@ -81,7 +81,7 @@ resource "aws_iam_role" "cloudwatch_logs" {
       # Rule 7.1: ABAC Scoping
       Condition = {
         StringEquals = {
-          "aws:PrincipalTag/Project" = var.tags["Project"]
+          "aws:PrincipalTag/Project" = lookup(var.tags, "Project", "AgentCore")
         }
       }
     }]
@@ -129,7 +129,7 @@ resource "aws_iam_role" "workload_identity" {
       # Rule 7.1: ABAC Scoping
       Condition = {
         StringEquals = {
-          "aws:PrincipalTag/Project" = var.tags["Project"]
+          "aws:PrincipalTag/Project" = lookup(var.tags, "Project", "AgentCore")
         }
       }
     }]
@@ -154,7 +154,7 @@ resource "aws_iam_role_policy" "workload_identity" {
         # Rule 7.2: Resource-level ABAC
         Condition = {
           StringEquals = {
-            "aws:ResourceTag/Project" = var.tags["Project"]
+            "aws:ResourceTag/Project" = lookup(var.tags, "Project", "AgentCore")
           }
         }
       },

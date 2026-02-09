@@ -14,7 +14,7 @@ resource "aws_iam_role" "policy_engine" {
       # Rule 7.1: ABAC Scoping - Prevent lateral movement
       Condition = {
         StringEquals = {
-          "aws:PrincipalTag/Project" = var.tags["Project"]
+          "aws:PrincipalTag/Project" = lookup(var.tags, "Project", "AgentCore")
         }
       }
     }]
@@ -61,7 +61,7 @@ resource "aws_iam_role" "evaluator" {
       # Rule 7.1: ABAC Scoping
       Condition = {
         StringEquals = {
-          "aws:PrincipalTag/Project" = var.tags["Project"]
+          "aws:PrincipalTag/Project" = lookup(var.tags, "Project", "AgentCore")
         }
       }
     }]

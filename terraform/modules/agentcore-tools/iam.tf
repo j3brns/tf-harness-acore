@@ -33,7 +33,7 @@ resource "aws_iam_role" "code_interpreter" {
       # Rule 7.1: ABAC Scoping
       Condition = {
         StringEquals = {
-          "aws:PrincipalTag/Project" = var.tags["Project"]
+          "aws:PrincipalTag/Project" = lookup(var.tags, "Project", "AgentCore")
         }
       }
     }]
@@ -112,7 +112,7 @@ resource "aws_iam_role" "browser" {
       # Rule 7.1: ABAC Scoping
       Condition = {
         StringEquals = {
-          "aws:PrincipalTag/Project" = var.tags["Project"]
+          "aws:PrincipalTag/Project" = lookup(var.tags, "Project", "AgentCore")
         }
       }
     }]
