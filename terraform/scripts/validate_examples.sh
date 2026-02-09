@@ -62,12 +62,19 @@ validate_example() {
     fi
 }
 
-# Use find to locate all .tfvars and .tfvars.example files recursively in the examples directory
+# Find all .tfvars and .tfvars.example files
 if [ -d "$EXAMPLES_DIR" ]; then
-    while IFS= read -r example_file; do
-        ((EXAMPLE_COUNT++))
-        validate_example "$example_file"
-    done < <(find "$EXAMPLES_DIR" -name "*.tfvars" -o -name "*.tfvars.example")
+    # Use a simpler find and loop to avoid shell-specific redirection issues
+    FILES=$(find "$EXAMPLES_DIR" -type f \( -name "*.tfvars" -o -name "*.tfvars.example" \))
+    
+    if [ -z "$FILES" ]; then
+        echo "WARN: No .tfvars or .tfvars.example files found in $EXAMPLES_DIR"
+    else
+        for example_file in $FILES; do
+            ((EXAMPLE_COUNT++))
+            validate_example "$example_file"
+        done
+    fi
 else
     echo "WARN: Examples directory not found: $EXAMPLES_DIR"
 fi
@@ -89,7 +96,6 @@ fi
 
 if [ "$EXAMPLE_COUNT" -eq 0 ]; then
     echo "WARN: No example configurations found"
-    # Don't exit error if no examples, but maybe we should?
     exit 0
 fi
 

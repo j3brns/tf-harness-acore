@@ -54,6 +54,7 @@ jobs:
       - uses: ./.github/actions/tflint-setup
         with:
           tflint_version: v0.50.3
+          github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: TFLint init
         working-directory: terraform
         run: tflint --init
