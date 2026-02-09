@@ -77,8 +77,8 @@ resource "null_resource" "policy_engine" {
 }
 
 data "aws_ssm_parameter" "policy_engine_id" {
-  count = var.enable_policy_engine ? 1 : 0
-  name  = "/agentcore/${var.agent_name}/policy-engine/id"
+  count      = var.enable_policy_engine ? 1 : 0
+  name       = "/agentcore/${var.agent_name}/policy-engine/id"
   depends_on = [null_resource.policy_engine]
 }
 
