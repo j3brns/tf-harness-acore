@@ -5,16 +5,17 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+TERRAFORM_DIR="$REPO_ROOT/terraform"
 
 echo "=========================================="
 echo "Validating Cedar policies"
 echo "=========================================="
 
-cd "$PROJECT_DIR"
+cd "$TERRAFORM_DIR"
 
 # Find Cedar policy files
-POLICY_DIR="modules/agentcore-governance/cedar_policies"
+POLICY_DIR="$TERRAFORM_DIR/modules/agentcore-governance/cedar_policies"
 
 if [ ! -d "$POLICY_DIR" ]; then
     echo "WARN: Cedar policies directory not found: $POLICY_DIR"

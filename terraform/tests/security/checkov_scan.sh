@@ -5,13 +5,14 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+TERRAFORM_DIR="$REPO_ROOT/terraform"
 
 echo "=========================================="
 echo "Running Checkov security scan"
 echo "=========================================="
 
-cd "$PROJECT_DIR"
+cd "$TERRAFORM_DIR"
 
 # Check if checkov is installed
 if ! command -v checkov &> /dev/null; then
@@ -23,18 +24,19 @@ fi
 echo ""
 echo "Scanning Terraform configuration..."
 
-checkov -d . \
+checkov -d "$TERRAFORM_DIR" \
     --framework terraform \
     --quiet \
     --compact \
     --output cli \
-    --output json:checkov_results.json
+    --config-file "$TERRAFORM_DIR/.checkov.yaml" \
+    --output json:"$TERRAFORM_DIR/checkov_results.json"
 
 # Check results
-if [ -f "checkov_results.json" ]; then
-    PASSED=$(jq '.summary.passed' checkov_results.json 2>/dev/null || echo "0")
-    FAILED=$(jq '.summary.failed' checkov_results.json 2>/dev/null || echo "0")
-    SKIPPED=$(jq '.summary.skipped' checkov_results.json 2>/dev/null || echo "0")
+if [ -f "$TERRAFORM_DIR/checkov_results.json" ]; then
+    PASSED=$(jq '.summary.passed' "$TERRAFORM_DIR/checkov_results.json" 2>/dev/null || echo "0")
+    FAILED=$(jq '.summary.failed' "$TERRAFORM_DIR/checkov_results.json" 2>/dev/null || echo "0")
+    SKIPPED=$(jq '.summary.skipped' "$TERRAFORM_DIR/checkov_results.json" 2>/dev/null || echo "0")
 
     echo ""
     echo "=========================================="
@@ -52,13 +54,13 @@ if [ -f "checkov_results.json" ]; then
         echo "Review checkov_results.json for details"
         echo ""
         echo "Failed checks:"
-        jq -r '.results.failed_checks[]? | "  - \(.check_id): \(.check_result.evaluated_keys[0])"' checkov_results.json 2>/dev/null || true
+        jq -r '.results.failed_checks[]? | "  - \(.check_id): \(.check_result.evaluated_keys[0])"' "$TERRAFORM_DIR/checkov_results.json" 2>/dev/null || true
         exit 1
     fi
 
     echo ""
     echo "PASS: No critical security issues found"
-    rm -f checkov_results.json
+    rm -f "$TERRAFORM_DIR/checkov_results.json"
 else
     echo "PASS: Checkov scan completed (no output file)"
 fi

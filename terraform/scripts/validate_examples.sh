@@ -5,13 +5,14 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+TERRAFORM_DIR="$REPO_ROOT/terraform"
 
 echo "=========================================="
 echo "Validating example configurations"
 echo "=========================================="
 
-cd "$PROJECT_DIR"
+cd "$TERRAFORM_DIR"
 
 # Initialize Terraform
 echo ""
@@ -19,7 +20,7 @@ echo "Initializing Terraform..."
 terraform init -backend=false -input=false
 
 # Find and validate each example
-EXAMPLES_DIR="examples"
+EXAMPLES_DIR="$REPO_ROOT/examples"
 EXAMPLE_COUNT=0
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -33,9 +34,9 @@ validate_example() {
     echo "  File: $example_file"
 
     # Validate syntax with plan
-    if terraform plan -var-file="$example_file" -input=false -out="test-${example_name}.tfplan" 2>&1; then
+    if terraform -chdir="$TERRAFORM_DIR" plan -var-file="$example_file" -input=false -out="test-${example_name}.tfplan" 2>&1; then
         echo "  PASS: Plan generated successfully"
-        rm -f "test-${example_name}.tfplan"
+        rm -f "$TERRAFORM_DIR/test-${example_name}.tfplan"
         ((PASS_COUNT++))
         return 0
     else
