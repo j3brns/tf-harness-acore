@@ -6,6 +6,7 @@ resource "aws_s3_bucket" "deployment" {
   tags = var.tags
 }
 
+# Block public access to deployment bucket
 resource "aws_s3_bucket_public_access_block" "deployment" {
   count  = var.deployment_bucket_name == "" ? 1 : 0
   bucket = aws_s3_bucket.deployment[0].id
@@ -16,29 +17,10 @@ resource "aws_s3_bucket_public_access_block" "deployment" {
   restrict_public_buckets = true
 }
 
-resource "aws_s3_bucket_versioning" "deployment" {
-  count  = var.deployment_bucket_name == "" ? 1 : 0
-  bucket = aws_s3_bucket.deployment[0].id
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "deployment" {
-  count  = var.deployment_bucket_name == "" ? 1 : 0
-  bucket = aws_s3_bucket.deployment[0].id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
-
 # S3 versioning
 resource "aws_s3_bucket_versioning" "deployment" {
-  count  = var.enable_s3_versioning ? 1 : 0
-  bucket = local.deployment_bucket
+  count  = var.deployment_bucket_name == "" && var.enable_s3_versioning ? 1 : 0
+  bucket = aws_s3_bucket.deployment[0].id
 
   versioning_configuration {
     status = "Enabled"
@@ -47,8 +29,8 @@ resource "aws_s3_bucket_versioning" "deployment" {
 
 # S3 server-side encryption - Using AWS-managed encryption (SSE-S3)
 resource "aws_s3_bucket_server_side_encryption_configuration" "deployment" {
-  count  = var.enable_s3_encryption ? 1 : 0
-  bucket = local.deployment_bucket
+  count  = var.deployment_bucket_name == "" && var.enable_s3_encryption ? 1 : 0
+  bucket = aws_s3_bucket.deployment[0].id
 
   rule {
     apply_server_side_encryption_by_default {
@@ -56,16 +38,6 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "deployment" {
     }
     bucket_key_enabled = true
   }
-}
-
-# Block public access to deployment bucket
-resource "aws_s3_bucket_public_access_block" "deployment" {
-  bucket = local.deployment_bucket
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
 }
 
 # CloudWatch log group for packaging
