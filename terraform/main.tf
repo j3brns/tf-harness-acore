@@ -61,11 +61,11 @@ module "agentcore_runtime" {
   tags       = var.tags
 
   # Runtime configuration
-  enable_runtime      = var.enable_runtime
-  runtime_source_path = var.runtime_source_path
-  runtime_config      = var.runtime_config
-  runtime_role_arn    = var.runtime_role_arn
-  runtime_policy_arns = var.runtime_policy_arns
+  enable_runtime          = var.enable_runtime
+  runtime_source_path     = var.runtime_source_path
+  runtime_config          = var.runtime_config
+  runtime_role_arn        = var.runtime_role_arn
+  runtime_policy_arns     = var.runtime_policy_arns
   runtime_inline_policies = var.runtime_inline_policies
 
   # Memory configuration

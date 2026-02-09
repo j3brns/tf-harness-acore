@@ -83,8 +83,8 @@ class TestCreateSessionManager:
         mock_config.assert_called_once_with(session_id="session-123")
 
     @patch("deepresearch.utils.session.get_memory_config")
-    @patch("deepresearch.utils.session.AgentCoreMemorySessionManager")
-    @patch("deepresearch.utils.session.AgentCoreMemoryConfig")
+    @patch("bedrock_agentcore.memory.integrations.strands.session_manager.AgentCoreMemorySessionManager")
+    @patch("bedrock_agentcore.memory.integrations.strands.config.AgentCoreMemoryConfig")
     def test_creates_session_manager_when_enabled(self, mock_config_class, mock_manager_class, mock_get_config):
         """Should create session manager when memory is configured."""
         mock_get_config.return_value = {

@@ -6,6 +6,8 @@ A sophisticated multi-agent research system built with Strands DeepAgents that c
 
 DeepSearch demonstrates an advanced agent architecture that orchestrates multiple specialized agents to conduct thorough research on any topic. The system automatically breaks down complex queries, delegates research tasks to specialized subagents, synthesizes findings, and enriches reports with proper citations.
 
+**Important:** Web search in this example uses third-party providers (Linkup/Tavily). It is not AWS-only by default.
+
 ## Architecture
 
 ![DeepSearch Sequence Diagram](img/sequence.png)
@@ -67,7 +69,7 @@ The research process follows this sequence:
 - Lean context throughout the research process
 
 ### Flexible Search Integration
-- Supports multiple internet search tools (Linkup, Tavily)
+- Supports multiple third-party internet search tools (Linkup, Tavily)
 - Randomized tool selection for load distribution
 - Easily extensible to add new search providers
 
@@ -92,19 +94,12 @@ source venv/bin/activate
 uv pip install -r requirements.txt
 ```
 
-2. **Configure API keys**:
-Create a `.env` file in the project root with:
-```env
-# Required for AI models
-ANTHROPIC_API_KEY=your_anthropic_key
+2. **Configure credentials**:
+Use your preferred secret management approach (for example, environment variables or AWS Secrets Manager).
+Do not store API keys in this repository or in a committed `.env` file.
 
-# Required for internet search (choose at least one)
-LINKUP_API_KEY=your_linkup_key
-TAVILY_API_KEY=your_tavily_key
-
-# Optional: bypass tool consent for automation
-BYPASS_TOOL_CONSENT=true
-```
+For local development, set the required environment variables in your shell. If you use a local `.env`, keep it untracked
+and set `LOAD_DOTENV=true` to load it at runtime.
 
 ## Usage
 
@@ -214,6 +209,41 @@ View live logs:
 ```bash
 tail -f /tmp/deepsearch.log
 ```
+
+## Observability (Weave + CloudWatch)
+
+This example can emit OpenTelemetry (OTEL) traces when OTEL environment variables are configured.
+
+### Weave via OTLP
+
+Set the W&B API key and project to have the runtime auto-configure OTEL for Weave:
+
+```bash
+export WANDB_API_KEY=your_wandb_api_key
+export WEAVE_PROJECT=your-entity/your-project
+```
+
+Optional override for the OTLP base URL:
+
+```bash
+export WANDB_BASE_URL=https://trace.wandb.ai
+```
+
+### Weave SDK (`@weave.op`)
+
+If you prefer Weave's native SDK instrumentation, install the `weave` extra and initialize in code:
+
+```bash
+pip install -e ".[weave]"
+export WANDB_API_KEY=your_wandb_api_key
+export WEAVE_PROJECT=your-entity/your-project
+```
+
+Then decorate key functions with `@weave.op()` and call `weave.init(WEAVE_PROJECT)` at startup.
+
+### CloudWatch
+
+When deploying to AgentCore with Observability enabled, follow AWS guidance for CloudWatch Transaction Search and ADOT configuration for OTEL export.
 
 ## Research Guidelines
 

@@ -1,5 +1,7 @@
 """
 Tools for searching the web using Linkup and Tavily.
+
+Note: These are third-party providers (not AWS-native).
 """
 
 import asyncio

@@ -6,6 +6,7 @@ Supports:
 - Weave (optional) via deepresearch[weave]
 """
 
+import base64
 import logging
 import os
 from typing import Optional
@@ -57,6 +58,7 @@ def _initialize_otel() -> bool:
     Returns:
         True if OTEL was initialized, False otherwise.
     """
+    _configure_weave_otel_env()
     endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
 
     if not endpoint:
@@ -79,6 +81,41 @@ def _initialize_otel() -> bool:
     except Exception as e:
         logger.error(f"Failed to initialize OTEL telemetry: {e}")
         return False
+
+
+def _configure_weave_otel_env() -> bool:
+    """
+    Configure OTEL env vars for Weave if not already set.
+
+    Returns:
+        True if OTEL env vars were set for Weave, False otherwise.
+    """
+    if "OTEL_EXPORTER_OTLP_ENDPOINT" in os.environ:
+        return False
+
+    api_key = os.environ.get("WANDB_API_KEY")
+    project_id = os.environ.get("WEAVE_PROJECT")
+
+    if not project_id:
+        project_id = os.environ.get("WEAVE_PROJECT_ID")
+
+    if not project_id:
+        entity = os.environ.get("WANDB_ENTITY")
+        project = os.environ.get("WANDB_PROJECT")
+        if entity and project:
+            project_id = f"{entity}/{project}"
+
+    if not api_key or not project_id:
+        return False
+
+    base_url = os.environ.get("WANDB_BASE_URL", "https://trace.wandb.ai")
+    os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = f"{base_url}/otel/v1/traces"
+
+    auth_token = base64.b64encode(f"api:{api_key}".encode()).decode()
+    os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = (
+        f"Authorization=Basic {auth_token},project_id={project_id}"
+    )
+    return True
 
 
 def _initialize_weave() -> bool:

@@ -2,6 +2,7 @@
 Unit tests for deepresearch.utils.telemetry module.
 """
 
+import os
 import pytest
 from unittest.mock import patch, MagicMock
 import deepresearch.utils.telemetry as telemetry_module
@@ -75,18 +76,10 @@ class TestInitializeOtel:
         monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
 
         with patch.dict("sys.modules", {"strands.telemetry": None}):
-            with patch(
-                "deepresearch.utils.telemetry.StrandsTelemetry",
-                side_effect=ImportError("No module"),
-            ):
-                # Force reimport behavior
-                pass
-
-        # The actual test - import will fail
-        result = _initialize_otel()
+            result = _initialize_otel()
         assert result is False
 
-    @patch("deepresearch.utils.telemetry.StrandsTelemetry")
+    @patch("strands.telemetry.StrandsTelemetry")
     def test_initializes_successfully(self, mock_strands_class, monkeypatch):
         """Should initialize OTEL successfully when configured."""
         monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
@@ -98,6 +91,32 @@ class TestInitializeOtel:
 
         assert result is True
         mock_instance.setup_otlp_exporter.assert_called_once()
+
+
+class TestConfigureWeaveOtelEnv:
+    """Tests for _configure_weave_otel_env helper."""
+
+    def test_sets_env_when_weave_config_present(self, monkeypatch):
+        monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)
+        monkeypatch.delenv("OTEL_EXPORTER_OTLP_HEADERS", raising=False)
+        monkeypatch.setenv("WANDB_API_KEY", "test-api-key")
+        monkeypatch.setenv("WEAVE_PROJECT", "entity/project")
+
+        result = telemetry_module._configure_weave_otel_env()
+
+        assert result is True
+        assert os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"].endswith("/otel/v1/traces")
+        assert "Authorization=Basic" in os.environ["OTEL_EXPORTER_OTLP_HEADERS"]
+        assert "project_id=entity/project" in os.environ["OTEL_EXPORTER_OTLP_HEADERS"]
+
+    def test_does_not_override_existing_endpoint(self, monkeypatch):
+        monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
+        monkeypatch.setenv("WANDB_API_KEY", "test-api-key")
+        monkeypatch.setenv("WEAVE_PROJECT_ID", "entity/project")
+
+        result = telemetry_module._configure_weave_otel_env()
+
+        assert result is False
 
 
 class TestInitializeWeave:
