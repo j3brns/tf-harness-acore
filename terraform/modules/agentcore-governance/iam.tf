@@ -11,7 +11,7 @@ resource "aws_iam_role" "policy_engine" {
       Principal = {
         Service = "bedrock-agentcore.amazonaws.com"
       }
-      # Rule 7.1: ABAC Scoping
+      # Rule 7.1: ABAC Scoping - Prevent lateral movement
       Condition = {
         StringEquals = {
           "aws:PrincipalTag/Project" = var.tags["Project"]
@@ -39,7 +39,7 @@ resource "aws_iam_role_policy" "policy_engine" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/policy-engine/*"
+        Resource = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/policy-engine/*"
       }
     ]
   })
@@ -86,7 +86,7 @@ resource "aws_iam_role_policy" "evaluator" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/evaluator/*"
+        Resource = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/evaluator/*"
       },
       {
         Effect = "Allow"
@@ -94,7 +94,7 @@ resource "aws_iam_role_policy" "evaluator" {
           "bedrock:InvokeModel",
           "bedrock:InvokeModelWithResponseStream"
         ]
-        Resource = "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/${var.evaluator_model_id}"
+        Resource = "arn:aws:bedrock:${var.region}::foundation-model/${var.evaluator_model_id}"
       }
     ]
   })
