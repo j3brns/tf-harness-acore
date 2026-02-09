@@ -11,6 +11,7 @@ module "agentcore_foundation" {
   # Gateway configuration
   enable_gateway      = var.enable_gateway
   gateway_name        = var.gateway_name
+  gateway_role_arn    = var.gateway_role_arn
   mcp_targets         = var.mcp_targets
   gateway_search_type = var.gateway_search_type
 
@@ -22,6 +23,10 @@ module "agentcore_foundation" {
   enable_observability = var.enable_observability
   log_retention_days   = var.log_retention_days
   enable_xray          = var.enable_xray
+
+  # Encryption
+  enable_kms  = var.enable_kms
+  kms_key_arn = var.kms_key_arn
 }
 
 module "agentcore_tools" {
@@ -42,6 +47,10 @@ module "agentcore_tools" {
   browser_vpc_config          = var.browser_vpc_config
   enable_browser_recording    = var.enable_browser_recording
   browser_recording_s3_bucket = var.browser_recording_s3_bucket
+
+  # Encryption (deprecated/fallback)
+  enable_kms  = var.enable_kms
+  kms_key_arn = var.kms_key_arn
 }
 
 module "agentcore_runtime" {
@@ -55,6 +64,9 @@ module "agentcore_runtime" {
   enable_runtime      = var.enable_runtime
   runtime_source_path = var.runtime_source_path
   runtime_config      = var.runtime_config
+  runtime_role_arn    = var.runtime_role_arn
+  runtime_policy_arns = var.runtime_policy_arns
+  runtime_inline_policies = var.runtime_inline_policies
 
   # Memory configuration
   enable_memory = var.enable_memory
@@ -81,14 +93,16 @@ module "agentcore_governance" {
   tags       = var.tags
 
   # Policy engine
-  enable_policy_engine = var.enable_policy_engine
-  cedar_policy_files   = var.cedar_policy_files
-  policy_engine_schema = var.policy_engine_schema
+  enable_policy_engine   = var.enable_policy_engine
+  cedar_policy_files     = var.cedar_policy_files
+  policy_engine_schema   = var.policy_engine_schema
+  policy_engine_role_arn = var.policy_engine_role_arn
 
   # Evaluations
   enable_evaluations  = var.enable_evaluations
   evaluation_type     = var.evaluation_type
   evaluator_model_id  = var.evaluator_model_id
+  evaluator_role_arn  = var.evaluator_role_arn
   evaluation_prompt   = var.evaluation_prompt
   evaluation_criteria = var.evaluation_criteria
 

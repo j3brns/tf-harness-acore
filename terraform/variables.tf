@@ -45,6 +45,12 @@ variable "gateway_name" {
   default     = ""
 }
 
+variable "gateway_role_arn" {
+  description = "IAM role ARN for the gateway (if not provided, one will be created)"
+  type        = string
+  default     = ""
+}
+
 variable "gateway_search_type" {
   description = "Search type for gateway (SEMANTIC, HYBRID)"
   type        = string
@@ -109,9 +115,15 @@ variable "enable_xray" {
 }
 
 variable "enable_kms" {
-  description = "DEPRECATED: Customer-managed KMS is no longer used. AWS-managed encryption is applied by default."
+  description = "Enable KMS encryption for logs and artifacts"
   type        = bool
   default     = false
+}
+
+variable "kms_key_arn" {
+  description = "KMS key ARN for encryption"
+  type        = string
+  default     = ""
 }
 
 # ===== TOOLS MODULE VARIABLES =====
@@ -186,15 +198,27 @@ variable "runtime_source_path" {
   default     = "./agent-code"
 }
 
-variable "runtime_entry_file" {
-  description = "Entry point file for agent runtime"
-  type        = string
-  default     = "runtime.py"
-}
-
 variable "runtime_config" {
   description = "Runtime configuration as JSON"
   type        = map(any)
+  default     = {}
+}
+
+variable "runtime_role_arn" {
+  description = "IAM role ARN for agent runtime"
+  type        = string
+  default     = ""
+}
+
+variable "runtime_policy_arns" {
+  description = "Additional IAM policy ARNs to attach to runtime role"
+  type        = list(string)
+  default     = []
+}
+
+variable "runtime_inline_policies" {
+  description = "Inline policies to attach to runtime role"
+  type        = map(string)
   default     = {}
 }
 
@@ -254,6 +278,12 @@ variable "policy_engine_schema" {
   default     = ""
 }
 
+variable "policy_engine_role_arn" {
+  description = "IAM role ARN for policy engine"
+  type        = string
+  default     = ""
+}
+
 variable "enable_evaluations" {
   description = "Enable agent evaluation system"
   type        = bool
@@ -270,6 +300,12 @@ variable "evaluator_model_id" {
   description = "Model ID for evaluator"
   type        = string
   default     = "anthropic.claude-sonnet-4-5"
+}
+
+variable "evaluator_role_arn" {
+  description = "IAM role ARN for evaluator"
+  type        = string
+  default     = ""
 }
 
 variable "evaluation_prompt" {
