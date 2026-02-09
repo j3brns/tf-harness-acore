@@ -17,7 +17,8 @@
 
 ### Key References
 - **Architecture**: `docs/architecture.md`
-- **ADRs**: `docs/adr/` (Review 0009, 0010, 0011)
+- **Remediation Plan**: `docs/plans/REMEDIATION_PLAN_V1.md`
+- **ADRs**: `docs/adr/`
 - **Human Guide**: `DEVELOPER_GUIDE.md`
 
 ---
@@ -36,50 +37,14 @@
 ### Security Rules - NEVER Violate These
 
 #### Rule 1.1: IAM Resources MUST Be Specific
-```hcl
-# FORBIDDEN:
-Resource = "*"
-
-# REQUIRED:
-Resource = [
-  "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/*"
-]
-Condition = {
-  StringEquals = {
-    "aws:SourceAccount" = data.aws_caller_identity.current.account_id
-  }
-}
-```
-
-**Known Exceptions (AWS-Required Wildcards)**:
-Certain actions do NOT support resource-level scoping and MUST use `Resource = "*"`. These are accommodated in tests:
-- `logs:PutResourcePolicy`: Required for Bedrock AgentCore log delivery.
-- `sts:GetCallerIdentity`: Required for identity verification.
-- `ec2:CreateNetworkInterface`: Required for dynamic VPC networking.
-- `s3:ListAllMyBuckets`: Required for bucket discovery.
-
-**Rule**: Every wildcard MUST have a comment: `# AWS-REQUIRED: <Reason>`.
+Every wildcard MUST have a comment: `# AWS-REQUIRED: <Reason>`.
 
 #### Rule 1.2: Errors MUST Fail Fast
-Forbidden:
-```bash
-cp -r "${local.source_path}"/* "$BUILD_DIR/code/" 2>/dev/null || true
-```
-Required:
-```bash
-if [ ! -d "${local.source_path}" ]; then
-  echo "ERROR: Source path not found: ${local.source_path}"
-  exit 1
-fi
-cp -r "${local.source_path}"/* "$BUILD_DIR/code/"
-```
-
-**Why**: Error suppression masks deployment failures.
+Provisioners MUST check output files: `if [ ! -s "file.json" ]; then exit 1; fi`.
 
 #### Rule 1.8: Bedrock Guardrails (Secure by Default)
 - **Policy**: Bedrock Guardrails are ENABLED by default for all agent aliases.
-- **Active Rejection**: Disabling guardrails requires an explicit `enable_guardrails = false` toggle AND a documented justification in the configuration (e.g., in `terraform.tfvars` or a comment).
-- **Enforcement**: Guardrails must be defined in the `agentcore-governance` module. If rejected, the configuration must explain why content filtering, PII masking, or contextual grounding is not required for the specific use case.
+- **Active Rejection**: Disabling guardrails requires an explicit `enable_guardrails = false` toggle AND a documented justification.
 
 ---
 
@@ -87,12 +52,6 @@ cp -r "${local.source_path}"/* "$BUILD_DIR/code/"
 
 Dependency direction (IMMUTABLE):
 foundation -> tools/runtime -> governance
-
-Module boundaries:
-- **foundation**: Gateway, Identity, Observability
-- **tools**: Code Interpreter, Browser
-- **runtime**: Runtime, Memory, Packaging
-- **governance**: Policies, Evaluations, Guardrails
 
 Reference: `docs/architecture.md`
 
@@ -104,91 +63,78 @@ Reference: `docs/architecture.md`
 - Prefer `for_each` with stable keys over `count`.
 - Use explicit types and validation for all variables.
 - Mark secrets as `sensitive = true`.
-- Avoid `null_resource` unless using the CLI pattern (Rule 4).
 
 ### Rule 3.2: Python (Strands SDK)
 - **Target**: Python 3.12 only.
 - **Format**: Black + Flake8 (Line length 120).
 - **Testing**: `pytest` under `examples/*/agent-code/tests/`.
-- **Behavior**: Use `logging` instead of `print`.
-- **Mocks**: No network calls in unit tests; mock external services.
 
 ---
 
 ## RULE 4: CLI Pattern is MANDATORY
 
-The following resources MUST use the `null_resource` + AWS CLI pattern due to provider gaps:
-1. Gateway
-2. Identity
-3. Browser
-4. Code Interpreter
-5. Runtime
-6. Memory
-7. Policy Engine / Cedar Policies
-8. Evaluators
-9. Credential Providers
+The following resources MUST use the `null_resource` + AWS CLI pattern:
+1. Gateway, 2. Identity, 3. Browser, 4. Code Interpreter, 5. Runtime, 6. Memory, 7. Policy Engine, 8. Evaluators, 9. Credential Providers.
 
 ---
 
-## RULE 9: Discovery is EXPLICIT
+## RULE 5: SSM State Persistence (Zero Local IDs)
 
-### Rule 9.1: Agents Must Be Discoverable
-- **Requirement**: Every agent MUST expose `/.well-known/agent-card.json`.
-- **Registry**: Agents MUST register with **Cloud Map** (East-West) or the **Gateway Manifest** (Northbound).
-
-### Rule 9.2: Gateway is the Tool Source
-- **Requirement**: Tools MUST be accessed via the **AgentCore Gateway**.
-- **Forbidden**: Invoking Tool Lambdas directly via `lambda:InvokeFunction`.
+### Rule 5.1: No Ephemeral IDs
+- **Problem**: Local JSON files in `.terraform/` are lost in CI/CD.
+- **Requirement**: ALL resource IDs created via CLI MUST be persisted to **AWS SSM Parameter Store**.
+- **Pattern**: 
+  1. CLI creates resource and captures ID.
+  2. CLI calls `aws ssm put-parameter --name "/agentcore/${var.agent_name}/<resource_type>/id" --value "$ID"`.
+  3. Subsequent resources use `data "aws_ssm_parameter"` to retrieve the ID.
 
 ---
 
-## RULE 10: Identity Propagation is MANDATORY
+## RULE 6: Zombie Resource Prevention (Cleanup Hooks)
 
-### Rule 10.1: No Anonymous A2A Calls
-- **Requirement**: Agent-to-Agent calls MUST use a **Workload Token**.
-- **Pattern**: `GetWorkloadAccessTokenForJWT` -> `Authorization: Bearer <token>`.
+### Rule 6.1: Mandatory Destroy Provisioners
+- **Problem**: `null_resource` does not automatically delete AWS resources on `terraform destroy`.
+- **Requirement**: Every `null_resource` MUST include a `destroy` provisioner.
+- **Implementation**:
+  ```hcl
+  provisioner "local-exec" {
+    when    = destroy
+    command = "aws bedrock-agentcore-control delete-... --id ${self.triggers.resource_id}"
+  }
+  ```
+- **Constraint**: Use `triggers` to pass the ID into the destroy context.
 
-### Rule 10.2: User Context Must Persist
-- **Requirement**: Original Entra ID context MUST be exchanged, not dropped.
+---
+
+## RULE 7: Zero Trust Identity (ABAC Scoping)
+
+### Rule 7.1: Attribute-Based Trust
+- **Requirement**: Agent identity roles MUST NOT use name-based wildcards for trust relationships.
+- **Enforcement**: Use **Attribute-Based Access Control (ABAC)** tags.
+- **Policy**: `Condition = { StringEquals = { "aws:PrincipalTag/Project" = "${var.project_tag}" } }`.
 
 ---
 
 ## RULE 11: Frontend Security (Token Handler)
 
 ### Rule 11.1: No Tokens in Browser
-- **Forbidden**: Storing Access/Refresh Tokens in `localStorage`, `sessionStorage`, or Cookies accessible to JS.
-- **Requirement**: Tokens must be stored server-side (DynamoDB/ElastiCache).
-
-### Rule 11.2: Session Management
-- **Pattern**: Use **Secure, HTTP-only, SameSite=Strict** cookies for Session IDs.
-- **Reference**: ADR 0011 (Serverless Token Handler).
+- **Forbidden**: Storing tokens in `localStorage` or JS-accessible cookies.
+- **Requirement**: Tokens must be stored server-side.
 
 ---
 
-## RULE 12: Comprehensive Issue Reporting & Verification
-
-### Rule 12.1: Issue Structure
-AI Agents MUST create comprehensive GitHub issues. Every issue MUST include:
-- **Context**: Why is this change needed? (Relate to ADRs/Rules).
-- **Technical Detail**: Specific AWS APIs, Python libraries, or Terraform patterns to be used.
-- **Implementation Tasks**: A checklist of specific actionable items.
-- **Acceptance Criteria**: Verifiable outcomes (e.g., "Exit code 0", "Test passes").
-
-### Rule 12.2: Issue Atomicity (One Defect = One Issue)
-- **Requirement**: Do not bundle unrelated defects or architectural changes into a single issue. 
-- **Why**: Allows for independent verification, parallel development, and clear rollback paths. 
+## RULE 12: Issue Reporting & Verification
 
 ### Rule 12.3: Post-Commit Verification
-- **Mandatory**: After every `git push`, AI agents MUST check the CI logs (via `gh run list/view`) to ensure all automated checks passed.
-- **Action**: If CI fails, the agent MUST investigate the logs, identify the root cause, and propose/apply a fix in the next turn.
+- **Mandatory**: After every `git push`, AI agents MUST check the CI logs (`gh run list/view`).
+- **Action**: If CI fails, the agent MUST investigate and fix the root cause in the next turn.
 
 ---
 
-## RULE 13: Repo Layout & Reorg Guardrails
+## RULE 13: Repo Layout
 
 ### Rule 13.1: Maintain Logical Separation
-- **Requirement**: Keep modules, examples, and documentation in their respective root-level directories.
-- **Forbidden**: Deeply nested logic that bypasses the 4-module architecture.
+Modules, examples, and documentation MUST remain in root-level directories.
 
 ---
 
@@ -196,12 +142,10 @@ AI Agents MUST create comprehensive GitHub issues. Every issue MUST include:
 
 | Question | Answer |
 | --- | --- |
-| Terraform-native or CLI? | If `aws_bedrockagentcore_X` exists AND passes `terraform validate`, use native. Otherwise use CLI pattern. |
-| Which module? | Foundation, Tools, Runtime, Governance (Fixed architecture). |
-| Use dynamic block? | Only for repeatable blocks. NEVER for single attributes. |
+| Where do IDs go? | persisted to AWS SSM Parameter Store (Rule 5). |
+| How to delete? | Mandatory `when = destroy` provisioner (Rule 6). |
+| How to trust? | ABAC tags, never name-wildcards (Rule 7). |
 | KMS or AWS-managed? | AWS-managed (SSE-S3) by default. |
-| Hardcode ARNs/regions? | NEVER. Use data sources or module outputs. |
-| Where do tokens go? | DynamoDB (server-side). Never in the browser. |
 
 ---
 
@@ -210,21 +154,6 @@ AI Agents MUST create comprehensive GitHub issues. Every issue MUST include:
 ```bash
 terraform fmt -check -recursive
 terraform validate
-terraform plan -backend=false -var-file=examples/research-agent.tfvars
-checkov -d . --framework terraform --compact
 tflint --recursive
-pre-commit run --all-files
+gh run list --limit 1 # Post-push check (Rule 12.3)
 ```
-
----
-
-## KEY DECISIONS (ADRs)
-
-| ADR | Decision | Rationale |
-|-----|----------|-----------|
-| 0001 | 4-module architecture | Clear separation of concerns |
-| 0002 | CLI-based resources | AWS provider gaps |
-| 0008 | AWS-managed encryption | Simpler, equivalent security |
-| 0009 | B2E Publishing & Identity | Streaming + Entra ID |
-| 0010 | Service Discovery (Dual-Tier) | Cloud Map + Registry |
-| 0011 | Serverless SPA & BFF | Token Handler Pattern (No XSS) |
