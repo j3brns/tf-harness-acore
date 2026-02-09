@@ -15,6 +15,7 @@ variables:
   REPO_ROOT: ${CI_PROJECT_DIR}
   TF_ROOT: ${CI_PROJECT_DIR}/terraform
   TF_VERSION: "1.14.4"
+  TFLINT_VERSION: "0.50.3"
   AWS_DEFAULT_REGION: us-east-1
 
 # =============================================================================
@@ -22,7 +23,20 @@ variables:
 # =============================================================================
 .terraform_setup:
   before_script:
-    - apk add --no-cache bash git wget unzip jq python3 py3-pip
+    - |
+      if command -v yum >/dev/null 2>&1; then
+        yum install -y bash git wget unzip jq python3 python3-pip curl
+        yum clean all
+      elif command -v apk >/dev/null 2>&1; then
+        apk add --no-cache bash git wget unzip jq python3 py3-pip curl
+      elif command -v apt-get >/dev/null 2>&1; then
+        apt-get update
+        apt-get install -y bash git wget unzip jq python3 python3-pip curl
+        rm -rf /var/lib/apt/lists/*
+      else
+        echo "ERROR: No supported package manager found"
+        exit 1
+      fi
     # Install Terraform
     - wget -q https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip
     - unzip -q terraform_${TF_VERSION}_linux_amd64.zip
@@ -70,6 +84,10 @@ validate:plan:
     - cd $TF_ROOT
     - terraform init -backend=false
     - |
+      if [ -z "$AWS_ACCESS_KEY_ID" ] && [ -z "$AWS_ROLE_ARN" ] && [ -z "$CI_JOB_JWT_V2" ]; then
+        echo "Skipping plan: AWS credentials not available"
+        exit 0
+      fi
       if [ -f "$REPO_ROOT/examples/1-hello-world/terraform.tfvars" ]; then
         terraform plan -var-file="$REPO_ROOT/examples/1-hello-world/terraform.tfvars" -input=false -out="$TF_ROOT/test.tfplan"
         terraform show test.tfplan
@@ -110,9 +128,9 @@ lint:tflint:
   stage: lint
   extends: .terraform_setup
   before_script:
-    - apk add --no-cache bash git wget unzip curl
-    # Install TFLint
-    - curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+    - !reference [.terraform_setup, before_script]
+    - curl -sSL -o /tmp/tflint.zip "https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_VERSION}/tflint_linux_amd64.zip"
+    - unzip -q /tmp/tflint.zip -d /usr/local/bin
   script:
     - cd $TF_ROOT
     - tflint --init || echo "TFLint init skipped"
@@ -124,7 +142,7 @@ lint:tflint:
 
 lint:checkov:
   stage: lint
-  image: bridgecrew/checkov:latest
+  image: bridgecrew/checkov:3.2.500
   script:
     - cd $TF_ROOT
     - checkov -d $TF_ROOT --framework terraform --quiet --compact --config-file $TF_ROOT/.checkov.yaml --output cli --output junitxml > checkov-report.xml || true
@@ -150,14 +168,7 @@ test:examples:
   script:
     - cd $TF_ROOT
     - terraform init -backend=false
-    - |
-      for example in "$REPO_ROOT"/examples/*.tfvars "$REPO_ROOT"/examples/*/terraform.tfvars; do
-        if [ -f "$example" ]; then
-          echo "Validating: $example"
-          terraform plan -var-file="$example" -input=false -out="$TF_ROOT/test.tfplan" || exit 1
-          rm -f "$TF_ROOT/test.tfplan"
-        fi
-      done
+    - bash $TF_ROOT/scripts/validate_examples.sh
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
@@ -290,7 +301,7 @@ test:python-research:
 test:documentation:
   stage: test
   script:
-    - cd $TF_ROOT
+    - cd $REPO_ROOT
     - |
       echo "Checking documentation..."
       for doc in README.md CLAUDE.md DEVELOPER_GUIDE.md; do
@@ -338,7 +349,7 @@ deploy:dev:
       }
       EOF
     - terraform init -reconfigure
-    - terraform plan -var-file=examples/1-hello-world/terraform.tfvars -out=dev.tfplan
+    - terraform plan -var-file="$REPO_ROOT/examples/1-hello-world/terraform.tfvars" -out=dev.tfplan
     - terraform apply -auto-approve dev.tfplan
     - terraform output -json > outputs-dev.json
   artifacts:
@@ -381,7 +392,7 @@ deploy:test:
       }
       EOF
     - terraform init -reconfigure
-    - terraform plan -var-file=examples/2-gateway-tool/terraform.tfvars -out=test.tfplan
+    - terraform plan -var-file="$REPO_ROOT/examples/2-gateway-tool/terraform.tfvars" -out=test.tfplan
     - terraform apply -auto-approve test.tfplan
     - terraform output -json > outputs-test.json
   artifacts:
@@ -424,7 +435,7 @@ deploy:prod:
       }
       EOF
     - terraform init -reconfigure
-    - terraform plan -var-file=examples/3-deepresearch/terraform.tfvars -out=prod.tfplan
+    - terraform plan -var-file="$REPO_ROOT/examples/3-deepresearch/terraform.tfvars" -out=prod.tfplan
     - echo "Waiting for manual approval..."
     - terraform apply -auto-approve prod.tfplan
     - terraform output -json > outputs-prod.json
@@ -467,7 +478,7 @@ drift:detection:
     - terraform init -reconfigure
     - |
       # Exit code 0 = no changes, 1 = error, 2 = changes detected
-      if terraform plan -detailed-exitcode -var-file=examples/1-hello-world/terraform.tfvars; then
+      if terraform plan -detailed-exitcode -var-file="$REPO_ROOT/examples/1-hello-world/terraform.tfvars"; then
         echo "No drift detected"
       else
         EXIT_CODE=$?
