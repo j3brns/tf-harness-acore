@@ -79,4 +79,5 @@ jobs:
         with:
           terraform_version: 1.14.4
       - name: Validate examples (local init via script)
-        run: bash terraform/scripts/validate_examples.sh
+        working-directory: terraform
+        run: bash scripts/validate_examples.sh
