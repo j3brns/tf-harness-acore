@@ -1,7 +1,25 @@
 variable "region" {
-  description = "AWS region"
+  description = "Default AWS region"
   type        = string
   default     = "us-east-1"
+}
+
+variable "agentcore_region" {
+  description = "Optional AgentCore control-plane region override (defaults to region)"
+  type        = string
+  default     = ""
+}
+
+variable "bedrock_region" {
+  description = "Optional Bedrock region override for model-related resources (defaults to agentcore_region)"
+  type        = string
+  default     = ""
+}
+
+variable "bff_region" {
+  description = "Optional BFF/API Gateway region override (defaults to agentcore_region)"
+  type        = string
+  default     = ""
 }
 
 variable "environment" {

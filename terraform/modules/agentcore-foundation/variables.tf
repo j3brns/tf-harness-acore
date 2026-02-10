@@ -8,6 +8,12 @@ variable "region" {
   type        = string
 }
 
+variable "bedrock_region" {
+  description = "Optional Bedrock region override (defaults to region)"
+  type        = string
+  default     = ""
+}
+
 variable "environment" {
   description = "Environment name"
   type        = string

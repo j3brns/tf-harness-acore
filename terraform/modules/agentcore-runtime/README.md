@@ -9,6 +9,10 @@ This module manages the agent runtime, memory, and packaging process.
 - **Memory**: Persistent agent memory configuration.
 - **Inference Profiles**: Optional Bedrock application inference profile creation (CLI-based).
 
+## Regional Settings
+- `region`: AgentCore control-plane region for runtime/memory/packaging resources and SSM persistence.
+- `bedrock_region`: Optional Bedrock region override for inference profile creation (defaults to `region`).
+
 ## Known Failure Modes (Rule 16)
 
 ### 1. Packaging Artifact Inconsistency

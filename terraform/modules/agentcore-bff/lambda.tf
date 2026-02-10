@@ -88,8 +88,9 @@ resource "aws_lambda_function" "proxy" {
 
   environment {
     variables = {
-      AGENT_ID       = var.agent_gateway_id # Using the variable here
-      AGENT_ALIAS_ID = "TSTALIASID"
+      AGENT_ID         = var.agent_gateway_id # Using the variable here
+      AGENT_ALIAS_ID   = "TSTALIASID"
+      AGENTCORE_REGION = local.agentcore_region
     }
   }
 }

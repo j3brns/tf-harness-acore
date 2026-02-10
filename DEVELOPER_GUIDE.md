@@ -168,6 +168,9 @@ cat > examples/5-my-agent/terraform.tfvars <<'EOF'
 agent_name          = "my-agent"
 region              = "us-east-1"
 environment         = "dev"
+agentcore_region    = ""
+bedrock_region      = ""
+bff_region          = ""
 
 enable_gateway      = true
 enable_runtime      = true

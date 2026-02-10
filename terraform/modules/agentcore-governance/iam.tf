@@ -1,5 +1,6 @@
 locals {
-  project_tag = lookup(var.tags, "Project", "AgentCore")
+  project_tag    = lookup(var.tags, "Project", "AgentCore")
+  bedrock_region = var.bedrock_region != "" ? var.bedrock_region : var.region
 }
 
 # IAM Role for Policy Engine
@@ -98,7 +99,7 @@ resource "aws_iam_role_policy" "evaluator" {
           "bedrock:InvokeModel",
           "bedrock:InvokeModelWithResponseStream"
         ]
-        Resource = "arn:aws:bedrock:${var.region}::foundation-model/${var.evaluator_model_id}"
+        Resource = "arn:aws:bedrock:${local.bedrock_region}::foundation-model/${var.evaluator_model_id}"
       }
     ]
   })

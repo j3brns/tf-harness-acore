@@ -18,6 +18,7 @@ module "agentcore_bff" {
   enable_bff = true
   agent_name = var.agent_name
   region     = var.region
+  agentcore_region = var.region
   environment = var.environment
 
   # Auth Configuration
@@ -26,6 +27,10 @@ module "agentcore_bff" {
   oidc_client_secret_arn = "arn:aws:secretsmanager:..."
 }
 ```
+
+## Regional Settings
+* `region`: Region for BFF resources (API Gateway, Lambda, DynamoDB, S3, CloudFront).
+* `agentcore_region`: Region for Bedrock AgentCore runtime invocation (defaults to `region`).
 
 ## Known Failure Modes (Rule 16)
 

@@ -22,7 +22,7 @@ terraform {
 }
 
 provider "aws" {
-  region = var.region
+  region = local.agentcore_region
 
   default_tags {
     tags = {
@@ -31,6 +31,19 @@ provider "aws" {
       Project     = "BedrockAgentCore"
       # Note: Removed timestamp() as it causes non-idempotent plans
       # Use lifecycle ignore_changes or external tagging if needed
+    }
+  }
+}
+
+provider "aws" {
+  alias  = "bff"
+  region = local.bff_region
+
+  default_tags {
+    tags = {
+      Terraform   = "true"
+      Environment = var.environment
+      Project     = "BedrockAgentCore"
     }
   }
 }

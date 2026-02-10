@@ -4,7 +4,12 @@ import boto3
 
 AGENT_ID = os.environ.get('AGENT_ID')
 AGENT_ALIAS_ID = os.environ.get('AGENT_ALIAS_ID', 'TSTALIASID')
-bedrock = boto3.client('bedrock-agent-runtime')
+AGENTCORE_REGION = os.environ.get('AGENTCORE_REGION')
+
+if AGENTCORE_REGION:
+    bedrock = boto3.client('bedrock-agent-runtime', region_name=AGENTCORE_REGION)
+else:
+    bedrock = boto3.client('bedrock-agent-runtime')
 
 def lambda_handler(event, context):
     # Context from Authorizer

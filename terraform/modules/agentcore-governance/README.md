@@ -8,6 +8,10 @@ This module manages security and evaluation policies, including Cedar policy eng
 - **Guardrails**: Bedrock Guardrails for content filtering and PII redaction.
 - **Evaluations**: Automated agent performance evaluation.
 
+## Regional Settings
+- `region`: AgentCore control-plane region for policy engine and evaluation resources.
+- `bedrock_region`: Optional Bedrock region override for guardrails and evaluator model permissions (defaults to `region`).
+
 ## Known Failure Modes (Rule 16)
 
 ### 1. Guardrail Version Drift

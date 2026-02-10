@@ -1,5 +1,6 @@
 locals {
-  project_tag = lookup(var.tags, "Project", "AgentCore")
+  project_tag    = lookup(var.tags, "Project", "AgentCore")
+  bedrock_region = var.bedrock_region != "" ? var.bedrock_region : var.region
 }
 
 # IAM Role for Bedrock AgentCore Gateway
@@ -43,7 +44,7 @@ resource "aws_iam_role_policy" "gateway" {
             "bedrock:InvokeModel",
             "bedrock:InvokeModelWithResponseStream"
           ]
-          Resource = "arn:aws:bedrock:${var.region}::foundation-model/*"
+          Resource = "arn:aws:bedrock:${local.bedrock_region}::foundation-model/*"
         },
         {
           Effect = "Allow"

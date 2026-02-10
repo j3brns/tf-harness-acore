@@ -8,6 +8,10 @@ This module manages the base infrastructure for a Bedrock Agent, including the M
 - **Identity**: ABAC-hardened IAM roles for agent workloads.
 - **Observability**: CloudWatch Log Groups and X-Ray tracing.
 
+## Regional Settings
+- `region`: AgentCore control-plane region for gateway/identity/observability resources.
+- `bedrock_region`: Optional Bedrock region override for model invocation permissions (defaults to `region`).
+
 ## Known Failure Modes (Rule 16)
 
 ### 1. Partial Provisioning (CLI Timeout)

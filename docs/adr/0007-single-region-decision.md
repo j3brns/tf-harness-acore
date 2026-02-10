@@ -13,9 +13,9 @@ AWS Bedrock AgentCore can be deployed in multiple regions. Need to decide deploy
 
 ## Decision
 
-Deploy to single region (us-east-1) initially.
+Deploy to a **single primary region** for the AgentCore control plane. Keep the option to **split the BFF/API Gateway region** and **Bedrock model region** when needed (e.g., regional availability constraints).
 
-Document DR region (us-west-2) for future expansion but do not implement multi-region until required.
+Document DR region (us-west-2) for future expansion but do not implement multi-region active-active until required.
 
 ## Rationale
 
@@ -33,11 +33,16 @@ Document DR region (us-west-2) for future expansion but do not implement multi-r
 - Team expertise in single-region patterns
 - Bedrock AgentCore still in preview (limited region availability)
 
-### Why us-east-1?
+### Why us-east-1 (initially)?
 - Full Bedrock AgentCore feature availability
 - Lowest latency for primary users (East Coast)
 - Most AWS services launch here first
 - Lower data transfer costs (majority of traffic origin)
+
+### EU Variants (Current)
+- **Dublin (`eu-west-1`)** or **Frankfurt (`eu-central-1`)** for AgentCore when required by regional availability.
+- **London (`eu-west-2`)** often preferred for Bedrock model availability and inference profiles.
+- Split regions only when required by service availability, data residency, or latency constraints.
 
 ## Disaster Recovery Plan
 
@@ -68,6 +73,8 @@ Document DR region (us-west-2) for future expansion but do not implement multi-r
 - No automatic failover
 - Manual DR process
 - Dependent on us-east-1 availability
+- Cross-region split (if used) adds latency and cross-region data transfer cost
+- Logs/metrics split across regions when BFF and AgentCore differ
 
 ## Future Multi-Region Triggers
 
@@ -79,6 +86,17 @@ Consider implementing multi-region when:
 - [ ] Team has capacity for additional operational complexity
 
 ## Implementation Notes
+
+### Regional Split Controls (Terraform)
+
+Use the following variables to keep a single region by default or split regions when required:
+
+```hcl
+region           = "eu-west-1" # default
+agentcore_region = ""          # AgentCore control plane (defaults to region)
+bff_region       = ""          # API Gateway/BFF (defaults to agentcore_region)
+bedrock_region   = ""          # Bedrock models/guardrails/inference profiles (defaults to agentcore_region)
+```
 
 ### State Backup (Recommended)
 

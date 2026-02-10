@@ -13,6 +13,12 @@ variable "region" {
   type        = string
 }
 
+variable "agentcore_region" {
+  description = "Optional AgentCore region override for Bedrock Agent runtime calls (defaults to region)"
+  type        = string
+  default     = ""
+}
+
 variable "tags" {
   description = "Common resource tags"
   type        = map(string)

@@ -2,6 +2,14 @@
 # Copy this file to terraform.tfvars and update values as needed
 
 region      = "us-east-1"
+# Optional AgentCore control-plane region override (defaults to region)
+# Example: AgentCore in eu-west-1 with BFF in eu-west-2
+agentcore_region = ""
+# Optional BFF/API Gateway region override (defaults to agentcore_region)
+bff_region = ""
+# Optional Bedrock region override for models/guardrails/inference profiles (defaults to agentcore_region)
+# Example: AgentCore in eu-west-1 with Bedrock models in eu-west-2
+bedrock_region = ""
 environment = "dev"
 agent_name  = "my-research-agent"
 

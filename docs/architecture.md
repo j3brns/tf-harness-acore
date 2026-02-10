@@ -380,6 +380,16 @@ Strands agents use a dual-tier discovery model:
 | Test | Integration testing | release/* | Manual |
 | Prod | Production | v* tags | Manual |
 
+## Regional Topology
+
+Default deployment is **single-region**. Region splits are supported when required by service availability:
+
+- **AgentCore control plane**: `agentcore_region` (defaults to `region`)
+- **Bedrock models/guardrails/inference profiles**: `bedrock_region` (defaults to `agentcore_region`)
+- **BFF/API Gateway**: `bff_region` (defaults to `agentcore_region`)
+
+When regions are split, expect higher latency and cross-region data transfer between BFF and AgentCore, and separate log/metric locations per region.
+
 ## Integration Points
 
 ### External Systems

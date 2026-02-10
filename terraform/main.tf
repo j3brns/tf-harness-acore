@@ -3,10 +3,11 @@
 module "agentcore_foundation" {
   source = "./modules/agentcore-foundation"
 
-  agent_name  = var.agent_name
-  region      = var.region
-  environment = var.environment
-  tags        = var.tags
+  agent_name     = var.agent_name
+  region         = local.agentcore_region
+  bedrock_region = local.bedrock_region
+  environment    = var.environment
+  tags           = var.tags
 
   # Gateway configuration
   enable_gateway      = var.enable_gateway
@@ -33,7 +34,7 @@ module "agentcore_tools" {
   source = "./modules/agentcore-tools"
 
   agent_name = var.agent_name
-  region     = var.region
+  region     = local.agentcore_region
   tags       = var.tags
 
   # Code interpreter
@@ -56,9 +57,10 @@ module "agentcore_tools" {
 module "agentcore_runtime" {
   source = "./modules/agentcore-runtime"
 
-  agent_name = var.agent_name
-  region     = var.region
-  tags       = var.tags
+  agent_name     = var.agent_name
+  region         = local.agentcore_region
+  bedrock_region = local.bedrock_region
+  tags           = var.tags
 
   # Runtime configuration
   enable_runtime          = var.enable_runtime
@@ -95,9 +97,10 @@ module "agentcore_runtime" {
 module "agentcore_governance" {
   source = "./modules/agentcore-governance"
 
-  agent_name = var.agent_name
-  region     = var.region
-  tags       = var.tags
+  agent_name     = var.agent_name
+  region         = local.agentcore_region
+  bedrock_region = local.bedrock_region
+  tags           = var.tags
 
   # Policy engine
   enable_policy_engine   = var.enable_policy_engine
@@ -131,11 +134,12 @@ module "agentcore_governance" {
 module "agentcore_bff" {
   source = "./modules/agentcore-bff"
 
-  enable_bff  = var.enable_bff
-  agent_name  = var.agent_name
-  region      = var.region
-  environment = var.environment
-  tags        = var.tags
+  enable_bff       = var.enable_bff
+  agent_name       = var.agent_name
+  region           = local.bff_region
+  agentcore_region = local.agentcore_region
+  environment      = var.environment
+  tags             = var.tags
 
   # Auth Configuration
   oidc_issuer            = var.oidc_issuer
@@ -145,6 +149,11 @@ module "agentcore_bff" {
   # Integration
   agent_gateway_id = var.enable_gateway ? module.agentcore_foundation.gateway_id : ""
 
-  depends_on = [module.agentcore_foundation
+  providers = {
+    aws = aws.bff
+  }
+
+  depends_on = [
+    module.agentcore_foundation
   ]
 }

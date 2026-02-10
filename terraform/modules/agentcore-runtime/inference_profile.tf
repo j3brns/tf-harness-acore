@@ -5,12 +5,13 @@ resource "null_resource" "inference_profile" {
   count = var.enable_inference_profile ? 1 : 0
 
   triggers = {
-    agent_name   = var.agent_name
-    region       = var.region
-    profile_name = var.inference_profile_name
-    model_source = var.inference_profile_model_source_arn
-    description  = var.inference_profile_description
-    tags_hash    = sha256(jsonencode(var.inference_profile_tags))
+    agent_name     = var.agent_name
+    region         = var.region
+    bedrock_region = local.bedrock_region
+    profile_name   = var.inference_profile_name
+    model_source   = var.inference_profile_model_source_arn
+    description    = var.inference_profile_description
+    tags_hash      = sha256(jsonencode(var.inference_profile_tags))
   }
 
   provisioner "local-exec" {
@@ -34,7 +35,7 @@ resource "null_resource" "inference_profile" {
 
       aws bedrock create-inference-profile \
         --cli-input-json file://"${path.module}/.terraform/inference_profile_input.json" \
-        --region ${self.triggers.region} \
+        --region ${self.triggers.bedrock_region} \
         --output json > "${path.module}/.terraform/inference_profile.json"
 
       # Rule 1.2: Fail Fast
@@ -80,7 +81,7 @@ resource "null_resource" "inference_profile" {
 
       if [ -n "$INFERENCE_PROFILE_ARN" ]; then
         echo "Deleting Inference Profile $INFERENCE_PROFILE_ARN..."
-        aws bedrock delete-inference-profile --inference-profile-identifier "$INFERENCE_PROFILE_ARN" --region ${self.triggers.region}
+        aws bedrock delete-inference-profile --inference-profile-identifier "$INFERENCE_PROFILE_ARN" --region ${self.triggers.bedrock_region}
         aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/inference-profile/arn" --region ${self.triggers.region}
       fi
     EOT

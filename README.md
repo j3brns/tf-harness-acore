@@ -199,6 +199,9 @@ aws bedrock-agentcore-runtime invoke-runtime \
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `environment` | `dev` | Environment name |
+| `agentcore_region` | `""` | Optional AgentCore control-plane region override (defaults to `region`) |
+| `bedrock_region` | `""` | Optional Bedrock model/guardrail/inference profile region override (defaults to `agentcore_region`) |
+| `bff_region` | `""` | Optional BFF/API Gateway region override (defaults to `agentcore_region`) |
 | `enable_gateway` | `true` | Enable MCP gateway |
 | `enable_code_interpreter` | `true` | Enable Python sandbox |
 | `enable_browser` | `false` | Enable web browsing |
@@ -209,6 +212,8 @@ aws bedrock-agentcore-runtime invoke-runtime \
 | `code_interpreter_network_mode` | `SANDBOX` | Network mode (PUBLIC/SANDBOX/VPC) |
 | `log_retention_days` | `30` | CloudWatch log retention |
 
+Region splits are optional. If you need API Gateway/BFF in a different region than AgentCore, set `bff_region`. If you need Bedrock models in a different region, set `bedrock_region`.
+
 ### Example terraform.tfvars
 
 ```hcl
@@ -216,6 +221,9 @@ agent_name          = "my-research-agent"
 region              = "us-east-1"
 environment         = "dev"
 runtime_source_path = "../my-agent"
+agentcore_region    = ""
+bedrock_region      = ""
+bff_region          = ""
 
 # Enable features
 enable_gateway          = true

@@ -160,9 +160,10 @@ resource "null_resource" "guardrail" {
   count = var.enable_guardrails ? 1 : 0
 
   triggers = {
-    agent_name = var.agent_name
-    region     = var.region
-    name       = var.guardrail_name != "" ? var.guardrail_name : "${var.agent_name}-guardrail"
+    agent_name     = var.agent_name
+    region         = var.region
+    bedrock_region = local.bedrock_region
+    name           = var.guardrail_name != "" ? var.guardrail_name : "${var.agent_name}-guardrail"
     config_hash = sha256(jsonencode({
       filters                = var.guardrail_filters
       sensitive_info_filters = var.guardrail_sensitive_info_filters
@@ -187,7 +188,7 @@ resource "null_resource" "guardrail" {
         --blocked-input-messaging "${var.guardrail_blocked_input_messaging}" \
         --blocked-outputs-messaging "${var.guardrail_blocked_outputs_messaging}" \
         --content-policy "filters=$CONTENT_FILTERS" \
-        --region ${self.triggers.region} \
+        --region ${self.triggers.bedrock_region} \
         --output json > "${path.module}/.terraform/guardrail.json"
 
       # Extract Guardrail ID
@@ -196,7 +197,7 @@ resource "null_resource" "guardrail" {
       # Create initial version
       aws bedrock create-guardrail-version \
         --guardrail-identifier "$GUARDRAIL_ID" \
-        --region ${self.triggers.region} \
+        --region ${self.triggers.bedrock_region} \
         --output json > "${path.module}/.terraform/guardrail_version.json"
       
       VERSION=$(jq -r '.version' < "${path.module}/.terraform/guardrail_version.json")
@@ -228,7 +229,7 @@ resource "null_resource" "guardrail" {
       
       if [ -n "$GUARDRAIL_ID" ]; then
         echo "Deleting Guardrail $GUARDRAIL_ID..."
-        aws bedrock delete-guardrail --guardrail-identifier "$GUARDRAIL_ID" --region ${self.triggers.region}
+        aws bedrock delete-guardrail --guardrail-identifier "$GUARDRAIL_ID" --region ${self.triggers.bedrock_region}
         aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/guardrail/id" --region ${self.triggers.region}
         aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/guardrail/version" --region ${self.triggers.region}
       fi
