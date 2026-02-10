@@ -18,6 +18,7 @@ A minimal agent demonstrating basic Bedrock AgentCore capabilities.
 | Browser | Disabled | Not needed |
 | Memory | Disabled | Stateless operation |
 | Policy Engine | Disabled | No governance |
+| Guardrails | **Enabled** | Basic safety filtering |
 | Evaluations | Disabled | No quality checks |
 
 ## Agent Code
@@ -27,6 +28,7 @@ The agent:
 2. Lists available buckets
 3. Returns first 5 bucket names with creation dates
 4. Handles errors gracefully
+5. **Safety**: Input and output are filtered by Bedrock Guardrails to prevent leakage of sensitive data or misconduct.
 
 ## Usage
 

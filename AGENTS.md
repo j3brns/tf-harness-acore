@@ -131,10 +131,27 @@ The following resources MUST use the `null_resource` + AWS CLI pattern:
 
 ---
 
-## RULE 13: Repo Layout
+## RULE 13: Example Parity
+- **Requirement**: Any change to a core module MUST be accompanied by an update to at least one example in `examples/`.
+- **Goal**: Demonstrate new functionality and ensure backward compatibility.
 
-### Rule 13.1: Maintain Logical Separation
-Modules, examples, and documentation MUST remain in root-level directories.
+---
+
+## RULE 14: Read-After-Write (RAW) Verification
+- **Requirement**: After any `write_file` or `replace` operation, the agent MUST immediately `read_file` the affected section.
+- **Goal**: Verify correct implementation and catch formatting regressions immediately.
+
+---
+
+## RULE 15: Shadow JSON Validation
+- **Requirement**: All CLI-based resources (`null_resource`) MUST generate their AWS CLI JSON payload to a temporary file (e.g., `.terraform/payload.json`) before execution.
+- **Goal**: Enable auditability of exact data sent to AWS APIs.
+
+---
+
+## RULE 16: Failure Mode Documentation
+- **Requirement**: Every module's `README.md` MUST contain a "Known Failure Modes" section.
+- **Content**: Detail manual recovery steps for CLI/provisioner failures (e.g., SSM parameter cleanup).
 
 ---
 

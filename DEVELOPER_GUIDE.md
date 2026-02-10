@@ -436,6 +436,7 @@ git push origin v1.2.0
 - Keep changes focused (one feature per MR)
 - Document decisions in ADRs
 - Update docs when changing code
+- Close issues with a comprehensive summary comment (changes, validation, outcomes)
 
 ### DON'T
 - Use `Resource = "*"` in IAM policies
