@@ -2,9 +2,9 @@
 
 ## Project Overview
 
-A comprehensive, production-ready Terraform implementation of AWS Bedrock AgentCore supporting all 9 core features (Gateway, Identity, Code Interpreter, Browser, Runtime, Memory, Policy Engine, Evaluations, Observability).
+A comprehensive, production-ready Terraform implementation of AWS Bedrock AgentCore supporting all core features plus a Serverless BFF/SPA layer.
 
-**Status**: ✅ 100% Complete & Production Ready
+**Status**: ✅ 100% Complete & Production Ready (v2.0)
 
 ---
 
@@ -14,11 +14,12 @@ A comprehensive, production-ready Terraform implementation of AWS Bedrock AgentC
 
 | File | Purpose | Audience |
 |------|---------|----------|
-| `README.md` | Comprehensive architecture guide | Everyone |
+| `README.md` | Comprehensive Engineering Handbook | Everyone |
+| `DEVELOPER_GUIDE.md` | Team onboarding & common tasks | Developers |
 | `QUICK_REFERENCE.md` | Quick command reference | Operators |
 | `SETUP.md` | Step-by-step setup guide | New users |
-| `docs/archive/IMPLEMENTATION_SUMMARY.md` | What was built and why (archived) | Architects |
 | `INDEX.md` | This file - complete file listing | Reference |
+| `AGENTS.md` | Universal AI Agent Codex (Security/Dev rules) | AI Agents |
 
 ### Archived Documentation
 
@@ -52,168 +53,87 @@ A comprehensive, production-ready Terraform implementation of AWS Bedrock AgentC
 
 ```
 terraform/
-├── versions.tf              # Provider requirements (Terraform ≥1.5.0, AWS ≥5.30.0)
-├── main.tf                  # Module composition and orchestration
-├── variables.tf             # 50+ input variables with validation
-├── outputs.tf               # 30+ output values (including sensitive)
+├── versions.tf              # Provider requirements (Terraform ≥1.10.0, AWS ≥5.80.0)
+├── main.tf                  # Module composition and regional split logic
+├── locals.tf                # Regional fallback and routing logic
+├── variables.tf             # Core variables with validation
+├── variables_bff.tf         # BFF specific input variables
+├── outputs.tf               # Root outputs (Agent IDs, URLs, DDB Tables)
 └── terraform.tfvars.example # Example configuration template
 ```
 
-**Key Points:**
-- `terraform/versions.tf`: Defines Terraform and provider versions
-- `terraform/main.tf`: Instantiates 4 modules with dependencies
-- `terraform/variables.tf`: All configurable options for users
-- `terraform/outputs.tf`: What gets exposed after deployment
-
-### Development Tools
+### Development Tools & Scripts
 
 ```
-repo-root/
-├── Makefile                 # Make targets for common operations
-├── README.md                # Full documentation (500+ lines)
-├── QUICK_REFERENCE.md       # Command cheat sheet
-├── SETUP.md                 # Step-by-step setup guide
-└── docs/archive/IMPLEMENTATION_SUMMARY.md # Technical details (archived)
+terraform/scripts/
+├── acore_debug.py           # Matrix TUI: Live logs, Traces, Remote Reload
+├── hot_reload.py            # Watchdog-based auto-apply for local dev
+├── validate_bff.py          # Integration test for Authorizer & Session logic
+└── validate_examples.sh     # CI script for example validation
 ```
 
 ---
 
-## Core Modules (4 Total)
+## Core Modules (5 Total)
 
 ### 1. agentcore-foundation (Terraform-Native) ✅
 
 **Location**: `terraform/modules/agentcore-foundation/`
-
-**Files:**
-- `variables.tf` - Module configuration (20+ variables)
-- `iam.tf` - IAM roles and policies for all components
-- `gateway.tf` - MCP gateway + targets + logging
-- `identity.tf` - Workload identity setup
-- `observability.tf` - CloudWatch logs, metrics, X-Ray
-- `data.tf` - AWS account and region data sources
-- `outputs.tf` - Module outputs (10+ values)
 
 **Resources Created:**
 - `aws_bedrockagentcore_gateway` - MCP protocol gateway
 - `aws_bedrockagentcore_gateway_target` - Tool integration points
 - `aws_bedrockagentcore_workload_identity` - OAuth2 identity
 - `aws_cloudwatch_log_group` - Centralized logging
-- `aws_cloudwatch_log_resource_policy` - Log delivery
-- `aws_xray_sampling_rule` - Distributed tracing
-- `aws_xray_group` - Error tracking
-- `aws_kms_key` - Master encryption key
-- `aws_cloudwatch_metric_alarm` - Health monitoring (2+)
-- IAM roles and policies
-
-**Status**: ✅ Fully Terraform-native
-
----
+- `aws_xray_group` - Distributed tracing
+- ABAC-scoped IAM roles
 
 ### 2. agentcore-tools (Terraform-Native) ✅
 
 **Location**: `terraform/modules/agentcore-tools/`
 
-**Files:**
-- `variables.tf` - Module configuration (15+ variables)
-- `iam.tf` - IAM roles and policies for tools
-- `code_interpreter.tf` - Python sandbox setup
-- `browser.tf` - Web browser tool + recording
-- `data.tf` - AWS account and region data sources
-- `outputs.tf` - Module outputs (5+ values)
-
 **Resources Created:**
 - `aws_bedrockagentcore_code_interpreter` - Python execution
 - `aws_bedrockagentcore_browser` - Web browsing capability
-- CloudWatch log groups
-- S3 bucket policy for recordings
-- IAM roles with VPC support
+- VPC-isolated IAM roles
 
-**Key Features:**
-- Network modes: PUBLIC, SANDBOX, VPC
-- Session recording to S3
-- Execution timeout control
-
-**Status**: ✅ Fully Terraform-native
-
----
-
-### 3. agentcore-runtime (CLI-Based) ✅
+### 3. agentcore-runtime (CLI-Based / OCDS Engine) ✅
 
 **Location**: `terraform/modules/agentcore-runtime/`
 
-**Files:**
-- `variables.tf` - Module configuration (20+ variables)
-- `iam.tf` - IAM roles and policies
-- `runtime.tf` - Agent runtime creation (CLI-based)
-- `memory.tf` (combined in runtime.tf) - Memory setup (CLI-based)
-- `packaging.tf` - Two-stage build (OCDS-compliant)
-- `s3.tf` - Deployment bucket + encryption + versioning
-- `data.tf` - AWS account and region data sources
-- `outputs.tf` - Module outputs (10+ values)
-
-**Resources Created:**
-- `null_resource` for runtime (via CLI)
-- `null_resource` for memory (via CLI)
-- `aws_s3_bucket` - Artifact storage
-- `aws_s3_bucket_versioning` - Version history
-- `aws_s3_bucket_server_side_encryption_configuration` - At-rest encryption
-- `aws_s3_bucket_public_access_block` - Security hardening
-- CloudWatch log groups
-- IAM roles and policies
-
 **Key Features:**
-- Two-stage build: dependencies → code
-- Hash-based change detection
-- Automatic S3 deployment
-- Python version configuration
-
-**Status**: ⚠️ CLI-based (native resources pending AWS provider update)
-
----
+- **Two-stage build**: optimized code/dependency separation
+- `null_resource` for runtime (via mandatory CLI Pattern)
+- `aws_s3_bucket` - Artifact storage with SSE-S3
 
 ### 4. agentcore-governance (CLI-Based) ✅
 
 **Location**: `terraform/modules/agentcore-governance/`
 
-**Files:**
-- `variables.tf` - Module configuration (15+ variables)
-- `iam.tf` - IAM roles and policies
-- `policy.tf` - Cedar policy engine (CLI-based)
-- `evaluations.tf` - Custom evaluators (CLI-based)
-- `data.tf` - AWS account and region data sources
-- `outputs.tf` - Module outputs (5+ values)
+**Key Features:**
+- `null_resource` for Cedar policy engine
+- `null_resource` for evaluator models
+- Quality metric alarms
 
-**Cedar Policy Files:**
-- `cedar_policies/pii-protection.cedar` - PII access control
-- `cedar_policies/rate-limiting.cedar` - Usage quotas & rate limits
+### 5. agentcore-bff (Serverless Token Handler) ✅
 
-**Resources Created:**
-- `null_resource` for policy engine (via CLI)
-- `null_resource` for Cedar policies (via CLI)
-- `null_resource` for evaluators (via CLI)
-- CloudWatch log groups
-- CloudWatch metric alarms (2+)
-- IAM roles and policies
+**Location**: `terraform/modules/agentcore-bff/`
 
 **Key Features:**
-- Cedar policy language support
-- Multiple policy files
-- Custom evaluator models
-- Quality metric monitoring
-
-**Status**: ⚠️ CLI-based (native resources pending AWS provider update)
+- **Zero-Trust**: No Access Tokens in the browser.
+- **Shadow JSON**: Rule 15 compliant audit logging.
+- **Regional Agility**: Deployed in `bff_region`.
 
 ---
 
-## Example Configurations
+## Example Configurations & Templates
+
+### Copier Templates
+- `templates/agent-project/` - Enterprise-grade agent project scaffolder.
 
 ### Example Files
-
-```
-examples/
-├── research-agent.tfvars      # Research agent with web browsing + code
-└── support-agent.tfvars        # Support agent with CRM integration
-```
+- `examples/1-hello-world/` - Basic S3 explorer.
+- `examples/5-integrated/` - Full module composition with BFF/SPA enabled.
 
 ### research-agent.tfvars
 
@@ -452,8 +372,8 @@ agentcore-foundation (no dependencies)
 
 ### Version Tracking
 
-- Terraform version: ≥ 1.5.0
-- AWS provider: ≥ 5.30.0
+- Terraform version: ≥ 1.10.0
+- AWS provider: ≥ 5.80.0
 - null provider: ≥ 3.2
 - external provider: ≥ 2.3
 
@@ -466,7 +386,7 @@ agentcore-foundation (no dependencies)
 | Step-by-step setup | `SETUP.md` |
 | Quick answers | `QUICK_REFERENCE.md` |
 | Full documentation | `README.md` |
-| Implementation details | `docs/archive/IMPLEMENTATION_SUMMARY.md` (archived) |
+| Engineering Philosophy | `README.md` section 1 |
 | File locations | `INDEX.md` (this file) |
 | Command help | `Makefile` (`make help`) |
 | Example configs | `examples/*.tfvars` |
@@ -481,6 +401,6 @@ This implementation provides a complete, modular, production-ready Terraform arc
 
 ---
 
-**Last Updated**: 2025-02-08
-**Version**: 1.0.0
+**Last Updated**: 2026-02-10
+**Version**: 2.0.0
 **Status**: Production Ready ✅
