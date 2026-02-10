@@ -22,8 +22,10 @@ Real-world enterprise constraints are messy. You might need your **Control Plane
 
 ### 4. Zero-Trust Security
 We assume your frontend is compromised.
-*   **Token Handler Pattern:** Our Serverless BFF (Backend-for-Frontend) handles all OIDC tokens. No Access Tokens ever touch the browser.
-*   **Shadow JSON Audit:** Every interaction via the proxy is logged to a shadow audit trail (Rule 15), compliant with strict banking/healthcare standards.
+*   **Token Handler Pattern (ADR 0011):** Our Serverless BFF (Backend-for-Frontend) prevents all token exposure. OIDC tokens are exchanged server-side and never reach the browser, shielding you from XSS and token theft.
+*   **Hardened Cookies:** Session IDs are transmitted via **HttpOnly**, **Secure**, and **SameSite=Strict** cookies, ensuring that client-side JS cannot access the session and preventing CSRF.
+*   **Mandatory Server-Side Validation:** Every API request is intercepted by a Lambda Authorizer that validates sessions against DynamoDB before injecting identity context into the backend.
+*   **Shadow JSON Audit:** Every interaction via the proxy is logged to a shadow audit trail (**Rule 15**), compliant with strict banking/healthcare standards.
 
 ## The AgentCore Advantage
 
