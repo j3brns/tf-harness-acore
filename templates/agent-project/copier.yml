@@ -1,0 +1,45 @@
+# Copier Template Configuration
+_min_copier_version: "9.0.0"
+
+# Questions
+agent_name:
+  type: str
+  help: "What is the name of your agent?"
+  default: "my-agent"
+  validator: "^[a-zA-Z0-9-]{1,64}$"
+
+description:
+  type: str
+  help: "Brief description of the agent"
+  default: "A Bedrock Agent built with AgentCore"
+
+region:
+  type: str
+  help: "AWS Region"
+  default: "us-east-1"
+  choices:
+    - "us-east-1"
+    - "us-west-2"
+    - "eu-central-1"
+
+# Capabilities
+enable_guardrails:
+  type: bool
+  help: "Enable Bedrock Guardrails for safety?"
+  default: true
+
+enable_code_interpreter:
+  type: bool
+  help: "Enable Python Code Interpreter?"
+  default: false
+
+enable_knowledge_base:
+  type: bool
+  help: "Enable RAG (Knowledge Base)?"
+  default: false
+
+# Advanced Settings
+python_version:
+  type: str
+  default: "3.12"
+  choices: ["3.12", "3.11"]

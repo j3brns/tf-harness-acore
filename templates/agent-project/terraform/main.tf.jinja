@@ -1,0 +1,103 @@
+terraform {
+  required_version = ">= 1.5.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "{{ region }}"
+  default_tags {
+    tags = {
+      Project = "{{ agent_name }}"
+      ManagedBy = "Terraform"
+    }
+  }
+}
+
+# Root module - orchestrates all AgentCore components
+
+module "agentcore_foundation" {
+  source = "github.com/j3brns/tf-harness-acore//terraform/modules/agentcore-foundation?ref=main"
+
+  agent_name  = "{{ agent_name }}"
+  region      = "{{ region }}"
+  environment = "dev"
+  
+  # Gateway configuration
+  enable_gateway      = true
+  gateway_name        = "{{ agent_name }}-gateway"
+  gateway_search_type = "HYBRID"
+
+  # Identity configuration
+  enable_identity   = false
+  
+  # Observability
+  enable_observability = true
+  log_retention_days   = 30
+  enable_xray          = true
+}
+
+module "agentcore_tools" {
+  source = "github.com/j3brns/tf-harness-acore//terraform/modules/agentcore-tools?ref=main"
+
+  agent_name = "{{ agent_name }}"
+  region     = "{{ region }}"
+
+  # Code interpreter
+  enable_code_interpreter       = {{ enable_code_interpreter | lower }}
+  code_interpreter_network_mode = "SANDBOX"
+
+  # Browser
+  enable_browser              = false
+  browser_network_mode        = "SANDBOX"
+}
+
+module "agentcore_runtime" {
+  source = "github.com/j3brns/tf-harness-acore//terraform/modules/agentcore-runtime?ref=main"
+
+  agent_name = "{{ agent_name }}"
+  region     = "{{ region }}"
+
+  # Runtime configuration
+  enable_runtime          = true
+  runtime_source_path     = "../agent-code"
+  
+  # Memory configuration
+  enable_memory = true
+  memory_type   = "BOTH"
+
+  # Packaging
+  enable_packaging = true
+  python_version   = "{{ python_version }}"
+
+  depends_on = [
+    module.agentcore_foundation
+  ]
+}
+
+module "agentcore_governance" {
+  source = "github.com/j3brns/tf-harness-acore//terraform/modules/agentcore-governance?ref=main"
+
+  agent_name = "{{ agent_name }}"
+  region     = "{{ region }}"
+
+  # Policy engine
+  enable_policy_engine   = false
+
+  # Guardrails
+  enable_guardrails                   = {{ enable_guardrails | lower }}
+  guardrail_name                      = "{{ agent_name }}-guardrail"
+  guardrail_description               = "Safety guardrail for {{ agent_name }}"
+  
+  # Evaluations
+  enable_evaluations  = false
+
+  depends_on = [
+    module.agentcore_foundation,
+    module.agentcore_runtime
+  ]
+}
