@@ -6,7 +6,6 @@ agent_name:
   type: str
   help: "What is the name of your agent?"
   default: "my-agent"
-  validator: "[a-zA-Z0-9-]{1,64}"
 
 description:
   type: str
