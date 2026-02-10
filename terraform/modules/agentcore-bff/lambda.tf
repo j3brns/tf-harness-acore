@@ -30,7 +30,7 @@ resource "aws_lambda_function" "auth_handler" {
 
 
 
-  function_name = "agentcore-bff-auth-${var.agent_name}"
+  function_name    = "agentcore-bff-auth-${var.agent_name}"
   role             = aws_iam_role.auth_handler[0].arn
   handler          = "auth_handler.lambda_handler"
   runtime          = "python3.12"
@@ -57,7 +57,7 @@ resource "aws_lambda_function" "authorizer" {
 
 
 
-  function_name = "agentcore-bff-authz-${var.agent_name}"
+  function_name    = "agentcore-bff-authz-${var.agent_name}"
   role             = aws_iam_role.authorizer[0].arn
   handler          = "authorizer.lambda_handler"
   runtime          = "python3.12"
@@ -79,7 +79,7 @@ resource "aws_lambda_function" "proxy" {
 
 
 
-  function_name = "agentcore-bff-proxy-${var.agent_name}"
+  function_name    = "agentcore-bff-proxy-${var.agent_name}"
   role             = aws_iam_role.proxy[0].arn
   handler          = "proxy.lambda_handler"
   runtime          = "python3.12"
