@@ -1,3 +1,37 @@
+# Security Headers Policy
+resource "aws_cloudfront_response_headers_policy" "security" {
+  count = var.enable_bff ? 1 : 0
+  name  = "agentcore-bff-security-${var.agent_name}"
+
+  security_headers_config {
+    content_type_options {
+      override = true
+    }
+    frame_options {
+      frame_option = "DENY"
+      override     = true
+    }
+    referrer_policy {
+      referrer_policy = "strict-origin-when-cross-origin"
+      override        = true
+    }
+    xss_protection {
+      mode_block = true
+      protection = true
+      override   = true
+    }
+    strict_transport_security {
+      access_control_max_age_sec = 31536000
+      include_subdomains         = true
+      preload                    = true
+      override                   = true
+    }
+  }
+}
+
+# checkov:skip=CKV2_AWS_47: WAF requires cost/complexity decision (out of scope for harness)
+# checkov:skip=CKV2_AWS_42: Custom SSL requires ACM cert (out of scope for harness default)
+# checkov:skip=CKV2_AWS_46: S3 Origin Access is enabled via OAC
 resource "aws_cloudfront_distribution" "bff" {
   count = var.enable_bff ? 1 : 0
 
@@ -37,6 +71,8 @@ resource "aws_cloudfront_distribution" "bff" {
       }
     }
 
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security[0].id
+
     viewer_protocol_policy = "redirect-to-https"
     min_ttl                = 0
     default_ttl            = 3600
@@ -58,6 +94,8 @@ resource "aws_cloudfront_distribution" "bff" {
       }
     }
 
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security[0].id
+
     viewer_protocol_policy = "https-only"
     min_ttl                = 0
     default_ttl            = 0
@@ -78,6 +116,8 @@ resource "aws_cloudfront_distribution" "bff" {
         forward = "all"
       }
     }
+
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security[0].id
 
     viewer_protocol_policy = "https-only"
     min_ttl                = 0
@@ -101,7 +141,7 @@ resource "aws_cloudfront_distribution" "bff" {
     response_code      = 200
     response_page_path = "/index.html"
   }
-
+  
   custom_error_response {
     error_code         = 404
     response_code      = 200

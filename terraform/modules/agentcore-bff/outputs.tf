@@ -5,7 +5,7 @@ output "spa_url" {
 
 output "api_url" {
   description = "Direct URL of the API Gateway (for debugging)"
-  value       = var.enable_bff ? "${aws_api_gateway_stage.bff[0].invoke_url}" : ""
+  value       = var.enable_bff ? aws_api_gateway_stage.bff[0].invoke_url : ""
 }
 
 output "session_table_name" {
