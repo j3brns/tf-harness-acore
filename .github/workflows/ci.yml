@@ -95,7 +95,7 @@ jobs:
       - name: Generate Project from Template
         run: |
           mkdir .generated-test
-          copier copy --force --trust --data 'agent_name="ci-agent"' --data 'region="us-east-1"' templates/agent-project .generated-test
+          copier copy --force --trust --data agent_name=ci-agent --data region=us-east-1 templates/agent-project .generated-test
       - uses: ./.github/actions/terraform-setup
         with:
           terraform_version: 1.14.4
