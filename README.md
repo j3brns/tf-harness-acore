@@ -36,16 +36,50 @@ We assume your frontend is compromised.
 
 ## Architecture
 
+### Logic & Modules
 ```mermaid
 graph TD
     A[agentcore-foundation<br/>Gateway, Identity, Observability] --> B[agentcore-tools<br/>Code Interpreter, Browser]
     A --> C[agentcore-runtime<br/>Runtime, Memory, Packaging]
     C --> D[agentcore-governance<br/>Policy Engine, Evaluations]
+    A --> E[agentcore-bff<br/>OIDC, Proxy, SPA]
 
     style A fill:#e1f5fe
     style B fill:#f3e5f5
     style C fill:#fff3e0
     style D fill:#e8f5e9
+    style E fill:#fff9c4
+```
+
+### Physical Infrastructure
+```mermaid
+flowchart TD
+    subgraph Frontend[BFF Layer]
+        APIGW[API Gateway]
+        LProxy[Proxy Lambda]
+        DDB[(DynamoDB)]
+    end
+
+    subgraph Core[AgentCore]
+        BGateway[Bedrock Gateway]
+        BRuntime[Bedrock Runtime]
+    end
+
+    subgraph Storage[Storage]
+        S3SPA[S3 SPA]
+        S3Deploy[S3 Deploy]
+        S3Memory[S3 Memory]
+    end
+
+    Browser[Browser] --> CF[CloudFront]
+    CF --> S3SPA
+    Browser --> APIGW
+    APIGW --> LProxy
+    LProxy <--> DDB
+    LProxy --> BGateway
+    BGateway --> BRuntime
+    BRuntime <--> S3Memory
+    BRuntime <--> S3Deploy
 ```
 
 **Implementation Note**: Most AWS Bedrock AgentCore resources are provisioned via the mandatory **CLI Pattern** (AWS CLI + Terraform State) to bridge provider gaps while maintaining strict IaC principles. Native resources (IAM, S3, CloudWatch) use standard Terraform.

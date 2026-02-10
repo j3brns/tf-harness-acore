@@ -10,6 +10,77 @@
 
 ---
 
+## Physical Infrastructure Architecture
+
+The following diagram illustrates the deployment of AgentCore components and the end-to-end data flow from the browser to the AI runtime.
+
+```mermaid
+flowchart TD
+    subgraph Users[Public Internet]
+        Browser[SPA Web Terminal]
+    end
+
+    subgraph Edge[AWS Edge]
+        CF[CloudFront CDN]
+    end
+
+    subgraph BFF[Serverless BFF - Zero Trust Layer]
+        APIGW[API Gateway REST]
+        LAuth[OIDC Handler Lambda]
+        LAuthorizer[Lambda Authorizer]
+        LProxy[Agent Proxy Lambda]
+        DDB[(DynamoDB Sessions)]
+    end
+
+    subgraph AgentCore[Bedrock AgentCore Service]
+        BGateway[Bedrock Agent / Gateway]
+        BRuntime[Bedrock Runtime Engine]
+        BPolicies[Cedar Policy Engine]
+    end
+
+    subgraph Compute[Compute & Sandbox Layer]
+        LMCP[Lambda MCP Tools]
+        LRuntime[Agent Runtime Lambda]
+        BSandbox[Code Interpreter Sandbox]
+    end
+
+    subgraph Storage[Persistence & Observability]
+        S3SPA[S3: SPA Static Assets]
+        S3Deploy[S3: Deployment Artifacts]
+        S3Memory[S3: Long-term Memory]
+        CW[CloudWatch Logs & Metrics]
+    end
+
+    %% Data Flows
+    Browser <--> CF
+    CF <--> S3SPA
+    
+    Browser -- "Opaque Session Cookie" --> APIGW
+    APIGW --> LAuthorizer
+    LAuthorizer <--> DDB
+    
+    APIGW -- "OIDC Flow" --> LAuth
+    LAuth <--> DDB
+    
+    APIGW -- "Validated Request" --> LProxy
+    
+    LProxy -- "bedrock:InvokeAgent" --> BGateway
+    BGateway <--> BPolicies
+    BGateway <--> LMCP
+    BGateway <--> BSandbox
+    BGateway <--> LRuntime
+    
+    LRuntime <--> S3Memory
+    
+    %% Monitoring Flows
+    Compute -.-> CW
+    BFF -.-> CW
+    AgentCore -.-> CW
+    
+    %% Deployment Flow
+    LRuntime -- "Code Sync" --> S3Deploy
+```
+
 ## System Overview
 
 This Terraform implementation provisions AWS Bedrock AgentCore infrastructure for deploying AI agents with MCP protocol support, code interpretation, web browsing, memory, and governance capabilities.
