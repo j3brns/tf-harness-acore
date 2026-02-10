@@ -137,16 +137,16 @@ output "cedar_policies" {
 output "agent_summary" {
   description = "Summary of deployed agent resources"
   value = {
-    name                     = var.agent_name
-    region                   = var.region
-    environment              = var.environment
-    gateway_enabled          = var.enable_gateway
-    code_interpreter_enabled = var.enable_code_interpreter
-    browser_enabled          = var.enable_browser
-    memory_enabled           = var.enable_memory
+    name                      = var.agent_name
+    region                    = var.region
+    environment               = var.environment
+    gateway_enabled           = var.enable_gateway
+    code_interpreter_enabled  = var.enable_code_interpreter
+    browser_enabled           = var.enable_browser
+    memory_enabled            = var.enable_memory
     inference_profile_enabled = var.enable_inference_profile
-    policy_engine_enabled    = var.enable_policy_engine
-    evaluations_enabled      = var.enable_evaluations
+    policy_engine_enabled     = var.enable_policy_engine
+    evaluations_enabled       = var.enable_evaluations
   }
 }
 

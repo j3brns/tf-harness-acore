@@ -153,6 +153,12 @@ The following resources MUST use the `null_resource` + AWS CLI pattern:
 - **Requirement**: Every module's `README.md` MUST contain a "Known Failure Modes" section.
 - **Content**: Detail manual recovery steps for CLI/provisioner failures (e.g., SSM parameter cleanup).
 
+## RULE 17: Template Integrity & Parity
+- **Trigger**: Any modification to `terraform/variables.tf`, `terraform/main.tf`, or module interfaces.
+- **Requirement**: You MUST update `templates/agent-project` to reflect the change.
+- **Verification**: The `template-test` CI job must pass (generates a fresh project and runs validation).
+- **Definition of Done**: A feature is not complete until it works in the Core Modules, The Examples, *AND* The Template.
+
 ---
 
 ## DECISION FRAMEWORK

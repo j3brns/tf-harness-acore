@@ -5,12 +5,12 @@ resource "null_resource" "inference_profile" {
   count = var.enable_inference_profile ? 1 : 0
 
   triggers = {
-    agent_name      = var.agent_name
-    region          = var.region
-    profile_name    = var.inference_profile_name
-    model_source    = var.inference_profile_model_source_arn
-    description     = var.inference_profile_description
-    tags_hash       = sha256(jsonencode(var.inference_profile_tags))
+    agent_name   = var.agent_name
+    region       = var.region
+    profile_name = var.inference_profile_name
+    model_source = var.inference_profile_model_source_arn
+    description  = var.inference_profile_description
+    tags_hash    = sha256(jsonencode(var.inference_profile_tags))
   }
 
   provisioner "local-exec" {
