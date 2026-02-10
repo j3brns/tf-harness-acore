@@ -66,16 +66,16 @@ stateDiagram-v2
 
 ```mermaid
 flowchart LR
-  subgraph Phase1[Phase 1: Local build]
+  subgraph Phase1[Phase 1: Local Build]
     A[Write agent/tool code] --> B[Run locally]
     B --> C[Quick checks + tests]
   end
 
-  subgraph Phase2[Phase 2: Observability (optional)]
+  subgraph Phase2[Phase 2: Observability]
     D[Enable telemetry] --> E[Weave or OTEL backend]
   end
 
-  subgraph Phase3[Phase 3: Infra + deploy]
+  subgraph Phase3[Phase 3: Infra + Deploy]
     F[Terraform plan/apply] --> G[AgentCore runtime + gateway]
     G --> H[MCP tools (Lambda)]
   end
