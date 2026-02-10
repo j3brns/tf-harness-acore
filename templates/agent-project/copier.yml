@@ -37,6 +37,11 @@ enable_knowledge_base:
   help: "Enable RAG (Knowledge Base)?"
   default: false
 
+enable_bff:
+  type: bool
+  help: "Enable Serverless SPA & BFF (Frontend)?"
+  default: false
+
 # Advanced Settings
 python_version:
   type: str

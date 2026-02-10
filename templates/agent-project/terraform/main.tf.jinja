@@ -70,15 +70,6 @@ module "agentcore_runtime" {
   enable_memory = true
   memory_type   = "BOTH"
 
-  # Inference profile (Bedrock)
-  enable_inference_profile = false
-  # inference_profile_name = "{{ agent_name }}-profile"
-  # inference_profile_model_source_arn = "arn:aws:bedrock:{{ region }}::foundation-model/<MODEL_ID>"
-  # inference_profile_description = "Application inference profile for {{ agent_name }}"
-  # inference_profile_tags = {
-  #   Project = "{{ agent_name }}"
-  # }
-
   # Packaging
   enable_packaging = true
   python_version   = "{{ python_version }}"
@@ -108,5 +99,23 @@ module "agentcore_governance" {
   depends_on = [
     module.agentcore_foundation,
     module.agentcore_runtime
+  ]
+}
+
+module "agentcore_bff" {
+  source = "github.com/j3brns/tf-harness-acore//terraform/modules/agentcore-bff?ref=main"
+
+  enable_bff  = {{ enable_bff | lower }}
+  agent_name  = "{{ agent_name }}"
+  region      = "{{ region }}"
+  environment = "dev"
+
+  # Auth Configuration (Placeholders - MUST be updated)
+  oidc_issuer            = "https://login.microsoftonline.com/YOUR_TENANT_ID/v2.0"
+  oidc_client_id         = "YOUR_CLIENT_ID"
+  oidc_client_secret_arn = "arn:aws:secretsmanager:{{ region }}:YOUR_ACCOUNT:secret:YOUR_SECRET"
+
+  depends_on = [
+    module.agentcore_foundation
   ]
 }
