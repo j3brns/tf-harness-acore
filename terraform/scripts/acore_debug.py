@@ -229,8 +229,71 @@ def main():
 
     tailer = CloudWatchTailer(region, log_group)
     
+    # Target module for reload (Rule 5 OCDS)
+    target_module = "module.agentcore_runtime"
+    reloading = False
+    
+    def run_terraform_apply():
+        nonlocal reloading
+        # Check if we are in scripts/ or root
+        cwd = Path.cwd()
+        tf_dir = cwd if (cwd / "main.tf").exists() else cwd.parent
+        
+        cmd = [
+            "terraform", "apply", 
+            "-auto-approve", 
+            "-input=false",
+            f"-target={target_module}"
+        ]
+        try:
+            subprocess.run(cmd, cwd=tf_dir, check=True, capture_output=True)
+            tailer.log_buffer.append((datetime.now().strftime("%H:%M:%S"), "[SYSTEM] Agent reloaded successfully."))
+        except Exception as e:
+            tailer.log_buffer.append((datetime.now().strftime("%H:%M:%S"), f"[ERROR] Reload failed: {e}"))
+        finally:
+            reloading = False
+
+    def trigger_reload():
+        nonlocal reloading
+        if reloading:
+            return
+        reloading = True
+        ts = datetime.now().strftime("%H:%M:%S")
+        tailer.log_buffer.append((ts, "[SYSTEM] Hot-Reload initiated (OCDS compliance)..."))
+        thread = threading.Thread(target=run_terraform_apply)
+        thread.start()
+
+    # Keyboard handling (Windows)
+    import msvcrt
+
     with Live(layout, refresh_per_second=4, screen=True) as live:
         while True:
+            # Check for input
+            if msvcrt.kbhit():
+                key = msvcrt.getch().decode('utf-8').lower()
+                if key == 'q':
+                    break
+                elif key == 'c':
+                    tailer.log_buffer = []
+                elif key == 'r':
+                    trigger_reload()
+
+            # Status Update
+            if reloading:
+                layout["header"].update(
+                    Panel(
+                        Align.center(f"[bold yellow]SYSTEM REBUILDING... (OCDS STAGE 2) // ID: {agent_id}[/bold yellow]"),
+                        style="yellow on black"
+                    )
+                )
+            else:
+                layout["header"].update(
+                    Panel(
+                        Align.center(f"[bold green]AGENTCORE MATRIX DEBUGGER // ID: {agent_id} // REGION: {region}[/bold green]"),
+                        style="green on black"
+                    )
+                )
+
             # Real logs
             tailer.fetch_logs()
             
