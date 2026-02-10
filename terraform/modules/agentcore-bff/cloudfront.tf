@@ -29,10 +29,10 @@ resource "aws_cloudfront_response_headers_policy" "security" {
   }
 }
 
-# checkov:skip=CKV2_AWS_47: WAF requires cost/complexity decision (out of scope for harness)
-# checkov:skip=CKV2_AWS_42: Custom SSL requires ACM cert (out of scope for harness default)
-# checkov:skip=CKV2_AWS_46: S3 Origin Access is enabled via OAC
 resource "aws_cloudfront_distribution" "bff" {
+  # checkov:skip=CKV2_AWS_47: WAF requires cost/complexity decision (out of scope for harness)
+  # checkov:skip=CKV2_AWS_42: Custom SSL requires ACM cert (out of scope for harness default)
+  # checkov:skip=CKV2_AWS_46: S3 Origin Access is enabled via OAC
   count = var.enable_bff ? 1 : 0
 
   origin {
@@ -141,7 +141,7 @@ resource "aws_cloudfront_distribution" "bff" {
     response_code      = 200
     response_page_path = "/index.html"
   }
-  
+
   custom_error_response {
     error_code         = 404
     response_code      = 200

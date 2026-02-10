@@ -131,9 +131,9 @@ module "agentcore_governance" {
 module "agentcore_bff" {
   source = "./modules/agentcore-bff"
 
-  enable_bff = var.enable_bff
-  agent_name = var.agent_name
-  region     = var.region
+  enable_bff  = var.enable_bff
+  agent_name  = var.agent_name
+  region      = var.region
   environment = var.environment
   tags        = var.tags
 
@@ -144,7 +144,7 @@ module "agentcore_bff" {
 
   # Integration
   # Note: In a real scenario, we'd pass the specific Agent ID here
-  agent_gateway_id = var.enable_gateway ? "TODO_GET_FROM_SSM" : "" 
+  agent_gateway_id = var.enable_gateway ? "TODO_GET_FROM_SSM" : ""
 
   depends_on = [
     module.agentcore_foundation
