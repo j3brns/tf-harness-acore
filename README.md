@@ -8,9 +8,9 @@ This is not a "Hello World" repository. This is an **Industrial-Grade Framework*
 
 It solves the hard problems of AI engineering:
 
-### 1. The "Bridge Pattern" (Interim State Management)
-We don't wait for HashiCorp. When a Bedrock feature is released, we wrap the AWS CLI in `null_resource` provisioners but—crucially—we use **SSM Parameter Store** to persist resource IDs. This creates a "Bridge" that allows Terraform to manage the lifecycle (create, update, delete) of resources it doesn't officially support yet.
-*   **Result:** You get Day 0 access to new models and features with full IaC safety.
+### 1. The "Bridge Pattern" (Edge-Case Engineering)
+We don't wait for HashiCorp. When a Bedrock feature is released, we wrap the AWS CLI in `null_resource` provisioners but—crucially—we use **SSM Parameter Store** to persist and track resource IDs. This creates a stateful "Bridge" that allows Terraform to manage the full lifecycle (create, update, delete) of bleeding-edge resources before they exist in the official provider.
+*   **Result:** You get Day 0 access to new models, inference profiles, and guardrails with production-grade lifecycle safety.
 
 ### 2. OCDS: The Speed Engine
 **Optimized Code/Dependency Separation (OCDS)** is our build protocol. We hash your `pyproject.toml` separately from your `*.py` files.
@@ -29,10 +29,10 @@ We assume your frontend is compromised.
 
 ## The AgentCore Advantage
 
-*   ⚡ **Instant Hot-Reload**: Trigger OCDS builds directly from the TUI.
-*   🖥️ **Matrix-Themed TUI**: A cyberpunk terminal interface for real-time observability.
-*   🛡️ **ABAC Hardened**: Granular IAM permissions based on tags, not wildcards.
-*   🚀 **Enterprise Templates**: Scaffold new agents instantly with `copier`, fully pre-configured for this architecture.
+*   ⚡ **Ultra-Fast OCDS Builds**: Instant Hot-Reload for agent logic. Skip slow dependency reinstalls and update your deployed agent in seconds.
+*   🖥️ **Matrix-Themed TUI**: A cyberpunk terminal interface for real-time observability, traces, and remote management.
+*   🛡️ **ABAC Hardened**: Zero-trust security using Attribute-Based Access Control and Cedar policy enforcement out of the box.
+*   🚀 **Enterprise Templates**: Scaffold hardened, production-ready agents instantly with `copier`.
 
 ## Architecture
 
@@ -56,9 +56,9 @@ graph TD
 stateDiagram-v2
     [*] --> LocalDev: edit tool or agent code
     LocalDev --> LocalTest: run local MCP server
-    LocalTest --> Package: deps+code packaging
+    LocalTest --> Package: deps and code packaging
     Package --> Deploy: terraform apply
-    Deploy --> Observe: CloudWatch/X-Ray
+    Deploy --> Observe: CloudWatch and X-Ray
     Observe --> LocalDev: feedback loop
 ```
 
@@ -67,23 +67,23 @@ stateDiagram-v2
 ```mermaid
 flowchart LR
   subgraph Phase1[Phase 1: Local Build]
-    A[Write agent/tool code] --> B[Run locally]
-    B --> C[Quick checks + tests]
+    A[Write agent and tool code] --> B[Run locally]
+    B --> C[Quick checks and tests]
   end
 
   subgraph Phase2[Phase 2: Observability]
     D[Enable telemetry] --> E[Weave or OTEL backend]
   end
 
-  subgraph Phase3[Phase 3: Infra + Deploy]
-    F[Terraform plan/apply] --> G[AgentCore runtime + gateway]
-    G --> H[MCP tools (Lambda)]
+  subgraph Phase3[Phase 3: Infra and Deploy]
+    F[Terraform plan and apply] --> G[AgentCore runtime and gateway]
+    G --> H[MCP tools - Lambda]
   end
 
   subgraph Phase4[Phase 4: Operate]
     I[User traffic] --> J[Runtime executes]
-    J --> K[Logs + traces]
-    K --> L[Fix + iterate]
+    J --> K[Logs and traces]
+    K --> L[Fix and iterate]
   end
 
   C --> F
