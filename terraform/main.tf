@@ -142,9 +142,9 @@ module "agentcore_bff" {
   oidc_client_id         = var.oidc_client_id
   oidc_client_secret_arn = var.oidc_client_secret_arn
 
-    # Integration
-    agent_gateway_id = var.enable_gateway ? module.agentcore_foundation.gateway_id : "" 
-  
-    depends_on = [    module.agentcore_foundation
+  # Integration
+  agent_gateway_id = var.enable_gateway ? module.agentcore_foundation.gateway_id : ""
+
+  depends_on = [module.agentcore_foundation
   ]
 }

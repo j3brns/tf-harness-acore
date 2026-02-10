@@ -4,6 +4,10 @@ import time
 import random
 import threading
 import argparse
+import subprocess
+import json
+import boto3
+from pathlib import Path
 from datetime import datetime
 
 # --- Dependency Check ---
@@ -55,6 +59,29 @@ TRACES = [
 ]
 
 # --- Functions ---
+
+def discover_config():
+    """Tries to discover configuration from Terraform outputs."""
+    try:
+        # Check if we are in scripts/ or root
+        cwd = Path.cwd()
+        tf_dir = cwd if (cwd / "main.tf").exists() else cwd.parent
+        
+        cmd = ["terraform", "output", "-json"]
+        res = subprocess.check_output(cmd, cwd=tf_dir, stderr=subprocess.DEVNULL).decode()
+        outputs = json.loads(res)
+        
+        config = {
+            "region": "us-east-1", # Default
+            "agent_id": outputs.get("agent_gateway_id", {}).get("value") or outputs.get("gateway_id", {}).get("value"),
+            "log_group": outputs.get("log_group_name", {}).get("value")
+        }
+        
+        # Region usually in provider or a variable, let's try to find it
+        # If not in outputs, we might need to check terraform.tfstate or just default
+        return config
+    except:
+        return {"region": "us-east-1", "agent_id": None, "log_group": None}
 
 def matrix_rain_effect(duration=3.0):
     """Simulates the falling code effect before startup."""
@@ -135,10 +162,48 @@ def get_status_panel():
         border_style="green"
     )
 
+class CloudWatchTailer:
+    def __init__(self, region, log_group):
+        self.region = region
+        self.log_group = log_group
+        self.log_buffer = []
+        self.last_timestamp = int((time.time() - 3600) * 1000) # Last hour
+        try:
+            self.logs = boto3.client('logs', region_name=region)
+            self.active = True
+        except:
+            self.active = False
+
+    def fetch_logs(self):
+        if not self.active or not self.log_group:
+            return
+        try:
+            response = self.logs.filter_log_events(
+                logGroupName=self.log_group,
+                startTime=self.last_timestamp + 1,
+                limit=10
+            )
+            for event in response.get('events', []):
+                ts = datetime.fromtimestamp(event['timestamp'] / 1000.0).strftime("%H:%M:%S")
+                self.log_buffer.append((ts, event['message']))
+                self.last_timestamp = max(self.last_timestamp, event['timestamp'])
+        except Exception as e:
+            # Silently fail or log briefly
+            pass
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--skip-intro", action="store_true", help="Skip the matrix intro")
+    parser.add_argument("--region", help="AWS Region")
+    parser.add_argument("--agent-id", help="Bedrock Agent ID")
+    parser.add_argument("--log-group", help="CloudWatch Log Group Name")
     args = parser.parse_args()
+
+    # Configuration Discovery
+    config = discover_config()
+    region = args.region or config.get("region") or "us-east-1"
+    agent_id = args.agent_id or config.get("agent_id") or "UNKNOWN"
+    log_group = args.log_group or config.get("log_group")
 
     if not args.skip_intro:
         matrix_rain_effect()
@@ -149,7 +214,7 @@ def main():
     # Header
     layout["header"].update(
         Panel(
-            Align.center("[bold green]AGENTCORE MATRIX DEBUGGER // CONNECTED TO: us-east-1[/bold green]"),
+            Align.center(f"[bold green]AGENTCORE MATRIX DEBUGGER // ID: {agent_id} // REGION: {region}[/bold green]"),
             style="green on black"
         )
     )
@@ -162,20 +227,22 @@ def main():
         )
     )
 
-    log_buffer = []
+    tailer = CloudWatchTailer(region, log_group)
     
     with Live(layout, refresh_per_second=4, screen=True) as live:
         while True:
-            # Simulate incoming logs
-            if random.random() < 0.3:
-                msg = random.choice(LOG_MESSAGES)
-                ts = datetime.now().strftime("%H:%M:%S")
-                log_buffer.append((ts, msg))
+            # Real logs
+            tailer.fetch_logs()
             
-            layout["logs"].update(get_log_panel(log_buffer))
+            # If no real logs yet, show some "System ready" noise
+            if not tailer.log_buffer and random.random() < 0.1:
+                ts = datetime.now().strftime("%H:%M:%S")
+                tailer.log_buffer.append((ts, "System operational. Waiting for traffic..."))
+
+            layout["logs"].update(get_log_panel(tailer.log_buffer))
             layout["status"].update(get_status_panel())
             
-            time.sleep(0.2)
+            time.sleep(0.5)
 
 if __name__ == "__main__":
     try:
