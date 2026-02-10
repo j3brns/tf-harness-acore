@@ -121,6 +121,12 @@ module "agentcore" {
   enable_policy_engine = false
   enable_evaluations   = false
 
+  # Frontend (BFF)
+  enable_bff             = true
+  oidc_issuer            = "https://example.com"
+  oidc_client_id         = "test-client"
+  oidc_client_secret_arn = "arn:aws:secretsmanager:${var.region}:123456789012:secret:test-secret"
+
   tags = {
     Example = "5-integrated"
   }

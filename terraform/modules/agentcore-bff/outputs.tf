@@ -12,3 +12,13 @@ output "session_table_name" {
   description = "Name of the DynamoDB Session Table"
   value       = var.enable_bff ? aws_dynamodb_table.sessions[0].name : ""
 }
+
+output "rest_api_id" {
+  description = "ID of the REST API"
+  value       = var.enable_bff ? aws_api_gateway_rest_api.bff[0].id : ""
+}
+
+output "authorizer_id" {
+  description = "ID of the Lambda Authorizer"
+  value       = var.enable_bff ? aws_api_gateway_authorizer.token_handler[0].id : ""
+}

@@ -25,6 +25,19 @@ def lambda_handler(event, context):
     if not prompt:
         return {"statusCode": 400, "body": "Missing prompt"}
 
+    # Rule 15: Shadow JSON
+    try:
+        with open('/tmp/shadow_invoker.json', 'w') as f:
+            json.dump({
+                "agentId": AGENT_ID,
+                "agentAliasId": AGENT_ALIAS_ID,
+                "sessionId": session_id,
+                "inputText": prompt,
+                "timestamp": str(os.environ.get('AWS_LAMBDA_REQUEST_ID'))
+            }, f)
+    except Exception as e:
+        print(f"Shadow JSON Error: {e}")
+
     # Invoke Bedrock Agent
     try:
         response = bedrock.invoke_agent(
