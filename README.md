@@ -1,17 +1,17 @@
-# AWS Bedrock AgentCore Terraform
+# Bedrock AgentCore Terraform // Industrial-Grade AI Infrastructure
 
-Production-ready infrastructure for deploying AI agents on AWS Bedrock AgentCore with local-first development and modular architecture.
+Deploy, secure, and scale production AI agents on AWS Bedrock with a **local-first DX**, **Zero-Trust security**, and **Instant Hot-Reload**.
 
-## Overview
+## The AgentCore Advantage
 
-This project provides:
+AgentCore is a hardened framework designed for engineers who need to move from Python prototype to global production without sacrificing security or speed.
 
-- **Local development first** - Build and test agents in Python before deploying infrastructure
-- **Modular Terraform architecture** - 4 independent modules for foundation, tools, runtime, and governance
-- **CLI-based provisioning** - Robust infrastructure using AWS CLI + Terraform state management
-- **OCDS-compliant packaging** - Two-stage builds with dependency caching
-- **Module composition** - Automatic ARN resolution, no hardcoded values
-- **CloudWatch monitoring** - Automatic logging and metrics with optional Weave integration
+*   ⚡ **Instant Hot-Reload**: Powered by OCDS-compliant two-stage builds. Update agent logic in seconds, skipping slow dependency reinstalls.
+*   🔒 **Zero-Trust SPA/BFF**: Implements the **Token Handler Pattern** (ADR 0011). Identity is managed server-side; no sensitive tokens ever touch the browser.
+*   📟 **Matrix-Themed TUI**: A cyberpunk terminal interface for real-time log streaming, system traces, and remote agent reloads.
+*   🌍 **Regional Agility**: Orchestrate multi-region deployments effortlessly. Split your control plane, models, and API Gateway to meet regional availability or latency needs.
+*   🛡️ **ABAC Hardened**: Security is non-negotiable. Implements strict Attribute-Based Access Control and Cedar policy enforcement out of the box.
+*   🧩 **Module Composition**: 4 decoupled modules (Foundation, Tools, Runtime, Governance) that wire themselves together with zero hardcoded ARNs.
 
 ## Architecture
 
@@ -27,7 +27,7 @@ graph TD
     style D fill:#e8f5e9
 ```
 
-**Implementation Note**: Most AWS Bedrock AgentCore resources are provisioned via AWS CLI using `null_resource` + `local-exec` pattern, as they are not yet available in the Terraform AWS provider. IAM roles, CloudWatch logs, and S3 buckets use native Terraform resources.
+**Implementation Note**: Most AWS Bedrock AgentCore resources are provisioned via the mandatory **CLI Pattern** (AWS CLI + Terraform State) to bridge provider gaps while maintaining strict IaC principles. Native resources (IAM, S3, CloudWatch) use standard Terraform.
 
 ## Lifecycle (Local → Cloud → Local)
 
@@ -297,6 +297,27 @@ module "agentcore" {
 ```
 
 See `examples/5-integrated/README.md` for details.
+
+## The Command Center (Matrix TUI)
+
+The AgentCore Matrix TUI is your mission control for deployed agents. It combines real-time observability with remote management in a single cyberpunk interface.
+
+```bash
+# Launch the Matrix (Auto-discovers region and ID)
+python terraform/scripts/acore_debug.py
+```
+
+*   📡 **Live Logs**: Automated CloudWatch tailing with near-zero latency.
+*   🚦 **System Traces**: Real-time monitoring of Authorizer decisions and Bedrock latency.
+*   🔄 **Remote Reload**: Press `r` to trigger an OCDS Hot-Reload via Terraform directly from the TUI.
+
+## Serverless BFF & SPA
+
+AgentCore includes a high-security **Backend-for-Frontend** module to expose your agents to the web without compromising identity.
+
+*   🖥️ **Web Terminal**: A Matrix-themed SPA (Single Page Application) matching the TUI aesthetic.
+*   🛡️ **Token Handler**: Pure serverless OIDC implementation. No Access Tokens in the browser.
+*   🕵️ **Shadow JSON**: Implements **Rule 15** audit logging, dumping all proxy payloads to a secure audit trail.
 
 ## Local Development
 
