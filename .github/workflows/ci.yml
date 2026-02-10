@@ -86,3 +86,21 @@ jobs:
           cd terraform
           bash scripts/validate_examples.sh || echo "WARN: Examples validation skipped or failed"
 
+  template-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Copier
+        run: pip install copier
+      - name: Generate Project from Template
+        run: |
+          mkdir .generated-test
+          copier copy --force --trust --data 'agent_name="ci-agent"' --data 'region="us-east-1"' templates/agent-project .generated-test
+      - uses: ./.github/actions/terraform-setup
+        with:
+          terraform_version: 1.14.4
+      - name: Validate Generated Terraform
+        run: |
+          cd .generated-test/terraform
+          terraform init -backend=false
+          terraform validate
