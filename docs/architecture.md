@@ -134,6 +134,7 @@ agentcore-foundation (NO dependencies)
 **Resources**:
 - `null_resource` + CLI for Runtime
 - `null_resource` + CLI for Memory
+- `null_resource` + CLI for Application Inference Profile
 - `aws_s3_bucket` - Deployment artifacts
 - Two-stage build (dependencies -> code)
 

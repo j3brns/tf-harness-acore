@@ -41,6 +41,12 @@ output "packaging_log_group_name" {
   value       = var.enable_packaging ? aws_cloudwatch_log_group.packaging[0].name : null
 }
 
+output "inference_profile_arn" {
+  description = "Bedrock application inference profile ARN"
+  value       = var.enable_inference_profile ? try(data.external.inference_profile_output[0].result.inferenceProfileArn, null) : null
+  sensitive   = true
+}
+
 output "source_hash" {
   description = "Hash of source code for change detection"
   value       = local.source_hash

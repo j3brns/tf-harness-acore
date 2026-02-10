@@ -7,6 +7,7 @@ This module manages the agent runtime, memory, and packaging process.
 - **Two-Stage Packaging**: Local Python packaging and S3 upload.
 - **Agent Runtime**: CLI-based provisioning of the agent control plane.
 - **Memory**: Persistent agent memory configuration.
+- **Inference Profiles**: Optional Bedrock application inference profile creation (CLI-based).
 
 ## Known Failure Modes (Rule 16)
 

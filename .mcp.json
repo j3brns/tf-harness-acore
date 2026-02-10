@@ -20,7 +20,10 @@
     "showLineNumbers": true
   },
   "mcpServers": {
-    "awsdocs": {
+    "awslabs.aws-documentation-mcp-server": {
+      "disabled": false,
+      "timeout": 60000,
+      "type": "stdio",
       "command": "uv",
       "args": [
         "tool",
@@ -32,10 +35,12 @@
       "env": {
         "FASTMCP_LOG_LEVEL": "ERROR",
         "AWS_DOCUMENTATION_PARTITION": "aws"
-      },
-      "timeout": 60000
+      }
     },
-    "aws-terraform": {
+    "awslabs.terraform-mcp-server": {
+      "disabled": false,
+      "timeout": 240000,
+      "type": "stdio",
       "command": "uv",
       "args": [
         "tool",
@@ -47,7 +52,7 @@
       "env": {
         "FASTMCP_LOG_LEVEL": "ERROR"
       },
-      "timeout": 240000
+      "autoApprove": []
     }
   }
 }

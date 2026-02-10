@@ -50,6 +50,57 @@ variable "memory_type" {
   }
 }
 
+# Inference profile configuration (Bedrock)
+variable "enable_inference_profile" {
+  description = "Enable Bedrock application inference profile creation"
+  type        = bool
+  default     = false
+}
+
+variable "inference_profile_name" {
+  description = "Name for the Bedrock application inference profile"
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.enable_inference_profile ? length(trim(var.inference_profile_name)) > 0 : true
+    error_message = "inference_profile_name must be set when enable_inference_profile is true."
+  }
+}
+
+variable "inference_profile_model_source_arn" {
+  description = "Model source ARN (foundation model ARN or system-defined inference profile ARN)"
+  type        = string
+  default     = ""
+
+  validation {
+    condition = var.enable_inference_profile ? can(
+      regex(
+        "^arn:aws[a-z-]*:bedrock:[a-z0-9-]+:(?:[0-9]{12})?:(foundation-model|inference-profile)/[A-Za-z0-9._:-]+$",
+        var.inference_profile_model_source_arn
+      )
+    ) : true
+    error_message = "inference_profile_model_source_arn must be a valid Bedrock foundation model or inference profile ARN."
+  }
+}
+
+variable "inference_profile_description" {
+  description = "Optional description for the inference profile"
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = length(var.inference_profile_description) <= 200
+    error_message = "inference_profile_description must be 200 characters or fewer."
+  }
+}
+
+variable "inference_profile_tags" {
+  description = "Tags to apply to the inference profile"
+  type        = map(string)
+  default     = {}
+}
+
 # S3 deployment configuration
 variable "deployment_bucket_name" {
   description = "S3 bucket name for deployment artifacts"

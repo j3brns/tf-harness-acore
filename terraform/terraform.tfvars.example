@@ -63,6 +63,15 @@ runtime_config = {
 enable_memory = true
 memory_type   = "BOTH"
 
+# Runtime - Inference Profiles (Bedrock)
+enable_inference_profile = false
+# inference_profile_name = "agentcore-profile"
+# inference_profile_model_source_arn = "arn:aws:bedrock:<REGION>::foundation-model/<MODEL_ID>"
+# inference_profile_description = "Application inference profile for agent runtime"
+# inference_profile_tags = {
+#   Project = "bedrock-agentcore"
+# }
+
 # Runtime - Packaging
 enable_packaging = true
 python_version   = "3.12"

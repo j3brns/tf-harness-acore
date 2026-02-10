@@ -107,6 +107,12 @@ output "source_hash" {
   value       = module.agentcore_runtime.source_hash
 }
 
+output "inference_profile_arn" {
+  description = "Bedrock application inference profile ARN"
+  value       = module.agentcore_runtime.inference_profile_arn
+  sensitive   = true
+}
+
 # ===== GOVERNANCE MODULE OUTPUTS =====
 
 output "policy_engine_id" {
@@ -138,6 +144,7 @@ output "agent_summary" {
     code_interpreter_enabled = var.enable_code_interpreter
     browser_enabled          = var.enable_browser
     memory_enabled           = var.enable_memory
+    inference_profile_enabled = var.enable_inference_profile
     policy_engine_enabled    = var.enable_policy_engine
     evaluations_enabled      = var.enable_evaluations
   }
