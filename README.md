@@ -2,16 +2,35 @@
 
 Deploy, secure, and scale production AI agents on AWS Bedrock with a **local-first DX**, **Zero-Trust security**, and **Instant Hot-Reload**.
 
+## The Engineering Philosophy
+
+This is not a "Hello World" repository. This is an **Industrial-Grade Framework** designed for teams who need to deploy AI Agents that survive in production.
+
+It solves the hard problems of AI engineering:
+
+### 1. The "Bridge Pattern" (Interim State Management)
+We don't wait for HashiCorp. When a Bedrock feature is released, we wrap the AWS CLI in `null_resource` provisioners but—crucially—we use **SSM Parameter Store** to persist resource IDs. This creates a "Bridge" that allows Terraform to manage the lifecycle (create, update, delete) of resources it doesn't officially support yet.
+*   **Result:** You get Day 0 access to new models and features with full IaC safety.
+
+### 2. OCDS: The Speed Engine
+**Optimized Code/Dependency Separation (OCDS)** is our build protocol. We hash your `pyproject.toml` separately from your `*.py` files.
+*   **Outcome:** If you only change your code, deployment takes **seconds**, not minutes. We only rebuild the heavy dependency layer when you actually add a library.
+
+### 3. Global Mesh Topology
+Real-world enterprise constraints are messy. You might need your **Control Plane** in `eu-central-1` (Data Residency), your **BFF** in `us-east-1` (Latency), and your **Models** in `us-west-2` (Availability).
+*   **Solution:** AgentCore supports granular regional splitting out of the box. Set `bedrock_region` and `bff_region` independently of your primary `region`. The modules handle the cross-region wiring automatically.
+
+### 4. Zero-Trust Security
+We assume your frontend is compromised.
+*   **Token Handler Pattern:** Our Serverless BFF (Backend-for-Frontend) handles all OIDC tokens. No Access Tokens ever touch the browser.
+*   **Shadow JSON Audit:** Every interaction via the proxy is logged to a shadow audit trail (Rule 15), compliant with strict banking/healthcare standards.
+
 ## The AgentCore Advantage
 
-AgentCore is a hardened framework designed for engineers who need to move from Python prototype to global production without sacrificing security or speed.
-
-*   ⚡ **Instant Hot-Reload**: Powered by OCDS-compliant two-stage builds. Update agent logic in seconds, skipping slow dependency reinstalls.
-*   🔒 **Zero-Trust SPA/BFF**: Implements the **Token Handler Pattern** (ADR 0011). Identity is managed server-side; no sensitive tokens ever touch the browser.
-*   📟 **Matrix-Themed TUI**: A cyberpunk terminal interface for real-time log streaming, system traces, and remote agent reloads.
-*   🌍 **Regional Agility**: Orchestrate multi-region deployments effortlessly. Split your control plane, models, and API Gateway to meet regional availability or latency needs.
-*   🛡️ **ABAC Hardened**: Security is non-negotiable. Implements strict Attribute-Based Access Control and Cedar policy enforcement out of the box.
-*   🧩 **Module Composition**: 4 decoupled modules (Foundation, Tools, Runtime, Governance) that wire themselves together with zero hardcoded ARNs.
+*   ⚡ **Instant Hot-Reload**: Trigger OCDS builds directly from the TUI.
+*   🖥️ **Matrix-Themed TUI**: A cyberpunk terminal interface for real-time observability.
+*   🛡️ **ABAC Hardened**: Granular IAM permissions based on tags, not wildcards.
+*   🚀 **Enterprise Templates**: Scaffold new agents instantly with `copier`, fully pre-configured for this architecture.
 
 ## Architecture
 
@@ -114,35 +133,32 @@ repo-root/
 
 ## Quick Start
 
-### 1. Local Development (No AWS Required)
+### 1. Scaffold with Template
+
+Don't start from scratch. Use our enterprise `copier` template to generate a fully compliant agent project.
+
+```bash
+# Install copier
+pip install copier
+
+# Generate project
+copier copy --trust templates/agent-project my-agent
+cd my-agent
+```
+
+### 2. Local Development (No AWS Required)
 
 Start by developing your agent in pure Python:
 
 ```bash
-# Create agent directory
-mkdir my-agent && cd my-agent
-
-# Create runtime.py
-cat > runtime.py <<'EOF'
-from bedrock_agentcore import BedrockAgentCoreApp
-
-class MyAgent(BedrockAgentCoreApp):
-    def invoke(self, event):
-        return {
-            "status": "success",
-            "output": f"Processed: {event.get('input')}"
-        }
-
-app = MyAgent()
-EOF
-
 # Test locally
-python -c "from runtime import app; print(app.invoke({'input': 'test'}))"
+cd agent-code
+python runtime.py
 ```
 
-### 2. Add Dependencies
+### 3. Add Dependencies
 
-Create `pyproject.toml` for two-stage OCDS build:
+Edit `pyproject.toml` to add libraries. The OCDS build system will automatically cache them.
 
 ```toml
 [project]
@@ -154,7 +170,7 @@ dependencies = [
 ]
 ```
 
-### 3. Deploy Infrastructure
+### 4. Deploy Infrastructure
 
 ```bash
 cd terraform
