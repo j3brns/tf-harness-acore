@@ -39,8 +39,21 @@ def main():
 
     print(f"Validating API: {api_id}, Authorizer: {auth_id}, Table: {table_name}")
 
+    # 0. Check for Streaming Mode in State
+    print("\n[0/3] Checking Streaming Configuration in Terraform State...")
+    try:
+        # We look for the integration in the state to ensure the STREAM mode is set
+        state_cmd = ["terraform", "state", "show", "module.agentcore_bff.aws_api_gateway_integration.chat[0]"]
+        state_out = subprocess.check_output(state_cmd, cwd=os.path.dirname(os.path.dirname(__file__))).decode()
+        if "response_transfer_mode" in state_out and "STREAM" in state_out:
+            print("PASS: response_transfer_mode = STREAM found in state")
+        else:
+            print("WARNING: response_transfer_mode = STREAM NOT found in state. Native streaming might not be active.")
+    except Exception as e:
+        print(f"Info: Could not verify state (perhaps not deployed yet): {e}")
+
     # 1. Test Missing Cookie (Expect Deny)
-    print("\n[1/2] Testing Missing Cookie...")
+    print("\n[1/3] Testing Missing Cookie...")
     cmd = [
         "aws", "apigateway", "test-invoke-authorizer",
         "--rest-api-id", api_id,
@@ -64,7 +77,7 @@ def main():
         sys.exit(1)
 
     # 2. Test Valid Cookie (Expect Allow)
-    print("\n[2/2] Testing Valid Cookie (Mocking Session)...")
+    print("\n[2/3] Testing Valid Cookie (Mocking Session)...")
     ddb = boto3.resource('dynamodb', region_name=region)
     table = ddb.Table(table_name)
 

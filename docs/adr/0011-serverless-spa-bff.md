@@ -33,14 +33,20 @@ The API Gateway will use a **Request Authorizer**:
 
 ### 4. Entra ID Configuration
 *   **App Registration:** "Single Page Application" platform is *incorrect* for this pattern.
-*   **Configuration:** Register as a **Web Application** (Confidential Client) because the exchange happens securely on the server (Lambda). This allows us to use a Client Secret if needed (though Certificate auth is preferred).
+*   **Configuration:** Register as a **Web Application** (Confidential Client) because the exchange happens securely on the server (Lambda).
+*   **Security:** Implements **PKCE (Proof Key for Code Exchange)** for all OIDC flows to prevent authorization code injection, even for confidential clients.
+
+### 5. Response Streaming
+*   **Requirement:** Agent interactions (e.g., Deep Research) often exceed 29s.
+*   **Implementation:** The `/api/chat` endpoint utilizes **Native Response Streaming** enabled by **AWS Provider v6.0+**.
+*   **Configuration:** `response_transfer_mode = "STREAM"` with a `timeout_milliseconds = 900000` (15 minutes).
 
 ## Consequences
 
 ### Positive
-*   **Security:** "Bank-grade" security. Tokens are completely invisible to the client.
+*   **Security:** "Bank-grade" security. Tokens are completely invisible to the client. PKCE prevents interception.
 *   **Scalability:** Serverless components scale to zero.
-*   **Compliance:** Access logs (CloudFront + API Gateway) provide full audit trail.
+*   **UX:** Native 15-minute streaming prevents 504 timeouts during long-running agent tasks.
 
 ### Negative
 *   **Complexity:** Requires maintaining the Token Handler Lambda code.
