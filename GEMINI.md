@@ -169,6 +169,11 @@ AI Agents MUST create comprehensive GitHub issues. Every issue MUST include:
 - **Implementation Tasks**: A checklist of specific actionable items.
 - **Acceptance Criteria**: Verifiable outcomes (e.g., "Exit code 0", "Test passes").
 
+### Rule 12.2: Roadmap Alignment
+- Every planned item in `ROADMAP.md` MUST have a corresponding GitHub Issue.
+- The Roadmap provides the **Strategic Vision**; Issues provide the **Execution Detail**.
+- When an issue is closed, the corresponding item in `ROADMAP.md` MUST be ticked.
+
 ---
 
 ## RULE 13: Repo Layout & Reorg Guardrails
