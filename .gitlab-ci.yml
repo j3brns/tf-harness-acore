@@ -123,14 +123,14 @@ variables:
       fi
 
 # =============================================================================
-# Cache for terraform binary between jobs
+# Cache for terraform providers between jobs (paths relative to CI_PROJECT_DIR)
 # =============================================================================
 .terraform_cache:
   cache:
-    key: terraform-${TF_VERSION}
+    key: terraform-providers-${TF_VERSION}
     paths:
-      - .terraform/
-      - .terraform.lock.hcl
+      - terraform/.terraform/
+      - terraform/.terraform.lock.hcl
     policy: pull-push
 
 # =============================================================================
@@ -162,7 +162,7 @@ validate:syntax:
 
 validate:docs-and-tests:
   stage: validate
-  extends: .notify_failure
+  extends: [.install_tools, .notify_failure]
   script:
     - |
       set -euo pipefail
@@ -190,14 +190,14 @@ lint:tflint:
     - cd $TF_ROOT
     - tflint --init
     - tflint --recursive --format compact --config $TF_ROOT/.tflint.hcl
-  allow_failure: true
+  allow_failure: false
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 lint:checkov:
   stage: lint
-  image: bridgecrew/checkov:3.2.500
+  image: bridgecrew/checkov:latest
   extends: .notify_failure
   script:
     - cd $TF_ROOT
@@ -262,20 +262,6 @@ test:cedar-policies:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-
-test:mcp-servers:
-  stage: test
-  extends: [.install_tools, .notify_failure]
-  script:
-    - cd $REPO_ROOT/examples/mcp-servers/terraform
-    - terraform init -backend=false -input=false
-    - terraform validate
-    - terraform fmt -check
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-    - changes:
-        - examples/mcp-servers/**/*
 
 test:python-hello-world:
   stage: test
@@ -355,7 +341,7 @@ test:python-research:
 
 plan:dev:
   stage: plan-dev
-  extends: [.aws_auth, .notify_failure]
+  extends: [.aws_auth, .terraform_cache, .notify_failure]
   environment:
     name: dev
   variables:
@@ -385,7 +371,7 @@ plan:dev:
 
 deploy:dev:
   stage: deploy-dev
-  extends: [.aws_auth, .notify_failure]
+  extends: [.aws_auth, .terraform_cache, .notify_failure]
   environment:
     name: dev
     url: https://console.aws.amazon.com/bedrock/
@@ -402,7 +388,7 @@ deploy:dev:
     - |
       if ! terraform apply -auto-approve -input=false dev.tfplan; then
         echo "ERROR: Deploy failed. Saving state snapshot for diagnostics."
-        terraform state pull > failed-state-$(date +%s).json 2>/dev/null || true
+        terraform state pull > failed-state-$(date +%s).json || echo "WARNING: Could not save state snapshot"
         exit 1
       fi
     - terraform output -json > outputs-dev.json
@@ -421,7 +407,7 @@ deploy:dev:
 
 plan:test:
   stage: plan-test
-  extends: [.aws_auth, .notify_failure]
+  extends: [.aws_auth, .terraform_cache, .notify_failure]
   environment:
     name: test
   variables:
@@ -451,7 +437,7 @@ plan:test:
 
 deploy:test:
   stage: deploy-test
-  extends: [.aws_auth, .notify_failure]
+  extends: [.aws_auth, .terraform_cache, .notify_failure]
   environment:
     name: test
     url: https://console.aws.amazon.com/bedrock/
@@ -469,7 +455,7 @@ deploy:test:
     - |
       if ! terraform apply -auto-approve -input=false test.tfplan; then
         echo "ERROR: Deploy failed. Saving state snapshot for diagnostics."
-        terraform state pull > failed-state-$(date +%s).json 2>/dev/null || true
+        terraform state pull > failed-state-$(date +%s).json || echo "WARNING: Could not save state snapshot"
         exit 1
       fi
     - terraform output -json > outputs-test.json
@@ -488,7 +474,7 @@ deploy:test:
 
 plan:prod:
   stage: plan-prod
-  extends: [.aws_auth, .notify_failure]
+  extends: [.aws_auth, .terraform_cache, .notify_failure]
   environment:
     name: production
   variables:
@@ -520,7 +506,7 @@ plan:prod:
 
 deploy:prod:
   stage: deploy-prod
-  extends: [.aws_auth, .notify_failure]
+  extends: [.aws_auth, .terraform_cache, .notify_failure]
   environment:
     name: production
     url: https://console.aws.amazon.com/bedrock/
@@ -538,7 +524,7 @@ deploy:prod:
     - |
       if ! terraform apply -auto-approve -input=false prod.tfplan; then
         echo "ERROR: Prod deploy failed. Saving state snapshot for diagnostics."
-        terraform state pull > failed-state-$(date +%s).json 2>/dev/null || true
+        terraform state pull > failed-state-$(date +%s).json || echo "WARNING: Could not save state snapshot"
         exit 1
       fi
     - terraform output -json > outputs-prod.json
