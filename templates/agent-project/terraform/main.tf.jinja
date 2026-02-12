@@ -27,7 +27,7 @@ module "agentcore_foundation" {
   region      = "{{ region }}"
   bedrock_region = "{{ region }}"
   environment = "dev"
-  
+
   # Gateway configuration
   enable_gateway      = true
   gateway_name        = "{{ agent_name }}-gateway"
@@ -35,7 +35,7 @@ module "agentcore_foundation" {
 
   # Identity configuration
   enable_identity   = false
-  
+
   # Observability
   enable_observability = true
   log_retention_days   = 30
@@ -67,7 +67,7 @@ module "agentcore_runtime" {
   # Runtime configuration
   enable_runtime          = true
   runtime_source_path     = "../agent-code"
-  
+
   # Memory configuration
   enable_memory = true
   memory_type   = "BOTH"
@@ -95,7 +95,7 @@ module "agentcore_governance" {
   enable_guardrails                   = {{ enable_guardrails | lower }}
   guardrail_name                      = "{{ agent_name }}-guardrail"
   guardrail_description               = "Safety guardrail for {{ agent_name }}"
-  
+
   # Evaluations
   enable_evaluations  = false
 
@@ -113,6 +113,7 @@ module "agentcore_bff" {
   region      = "{{ region }}"
   agentcore_region = "{{ region }}"
   environment = "dev"
+  agentcore_runtime_arn = module.agentcore_runtime.runtime_arn
 
   # Auth Configuration (Placeholders - MUST be updated)
   oidc_issuer            = "https://login.microsoftonline.com/YOUR_TENANT_ID/v2.0"

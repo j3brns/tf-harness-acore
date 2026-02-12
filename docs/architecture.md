@@ -54,29 +54,29 @@ flowchart TD
     %% Data Flows
     Browser <--> CF
     CF <--> S3SPA
-    
+
     Browser -- "Opaque Session Cookie" --> APIGW
     APIGW --> LAuthorizer
     LAuthorizer <--> DDB
-    
+
     APIGW -- "OIDC Flow" --> LAuth
     LAuth <--> DDB
-    
+
     APIGW -- "Validated Request" --> LProxy
-    
+
     LProxy -- "bedrock:InvokeAgent" --> BGateway
     BGateway <--> BPolicies
     BGateway <--> LMCP
     BGateway <--> BSandbox
     BGateway <--> LRuntime
-    
+
     LRuntime <--> S3Memory
-    
+
     %% Monitoring Flows
     Compute -.-> CW
     BFF -.-> CW
     AgentCore -.-> CW
-    
+
     %% Deployment Flow
     LRuntime -- "Code Sync" --> S3Deploy
 ```
@@ -473,6 +473,7 @@ When regions are split, expect higher latency and cross-region data transfer bet
 ### APIs
 
 - **Bedrock AgentCore**: AWS service APIs
+- **AgentCore Runtime Invoke**: `InvokeAgentRuntime` over HTTPS (supports streaming responses)
 - **S3**: Storage APIs
 - **CloudWatch**: Monitoring APIs
 - **Secrets Manager**: Secret retrieval

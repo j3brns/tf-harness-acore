@@ -147,7 +147,7 @@ module "agentcore_bff" {
   oidc_client_secret_arn = var.oidc_client_secret_arn
 
   # Integration
-  agent_gateway_id = var.enable_gateway ? module.agentcore_foundation.gateway_id : ""
+  agentcore_runtime_arn = var.bff_agentcore_runtime_arn != "" ? var.bff_agentcore_runtime_arn : module.agentcore_runtime.runtime_arn
 
   providers = {
     aws = aws.bff

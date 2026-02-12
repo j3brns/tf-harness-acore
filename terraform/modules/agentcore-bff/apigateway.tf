@@ -174,6 +174,9 @@ resource "aws_api_gateway_integration" "chat" {
   resource_id             = aws_api_gateway_resource.chat[0].id
   http_method             = aws_api_gateway_method.chat[0].http_method
   integration_http_method = "POST"
-  type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.proxy[0].invoke_arn
+  type                    = "HTTP_PROXY"
+  uri                     = aws_lambda_function_url.proxy[0].function_url
+  connection_type         = "INTERNET"
+  credentials             = aws_iam_role.apigw_proxy[0].arn
+  timeout_milliseconds    = 29000
 }

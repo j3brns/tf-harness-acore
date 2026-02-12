@@ -23,3 +23,14 @@ variable "oidc_client_secret_arn" {
   type        = string
   default     = ""
 }
+
+variable "bff_agentcore_runtime_arn" {
+  description = "AgentCore runtime ARN for the BFF proxy (required if enable_bff is true and enable_runtime is false)"
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.enable_bff ? (var.enable_runtime || length(trim(var.bff_agentcore_runtime_arn)) > 0) : true
+    error_message = "bff_agentcore_runtime_arn must be set when enable_bff is true and enable_runtime is false."
+  }
+}

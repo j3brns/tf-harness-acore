@@ -28,7 +28,8 @@ The API Gateway will use a **Request Authorizer**:
 *   **Input:** `Cookie` header.
 *   **Logic:** Reads `session_id`, looks up `access_token` in DynamoDB.
 *   **Output:** Returns an IAM Policy allowing the request AND injects the `access_token` into the context.
-*   **Integration:** The backend Lambda Proxy (from ADR 0009) reads this token from the context/header to perform the **STS WebIdentity Exchange**.
+*   **Integration:** The backend Lambda Proxy reads this token and invokes **AgentCore Runtime** via `InvokeAgentRuntime` over HTTPS (OAuth-compatible), forwarding the bearer token.
+*   **Streaming:** The proxy uses Lambda response streaming (Node.js runtime) and API Gateway response transfer mode `STREAM` to pass through runtime chunks as NDJSON (`application/x-ndjson`).
 
 ### 4. Entra ID Configuration
 *   **App Registration:** "Single Page Application" platform is *incorrect* for this pattern.

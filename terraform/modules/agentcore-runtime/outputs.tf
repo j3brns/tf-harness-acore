@@ -15,7 +15,13 @@ output "runtime_role_arn" {
 
 output "runtime_id" {
   description = "Agent runtime ID"
-  value       = var.enable_runtime ? try(data.external.runtime_output[0].result.runtimeId, null) : null
+  value       = var.enable_runtime ? try(data.external.runtime_output[0].result.agentRuntimeId, data.external.runtime_output[0].result.runtimeId, null) : null
+  sensitive   = true
+}
+
+output "runtime_arn" {
+  description = "Agent runtime ARN"
+  value       = var.enable_runtime ? try(data.external.runtime_output[0].result.agentRuntimeArn, data.external.runtime_output[0].result.runtimeArn, null) : null
   sensitive   = true
 }
 

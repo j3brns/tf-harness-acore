@@ -25,7 +25,9 @@ resource "aws_iam_role_policy" "auth_handler" {
         Effect = "Allow"
         Action = [
           "dynamodb:PutItem",
-          "dynamodb:UpdateItem"
+          "dynamodb:UpdateItem",
+          "dynamodb:GetItem",
+          "dynamodb:DeleteItem"
         ]
         Resource = aws_dynamodb_table.sessions[0].arn
       },
@@ -116,10 +118,9 @@ resource "aws_iam_role_policy" "proxy" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow"
-        Action = ["bedrock:InvokeAgent"]
-        # In real-world, scope this to the specific Agent Alias ARN
-        Resource = "*"
+        Effect   = "Allow"
+        Action   = ["bedrock-agentcore:InvokeAgentRuntime"]
+        Resource = var.agentcore_runtime_arn
       },
       {
         Effect = "Allow"
@@ -129,6 +130,43 @@ resource "aws_iam_role_policy" "proxy" {
           "logs:PutLogEvents"
         ]
         Resource = "arn:aws:logs:*:*:*"
+      }
+    ]
+  })
+}
+
+# --- API Gateway Proxy Role ---
+resource "aws_iam_role" "apigw_proxy" {
+  count = var.enable_bff ? 1 : 0
+  name  = "agentcore-bff-apigw-${var.agent_name}-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "apigateway.amazonaws.com" }
+    }]
+  })
+  tags = var.tags
+}
+
+resource "aws_iam_role_policy" "apigw_proxy" {
+  count = var.enable_bff ? 1 : 0
+  role  = aws_iam_role.apigw_proxy[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["lambda:InvokeFunctionUrl"]
+        Resource = aws_lambda_function.proxy[0].arn
+        Condition = {
+          StringEquals = {
+            "lambda:FunctionUrlAuthType" = "AWS_IAM"
+          }
+        }
       }
     ]
   })

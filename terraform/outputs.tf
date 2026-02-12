@@ -22,3 +22,8 @@ output "agentcore_bff_authorizer_id" {
   description = "Authorizer ID"
   value       = module.agentcore_bff.authorizer_id
 }
+
+output "agentcore_runtime_arn" {
+  description = "AgentCore runtime ARN"
+  value       = module.agentcore_runtime.runtime_arn
+}

@@ -7,7 +7,7 @@ This module implements the **Serverless Token Handler Pattern** (ADR 0011) to se
 *   **Frontend**: S3 + CloudFront (SPA Hosting).
 *   **API**: Amazon API Gateway (REST).
 *   **Auth**: "Token Handler" Lambdas (Login/Callback) + DynamoDB Session Store.
-*   **Proxy**: Lambda Proxy to Bedrock AgentCore Gateway.
+*   **Proxy**: Lambda Proxy to AgentCore Runtime (`InvokeAgentRuntime`) with streaming response support (Node.js runtime).
 
 ## Usage
 
@@ -20,6 +20,7 @@ module "agentcore_bff" {
   region     = var.region
   agentcore_region = var.region
   environment = var.environment
+  agentcore_runtime_arn = module.agentcore_runtime.runtime_arn
 
   # Auth Configuration
   oidc_client_id         = var.oidc_client_id
@@ -30,7 +31,14 @@ module "agentcore_bff" {
 
 ## Regional Settings
 * `region`: Region for BFF resources (API Gateway, Lambda, DynamoDB, S3, CloudFront).
-* `agentcore_region`: Region for Bedrock AgentCore runtime invocation (defaults to `region`).
+* `agentcore_region`: Region for AgentCore runtime invocation (defaults to `region`).
+* `agentcore_runtime_arn`: Runtime ARN to invoke.
+
+## Streaming Response Format
+
+The proxy streams `application/x-ndjson` where each line is a JSON object:
+- `{"type":"meta","sessionId":"..."}`
+- `{"type":"delta","delta":"text chunk"}`
 
 ## Known Failure Modes (Rule 16)
 

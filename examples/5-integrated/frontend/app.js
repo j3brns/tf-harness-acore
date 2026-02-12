@@ -40,8 +40,56 @@ async function sendMessage(e) {
             return;
         }
 
-        const data = await res.json();
-        appendLog(data.response, 'text-white');
+        if (!res.ok) {
+            const errText = await res.text();
+            appendLog(`ERROR: ${errText}`, 'text-red-500');
+            return;
+        }
+
+        if (!res.body || !res.body.getReader) {
+            const data = await res.json();
+            appendLog(data.response || JSON.stringify(data), 'text-white');
+            return;
+        }
+
+        const responseDiv = appendLog('', 'text-white');
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let responseText = '';
+
+        const processLine = (line) => {
+            const trimmed = line.trim();
+            if (!trimmed) return;
+            try {
+                const obj = JSON.parse(trimmed);
+                if (obj.type === 'delta' && obj.delta !== undefined) {
+                    responseText += obj.delta;
+                    responseDiv.innerText = responseText;
+                    return;
+                }
+                if (obj.error) {
+                    appendLog(`ERROR: ${obj.error}`, 'text-red-500');
+                    return;
+                }
+            } catch (err) {
+                responseText += line;
+                responseDiv.innerText = responseText;
+            }
+        };
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+            lines.forEach(processLine);
+        }
+
+        if (buffer.trim()) {
+            processLine(buffer);
+        }
 
     } catch (err) {
         appendLog(`SYSTEM FAILURE: ${err.message}`, 'text-red-500');
@@ -54,6 +102,7 @@ function appendLog(text, className) {
     div.innerText = text;
     document.getElementById('chat-window').appendChild(div);
     document.getElementById('chat-window').scrollTop = document.getElementById('chat-window').scrollHeight;
+    return div;
 }
 
 // Init

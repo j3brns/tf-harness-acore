@@ -19,6 +19,12 @@ variable "agentcore_region" {
   default     = ""
 }
 
+variable "agentcore_runtime_arn" {
+  description = "AgentCore runtime ARN to invoke"
+  type        = string
+  default     = ""
+}
+
 variable "tags" {
   description = "Common resource tags"
   type        = map(string)
@@ -64,9 +70,3 @@ variable "session_ttl_seconds" {
 }
 
 # --- Integration ---
-
-variable "agent_gateway_id" {
-  description = "ID of the AgentCore Gateway to proxy requests to"
-  type        = string
-  default     = ""
-}

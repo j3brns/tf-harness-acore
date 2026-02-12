@@ -45,9 +45,10 @@ resource "null_resource" "agent_runtime" {
         exit 1
       fi
 
-      # Extract runtime ID
-      RUNTIME_ID=$(jq -r '.runtimeId // empty' < "${path.module}/.terraform/runtime_output.json")
-      
+      # Extract runtime ID and ARN
+      RUNTIME_ID=$(jq -r '.agentRuntimeId // .runtimeId // empty' < "${path.module}/.terraform/runtime_output.json")
+      RUNTIME_ARN=$(jq -r '.agentRuntimeArn // .runtimeArn // empty' < "${path.module}/.terraform/runtime_output.json")
+
       if [ -z "$RUNTIME_ID" ]; then
         echo "ERROR: Runtime ID missing from output"
         exit 1
@@ -62,7 +63,20 @@ resource "null_resource" "agent_runtime" {
         --overwrite \
         --region ${self.triggers.region}
 
+      if [ -z "$RUNTIME_ARN" ]; then
+        echo "ERROR: Runtime ARN missing from output"
+        exit 1
+      fi
+
+      aws ssm put-parameter \
+        --name "/agentcore/${self.triggers.agent_name}/runtime/arn" \
+        --value "$RUNTIME_ARN" \
+        --type "String" \
+        --overwrite \
+        --region ${self.triggers.region}
+
       echo "$RUNTIME_ID" > "${path.module}/.terraform/runtime_id.txt"
+      echo "$RUNTIME_ARN" > "${path.module}/.terraform/runtime_arn.txt"
       echo "Agent runtime created successfully"
     EOT
 
@@ -75,11 +89,12 @@ resource "null_resource" "agent_runtime" {
     command = <<-EOT
       set +e
       RUNTIME_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/runtime/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
-      
+
       if [ -n "$RUNTIME_ID" ]; then
         echo "Deleting Runtime $RUNTIME_ID..."
         aws bedrock-agentcore-control delete-agent-runtime --runtime-identifier "$RUNTIME_ID" --region ${self.triggers.region}
         aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/runtime/id" --region ${self.triggers.region}
+        aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/runtime/arn" --region ${self.triggers.region}
       fi
     EOT
 
@@ -125,7 +140,7 @@ resource "null_resource" "agent_memory" {
           echo "ERROR: Failed to create short-term memory"
           exit 1
         fi
-        
+
         ST_MEMORY_ID=$(jq -r '.memoryId' < "${path.module}/.terraform/short_term_memory.json")
         aws ssm put-parameter \
           --name "/agentcore/${self.triggers.agent_name}/memory/short-term/id" \
@@ -149,7 +164,7 @@ resource "null_resource" "agent_memory" {
           echo "ERROR: Failed to create long-term memory"
           exit 1
         fi
-        
+
         LT_MEMORY_ID=$(jq -r '.memoryId' < "${path.module}/.terraform/long_term_memory.json")
         aws ssm put-parameter \
           --name "/agentcore/${self.triggers.agent_name}/memory/long-term/id" \
@@ -176,7 +191,7 @@ resource "null_resource" "agent_memory" {
         aws bedrock-agentcore-control delete-memory --memory-identifier "$ST_ID" --region ${self.triggers.region}
         aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/memory/short-term/id" --region ${self.triggers.region}
       fi
-      
+
       # Long-term memory cleanup
       LT_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/memory/long-term/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
       if [ -n "$LT_ID" ]; then

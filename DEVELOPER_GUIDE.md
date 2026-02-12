@@ -171,6 +171,7 @@ environment         = "dev"
 agentcore_region    = ""
 bedrock_region      = ""
 bff_region          = ""
+bff_agentcore_runtime_arn = ""
 
 enable_gateway      = true
 enable_runtime      = true

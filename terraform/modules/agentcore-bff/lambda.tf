@@ -16,7 +16,7 @@ data "archive_file" "authorizer" {
 data "archive_file" "proxy" {
   count       = var.enable_bff ? 1 : 0
   type        = "zip"
-  source_file = "${path.module}/src/proxy.py"
+  source_file = "${path.module}/src/proxy.js"
   output_path = "${path.module}/.terraform/proxy.zip"
 }
 
@@ -81,18 +81,24 @@ resource "aws_lambda_function" "proxy" {
 
   function_name    = "agentcore-bff-proxy-${var.agent_name}"
   role             = aws_iam_role.proxy[0].arn
-  handler          = "proxy.lambda_handler"
-  runtime          = "python3.12"
+  handler          = "proxy.handler"
+  runtime          = "nodejs20.x"
   filename         = data.archive_file.proxy[0].output_path
   source_code_hash = data.archive_file.proxy[0].output_base64sha256
 
   environment {
     variables = {
-      AGENT_ID         = var.agent_gateway_id # Using the variable here
-      AGENT_ALIAS_ID   = "TSTALIASID"
-      AGENTCORE_REGION = local.agentcore_region
+      AGENTCORE_RUNTIME_ARN = var.agentcore_runtime_arn
+      AGENTCORE_REGION      = local.agentcore_region
     }
   }
+}
+
+resource "aws_lambda_function_url" "proxy" {
+  count              = var.enable_bff ? 1 : 0
+  function_name      = aws_lambda_function.proxy[0].function_name
+  authorization_type = "AWS_IAM"
+  invoke_mode        = "RESPONSE_STREAM"
 }
 
 # --- Permissions ---
