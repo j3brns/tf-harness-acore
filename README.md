@@ -1,38 +1,33 @@
-# Bedrock AgentCore Terraform // Industrial-Grade AI Infrastructure
+# Bedrock AgentCore Terraform // Production-Ready AI Infrastructure
 
 Deploy, secure, and scale production AI agents on AWS Bedrock with a **local-first DX**, **Zero-Trust security**, and **Instant Hot-Reload**.
 
-## The Engineering Philosophy
+## Core Engineering Principles
 
-This is not a "Hello World" repository. This is an **Industrial-Grade Framework** designed for teams who need to deploy AI Agents that survive in production.
+Bedrock AgentCore is a comprehensive framework designed for teams deploying AI Agents in production environments. It addresses several critical challenges in AI infrastructure engineering:
 
-It solves the hard problems of AI engineering:
+### 1. The Bridge Pattern (AWS CLI Integration)
+We utilize a stateful "Bridge" pattern to manage the lifecycle of newer Bedrock features. By wrapping the AWS CLI in `null_resource` provisioners and using **SSM Parameter Store** to persist resource IDs, we provide Day 0 access to new models, inference profiles, and guardrails with production-grade lifecycle safety.
 
-### 1. The "Bridge Pattern" (Edge-Case Engineering)
-We don't wait for HashiCorp. When a Bedrock feature is released, we wrap the AWS CLI in `null_resource` provisioners but—crucially—we use **SSM Parameter Store** to persist and track resource IDs. This creates a stateful "Bridge" that allows Terraform to manage the full lifecycle (create, update, delete) of bleeding-edge resources before they exist in the official provider.
-*   **Result:** You get Day 0 access to new models, inference profiles, and guardrails with production-grade lifecycle safety.
+### 2. OCDS: Optimized Packaging
+**Optimized Code/Dependency Separation (OCDS)** is our specialized build protocol. By hashing `pyproject.toml` independently of code files, we ensure that heavy dependency layers are only rebuilt when necessary, enabling near-instant updates for agent logic changes.
 
-### 2. OCDS: The Speed Engine
-**Optimized Code/Dependency Separation (OCDS)** is our build protocol. We hash your `pyproject.toml` separately from your `*.py` files.
-*   **Outcome:** If you only change your code, deployment takes **seconds**, not minutes. We only rebuild the heavy dependency layer when you actually add a library.
-
-### 3. Global Mesh Topology
-Real-world enterprise constraints are messy. You might need your **Control Plane** in `eu-central-1` (Data Residency), your **BFF** in `us-east-1` (Latency), and your **Models** in `us-west-2` (Availability).
-*   **Solution:** AgentCore supports granular regional splitting out of the box. Set `bedrock_region` and `bff_region` independently of your primary `region`. The modules handle the cross-region wiring automatically.
+### 3. Modular Regional Topology
+The framework supports granular regional splitting out of the box. You can deploy the **Control Plane**, **BFF**, and **Models** in different regions (e.g., for data residency or availability constraints) while maintaining seamless integration through automated wiring.
 
 ### 4. Zero-Trust Security
-We assume your frontend is compromised.
-*   **Token Handler Pattern (ADR 0011):** Our Serverless BFF (Backend-for-Frontend) prevents all token exposure. OIDC tokens are exchanged server-side and never reach the browser, shielding you from XSS and token theft.
-*   **Hardened Cookies:** Session IDs are transmitted via **HttpOnly**, **Secure**, and **SameSite=Strict** cookies, ensuring that client-side JS cannot access the session and preventing CSRF.
-*   **Mandatory Server-Side Validation:** Every API request is intercepted by a Lambda Authorizer that validates sessions against DynamoDB before injecting identity context into the backend.
-*   **Shadow JSON Audit:** Every interaction via the proxy is logged to a shadow audit trail (**Rule 15**), compliant with strict banking/healthcare standards.
+Our security model assumes the frontend may be compromised:
+*   **Token Handler Pattern (ADR 0011):** The Serverless BFF (Backend-for-Frontend) ensures that OIDC tokens are exchanged server-side and never reach the browser, preventing XSS-based token theft.
+*   **Hardened Session Management:** Uses **Secure, HttpOnly, and SameSite=Strict** cookies for session identification.
+*   **Mandatory Server-Side Validation:** A Lambda Authorizer validates every API request against DynamoDB sessions before injecting identity context into the backend.
+*   **Audit Logging:** Implements detailed audit logging for all proxy interactions to maintain compliance standards.
 
-## The AgentCore Advantage
+## Framework Features
 
-*   ⚡ **Ultra-Fast OCDS Builds**: Instant Hot-Reload for agent logic. Skip slow dependency reinstalls and update your deployed agent in seconds.
-*   🖥️ **Matrix-Themed TUI**: A cyberpunk terminal interface for real-time observability, traces, and remote management.
-*   🛡️ **ABAC Hardened**: Zero-trust security using Attribute-Based Access Control and Cedar policy enforcement out of the box.
-*   🚀 **Enterprise Templates**: Scaffold hardened, production-ready agents instantly with `copier`.
+*   ⚡ **Fast OCDS Builds**: Instant updates for agent logic without full dependency reinstalls.
+*   🖥️ **Interactive CLI Terminal**: A dedicated terminal interface for real-time observability, log tailing, and remote management.
+*   🛡️ **ABAC & Cedar Support**: Zero-trust security using Attribute-Based Access Control and Cedar policy enforcement.
+*   🚀 **Enterprise Templates**: Scaffold fully compliant, production-ready agents using `copier`.
 
 ## Architecture
 
@@ -352,26 +347,27 @@ module "agentcore" {
 
 See `examples/5-integrated/README.md` for details.
 
-## The Command Center (Matrix TUI)
+## Monitoring & Management
 
-The AgentCore Matrix TUI is your mission control for deployed agents. It combines real-time observability with remote management in a single cyberpunk interface.
+### The AgentCore Terminal
+Launch the interactive terminal for real-time monitoring and remote management of your deployed agents:
 
 ```bash
-# Launch the Matrix (Auto-discovers region and ID)
+# Launch the Terminal (Auto-discovers region and ID)
 python terraform/scripts/acore_debug.py
 ```
 
-*   📡 **Live Logs**: Automated CloudWatch tailing with near-zero latency.
-*   🚦 **System Traces**: Real-time monitoring of Authorizer decisions and Bedrock latency.
-*   🔄 **Remote Reload**: Press `r` to trigger an OCDS Hot-Reload via Terraform directly from the TUI.
+*   📡 **Live Log Tailing**: Integrated CloudWatch log streaming with near-zero latency.
+*   🚦 **System Metrics**: Real-time monitoring of authorizer decisions and model latency.
+*   🔄 **Remote Update**: Trigger OCDS Hot-Reloads directly from the terminal.
 
-## Serverless BFF & SPA
+## Serverless BFF & Web UI
 
-AgentCore includes a high-security **Backend-for-Frontend** module to expose your agents to the web without compromising identity.
+The Backend-for-Frontend module provides a secure web interface for agent interaction:
 
-*   🖥️ **Web Terminal**: A Matrix-themed SPA (Single Page Application) matching the TUI aesthetic.
-*   🛡️ **Token Handler**: Pure serverless OIDC implementation. No Access Tokens in the browser.
-*   🕵️ **Shadow JSON**: Implements **Rule 15** audit logging, dumping all proxy payloads to a secure audit trail.
+*   🖥️ **Web Interface**: A responsive SPA (Single Page Application) for direct user interaction.
+*   🛡️ **Secure Auth**: Pure serverless OIDC implementation using the Token Handler pattern and PKCE.
+*   🕵️ **Compliance Ready**: Detailed logging of all proxy payloads for audit and compliance reporting.
 
 ## Local Development
 
