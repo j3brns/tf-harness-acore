@@ -11,7 +11,7 @@ This module manages auxiliary tools for the agent, such as the Code Interpreter 
 
 ### 1. VPC Configuration Sync
 - **Symptom**: Code Interpreter fails to start due to networking issues.
-- **Recovery**: 
+- **Recovery**:
   1. Verify Subnet and SG availability.
   2. If switching between PUBLIC and VPC modes, manually verify the tool status in Bedrock console or via CLI.
 

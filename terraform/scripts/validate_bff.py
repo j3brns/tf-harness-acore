@@ -15,7 +15,7 @@ def get_outputs():
             tf_dir = os.path.join(cwd, 'terraform')
         else:
             tf_dir = cwd
-            
+
         print(f"Reading Terraform outputs from {tf_dir}...")
         cmd = ["terraform", "output", "-json"]
         res = subprocess.check_output(cmd, cwd=tf_dir).decode()
@@ -26,7 +26,7 @@ def get_outputs():
 
 def main():
     outputs = get_outputs()
-    
+
     # Check if BFF is enabled
     api_id = outputs.get('agentcore_bff_rest_api_id', {}).get('value')
     if not api_id:
@@ -40,8 +40,7 @@ def main():
     print(f"Validating API: {api_id}, Authorizer: {auth_id}, Table: {table_name}")
 
     # 1. Test Missing Cookie (Expect Deny)
-    print("
-[1/2] Testing Missing Cookie...")
+    print("\n[1/2] Testing Missing Cookie...")
     cmd = [
         "aws", "apigateway", "test-invoke-authorizer",
         "--rest-api-id", api_id,
@@ -65,11 +64,10 @@ def main():
         sys.exit(1)
 
     # 2. Test Valid Cookie (Expect Allow)
-    print("
-[2/2] Testing Valid Cookie (Mocking Session)...")
+    print("\n[2/2] Testing Valid Cookie (Mocking Session)...")
     ddb = boto3.resource('dynamodb', region_name=region)
     table = ddb.Table(table_name)
-    
+
     session_id = str(uuid.uuid4())
     table.put_item(Item={
         'session_id': session_id,
@@ -80,7 +78,7 @@ def main():
 
     # Valid Cookie Header
     headers = {"Cookie": f"session_id={session_id}"}
-    
+
     cmd = [
         "aws", "apigateway", "test-invoke-authorizer",
         "--rest-api-id", api_id,
@@ -88,14 +86,14 @@ def main():
         "--headers", json.dumps(headers),
         "--region", region
     ]
-    
+
     try:
         res = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
         out = json.loads(res)
         policy = json.loads(out['policy'])
         effect = policy['policyDocument']['Statement'][0]['Effect']
         context_token = out['authorization'].get('access_token')
-        
+
         print(f"Result: {effect}")
         print(f"Context Token: {context_token}")
 
@@ -105,14 +103,13 @@ def main():
         if context_token != 'mock_token_for_validation':
             print("FAIL: Context propagation failed")
             sys.exit(1)
-            
+
         print("PASS")
     except subprocess.CalledProcessError as e:
         print(f"AWS CLI Error: {e.output.decode()}")
         sys.exit(1)
 
-    print("
-BFF Validation Successful.")
+    print("\nBFF Validation Successful.")
 
 if __name__ == "__main__":
     main()

@@ -66,7 +66,7 @@ validate_example() {
 if [ -d "$EXAMPLES_DIR" ]; then
     # Use a simpler find and loop to avoid shell-specific redirection issues
     FILES=$(find "$EXAMPLES_DIR" -type f \( -name "*.tfvars" -o -name "*.tfvars.example" \))
-    
+
     if [ -z "$FILES" ]; then
         echo "WARN: No .tfvars or .tfvars.example files found in $EXAMPLES_DIR"
     else

@@ -112,9 +112,7 @@ def _configure_weave_otel_env() -> bool:
     os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = f"{base_url}/otel/v1/traces"
 
     auth_token = base64.b64encode(f"api:{api_key}".encode()).decode()
-    os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = (
-        f"Authorization=Basic {auth_token},project_id={project_id}"
-    )
+    os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = f"Authorization=Basic {auth_token},project_id={project_id}"
     return True
 
 

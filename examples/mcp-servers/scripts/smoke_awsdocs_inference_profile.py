@@ -88,9 +88,7 @@ def main():
             "method": "tools/call",
             "params": {
                 "name": "search_documentation",
-                "arguments": {
-                    "search_phrase": "Bedrock inference profiles create application inference profile"
-                },
+                "arguments": {"search_phrase": "Bedrock inference profiles create application inference profile"},
             },
         },
     )

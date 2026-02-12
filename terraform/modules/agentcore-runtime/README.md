@@ -17,7 +17,7 @@ This module manages the agent runtime, memory, and packaging process.
 
 ### 1. Packaging Artifact Inconsistency
 - **Symptom**: Agent fails to invoke because of missing dependencies.
-- **Recovery**: 
+- **Recovery**:
   1. Manually clear the `.terraform/` directory in the module to force a re-package.
   2. Re-run `terraform apply`.
 

@@ -60,7 +60,7 @@ resource "null_resource" "policy_engine" {
     command = <<-EOT
       set +e
       POLICY_ENGINE_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/policy-engine/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
-      
+
       if [ -n "$POLICY_ENGINE_ID" ]; then
         echo "Deleting Policy Engine $POLICY_ENGINE_ID..."
         aws bedrock-agentcore-control delete-policy-engine --policy-engine-identifier "$POLICY_ENGINE_ID" --region ${self.triggers.region}
@@ -116,9 +116,9 @@ resource "null_resource" "cedar_policies" {
         echo "ERROR: Failed to create policy ${self.triggers.policy_name}"
         exit 1
       fi
-      
+
       POLICY_ID=$(jq -r '.policyId' < "${path.module}/.terraform/policy_${self.triggers.policy_name}.json")
-      
+
       # Persist Policy ID
       aws ssm put-parameter \
         --name "/agentcore/${self.triggers.agent_name}/policies/${self.triggers.policy_name}/id" \
@@ -136,7 +136,7 @@ resource "null_resource" "cedar_policies" {
     command = <<-EOT
       set +e
       POLICY_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/policies/${self.triggers.policy_name}/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
-      
+
       if [ -n "$POLICY_ID" ]; then
         echo "Deleting Policy $POLICY_ID from Engine ${self.triggers.policy_engine_id}..."
         aws bedrock-agentcore-control delete-policy \
@@ -180,7 +180,7 @@ resource "null_resource" "guardrail" {
 
       # Prepare content filters JSON
       CONTENT_FILTERS=$(echo '${jsonencode([for f in var.guardrail_filters : { type = f.type, inputStrength = f.input_strength, outputStrength = f.output_strength }])}')
-      
+
       # Create guardrail
       aws bedrock create-guardrail \
         --name "${self.triggers.name}" \
@@ -193,13 +193,13 @@ resource "null_resource" "guardrail" {
 
       # Extract Guardrail ID
       GUARDRAIL_ID=$(jq -r '.guardrailId' < "${path.module}/.terraform/guardrail.json")
-      
+
       # Create initial version
       aws bedrock create-guardrail-version \
         --guardrail-identifier "$GUARDRAIL_ID" \
         --region ${self.triggers.bedrock_region} \
         --output json > "${path.module}/.terraform/guardrail_version.json"
-      
+
       VERSION=$(jq -r '.version' < "${path.module}/.terraform/guardrail_version.json")
 
       # Persist to SSM
@@ -209,7 +209,7 @@ resource "null_resource" "guardrail" {
         --type "String" \
         --overwrite \
         --region ${self.triggers.region}
-      
+
       aws ssm put-parameter \
         --name "/agentcore/${self.triggers.agent_name}/guardrail/version" \
         --value "$VERSION" \
@@ -226,7 +226,7 @@ resource "null_resource" "guardrail" {
     command = <<-EOT
       set +e
       GUARDRAIL_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/guardrail/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
-      
+
       if [ -n "$GUARDRAIL_ID" ]; then
         echo "Deleting Guardrail $GUARDRAIL_ID..."
         aws bedrock delete-guardrail --guardrail-identifier "$GUARDRAIL_ID" --region ${self.triggers.bedrock_region}

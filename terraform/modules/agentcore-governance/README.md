@@ -16,7 +16,7 @@ This module manages security and evaluation policies, including Cedar policy eng
 
 ### 1. Guardrail Version Drift
 - **Symptom**: `terraform apply` fails when creating a new guardrail version.
-- **Recovery**: 
+- **Recovery**:
   1. Manually delete orphaned versions via CLI: `aws bedrock list-guardrail-versions`.
   2. If the guardrail ID in SSM is wrong, manually update it using the pattern in Rule 5.
 

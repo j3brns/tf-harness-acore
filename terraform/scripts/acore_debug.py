@@ -66,17 +66,17 @@ def discover_config():
         # Check if we are in scripts/ or root
         cwd = Path.cwd()
         tf_dir = cwd if (cwd / "main.tf").exists() else cwd.parent
-        
+
         cmd = ["terraform", "output", "-json"]
         res = subprocess.check_output(cmd, cwd=tf_dir, stderr=subprocess.DEVNULL).decode()
         outputs = json.loads(res)
-        
+
         config = {
             "region": "us-east-1", # Default
-            "agent_id": outputs.get("agent_gateway_id", {}).get("value") or outputs.get("gateway_id", {}).get("value"),
+            "agent_id": outputs.get("agentcore_runtime_arn", {}).get("value") or outputs.get("gateway_id", {}).get("value"),
             "log_group": outputs.get("log_group_name", {}).get("value")
         }
-        
+
         # Region usually in provider or a variable, let's try to find it
         # If not in outputs, we might need to check terraform.tfstate or just default
         return config
@@ -88,7 +88,7 @@ def matrix_rain_effect(duration=3.0):
     start = time.time()
     width = console.width
     chars = "abcdefghijklmnopqrstuvwxyz0123456789@#$%^&*="
-    
+
     while time.time() - start < duration:
         line = ""
         for _ in range(width):
@@ -98,7 +98,7 @@ def matrix_rain_effect(duration=3.0):
                 line += " "
         console.print(line, end="")
         time.sleep(0.05)
-    
+
     console.clear()
 
 def show_kung_fu_banner():
@@ -137,9 +137,8 @@ def get_log_panel(log_buffer):
     text = Text()
     for ts, msg in log_buffer[-20:]:
         text.append(f"[{ts}] ", style="dim green")
-        text.append(f"{msg}
-", style=MATRIX_GREEN)
-    
+        text.append(f"{msg}\n", style=MATRIX_GREEN)
+
     return Panel(
         text,
         title="[bold green]LIVE LOGS (CLOUDWATCH)[/bold green]",
@@ -152,7 +151,7 @@ def get_status_panel():
     table.add_column("Component")
     table.add_column("Status")
     table.add_column("Latency")
-    
+
     for comp, status, lat in TRACES:
         table.add_row(comp, status, lat)
 
@@ -210,7 +209,7 @@ def main():
         show_kung_fu_banner()
 
     layout = generate_layout()
-    
+
     # Header
     layout["header"].update(
         Panel(
@@ -228,20 +227,20 @@ def main():
     )
 
     tailer = CloudWatchTailer(region, log_group)
-    
+
     # Target module for reload (Rule 5 OCDS)
     target_module = "module.agentcore_runtime"
     reloading = False
-    
+
     def run_terraform_apply():
         nonlocal reloading
         # Check if we are in scripts/ or root
         cwd = Path.cwd()
         tf_dir = cwd if (cwd / "main.tf").exists() else cwd.parent
-        
+
         cmd = [
-            "terraform", "apply", 
-            "-auto-approve", 
+            "terraform", "apply",
+            "-auto-approve",
             "-input=false",
             f"-target={target_module}"
         ]
@@ -296,7 +295,7 @@ def main():
 
             # Real logs
             tailer.fetch_logs()
-            
+
             # If no real logs yet, show some "System ready" noise
             if not tailer.log_buffer and random.random() < 0.1:
                 ts = datetime.now().strftime("%H:%M:%S")
@@ -304,7 +303,7 @@ def main():
 
             layout["logs"].update(get_log_panel(tailer.log_buffer))
             layout["status"].update(get_status_panel())
-            
+
             time.sleep(0.5)
 
 if __name__ == "__main__":

@@ -17,7 +17,7 @@ This module manages the base infrastructure for a Bedrock Agent, including the M
 ### 1. Partial Provisioning (CLI Timeout)
 - **Symptom**: `null_resource.gateway` fails mid-execution.
 - **Impact**: AWS resource may be created but not recorded in SSM.
-- **Recovery**: 
+- **Recovery**:
   1. Manually identify the resource ID via AWS CLI: `aws bedrock-agentcore-control list-gateways`.
   2. Manually populate SSM: `aws ssm put-parameter --name "/agentcore/<agent_name>/gateway/id" --value "<id>" --type "String" --overwrite`.
   3. Re-run `terraform apply`.

@@ -178,5 +178,33 @@ resource "aws_api_gateway_integration" "chat" {
   uri                     = aws_lambda_function_url.proxy[0].function_url
   connection_type         = "INTERNET"
   credentials             = aws_iam_role.apigw_proxy[0].arn
-  timeout_milliseconds    = 29000
+  timeout_milliseconds    = 29000 # Provider limit, patched to 900000 below
+}
+
+# --- Bridge Pattern: Patch for Response Streaming (Rule 1) ---
+# This bypasses the 29s provider limit for REST APIs by using the AWS CLI
+resource "null_resource" "patch_chat_streaming" {
+  count = var.enable_bff ? 1 : 0
+
+  triggers = {
+    integration_id = aws_api_gateway_integration.chat[0].id
+    # Re-patch if the function URL changes
+    uri            = aws_lambda_function_url.proxy[0].function_url
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "Patching chat integration for 15-minute streaming..."
+      aws apigateway update-integration \
+        --rest-api-id ${aws_api_gateway_rest_api.bff[0].id} \
+        --resource-id ${aws_api_gateway_resource.chat[0].id} \
+        --http-method ${aws_api_gateway_method.chat[0].http_method} \
+        --patch-operations \
+          "op='replace',path='/timeoutInMillis',value='900000'" \
+          "op='replace',path='/responseTransferMode',value='STREAM'" \
+        --region ${var.region}
+    EOT
+  }
+
+  depends_on = [aws_api_gateway_integration.chat]
 }

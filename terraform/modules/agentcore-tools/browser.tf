@@ -24,9 +24,9 @@ resource "null_resource" "browser" {
         echo "ERROR: Failed to create browser"
         exit 1
       fi
-      
+
       BROWSER_ID=$(jq -r '.browserId' < "${path.module}/.terraform/browser_output.json")
-      
+
       # Rule 5.1: SSM Persistence
       echo "Persisting Browser ID to SSM..."
       aws ssm put-parameter \
@@ -46,7 +46,7 @@ resource "null_resource" "browser" {
     command = <<-EOT
       set +e
       BROWSER_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/browser/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
-      
+
       if [ -n "$BROWSER_ID" ]; then
         echo "Deleting Browser $BROWSER_ID..."
         aws bedrock-agentcore-control delete-browser --browser-identifier "$BROWSER_ID" --region ${self.triggers.region}

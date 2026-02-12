@@ -37,7 +37,7 @@ resource "null_resource" "gateway" {
 
       # Capture ID
       GATEWAY_ID=$(jq -r '.gatewayId' < "${path.module}/.terraform/gateway_output.json")
-      
+
       # Rule 5.1: SSM Persistence Pattern
       echo "Persisting Gateway ID to SSM..."
       aws ssm put-parameter \
@@ -59,15 +59,15 @@ resource "null_resource" "gateway" {
     when    = destroy
     command = <<-EOT
       set +e
-      
+
       GATEWAY_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/gateway/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
-      
+
       if [ -z "$GATEWAY_ID" ]; then
         echo "WARN: Could not find Gateway ID in SSM for ${self.triggers.agent_name}, skipping AWS resource deletion"
       else
         echo "Deleting Gateway $GATEWAY_ID..."
         aws bedrock-agentcore-control delete-gateway --gateway-identifier "$GATEWAY_ID" --region ${self.triggers.region}
-        
+
         echo "Cleaning up SSM parameter..."
         aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/gateway/id" --region ${self.triggers.region}
       fi
@@ -120,9 +120,9 @@ resource "null_resource" "gateway_target" {
         echo "ERROR: Failed to create target ${self.triggers.name}"
         exit 1
       fi
-      
+
       TARGET_ID=$(jq -r '.targetId' < "${path.module}/.terraform/target_${self.triggers.target_key}.json")
-      
+
       # Persist Target ID
       aws ssm put-parameter \
         --name "/agentcore/${self.triggers.agent_name}/gateway/targets/${self.triggers.target_key}/id" \
@@ -140,7 +140,7 @@ resource "null_resource" "gateway_target" {
     command = <<-EOT
       set +e
       TARGET_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/gateway/targets/${self.triggers.target_key}/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
-      
+
       if [ -n "$TARGET_ID" ]; then
         echo "Deleting Gateway Target $TARGET_ID..."
         aws bedrock-agentcore-control delete-gateway-target --gateway-identifier "${self.triggers.gateway_id}" --target-identifier "$TARGET_ID" --region ${self.triggers.region}

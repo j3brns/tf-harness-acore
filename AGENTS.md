@@ -83,7 +83,7 @@ The following resources MUST use the `null_resource` + AWS CLI pattern:
 ### Rule 5.1: No Ephemeral IDs
 - **Problem**: Local JSON files in `.terraform/` are lost in CI/CD.
 - **Requirement**: ALL resource IDs created via CLI MUST be persisted to **AWS SSM Parameter Store**.
-- **Pattern**: 
+- **Pattern**:
   1. CLI creates resource and captures ID.
   2. CLI calls `aws ssm put-parameter --name "/agentcore/${var.agent_name}/<resource_type>/id" --value "$ID"`.
   3. Subsequent resources use `data "aws_ssm_parameter"` to retrieve the ID.

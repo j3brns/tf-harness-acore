@@ -26,7 +26,7 @@ class AgentCodeHandler(FileSystemEventHandler):
             return
         if not event.src_path.endswith(".py"):
             return
-        
+
         # Debounce
         current_time = time.time()
         if current_time - self.last_trigger < self.debounce_seconds:
@@ -39,14 +39,14 @@ class AgentCodeHandler(FileSystemEventHandler):
 
     def trigger_apply(self):
         print(f"[HOT-RELOAD] Applying changes to {self.target_module}...")
-        
+
         cmd = [
-            "terraform", "apply", 
-            "-auto-approve", 
+            "terraform", "apply",
+            "-auto-approve",
             "-input=false",
             f"-target={self.target_module}"
         ]
-        
+
         try:
             # We run this in the terraform directory
             subprocess.run(cmd, cwd=self.terraform_dir, check=True)
@@ -68,7 +68,7 @@ def main():
     if not agent_code_dir.exists():
         print(f"Error: Directory not found: {agent_code_dir}")
         sys.exit(1)
-    
+
     if not terraform_dir.exists():
         print(f"Error: Directory not found: {terraform_dir}")
         sys.exit(1)

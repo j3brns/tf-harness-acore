@@ -153,12 +153,8 @@ def validate_terraform_docs():
     tools_resp = tools_list(proc)
     tools = [t.get("name") for t in tools_resp.get("result", {}).get("tools", [])]
 
-    aws_provider = tools_call(
-        proc, 3, "SearchAwsProviderDocs", {"query": "bedrock inference profile"}
-    )
-    awscc_provider = tools_call(
-        proc, 4, "SearchAwsccProviderDocs", {"query": "bedrock inference profile"}
-    )
+    aws_provider = tools_call(proc, 3, "SearchAwsProviderDocs", {"query": "bedrock inference profile"})
+    awscc_provider = tools_call(proc, 4, "SearchAwsccProviderDocs", {"query": "bedrock inference profile"})
 
     proc.kill()
     return {

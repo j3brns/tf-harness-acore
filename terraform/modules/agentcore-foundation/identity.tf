@@ -26,7 +26,7 @@ resource "null_resource" "workload_identity" {
       fi
 
       IDENTITY_ID=$(jq -r '.workloadIdentityId' < "${path.module}/.terraform/identity_output.json")
-      
+
       # Rule 5.1: SSM Persistence Pattern
       echo "Persisting Workload Identity ID to SSM..."
       aws ssm put-parameter \
@@ -46,7 +46,7 @@ resource "null_resource" "workload_identity" {
     command = <<-EOT
       set +e
       IDENTITY_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/identity/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
-      
+
       if [ -n "$IDENTITY_ID" ]; then
         echo "Deleting Workload Identity $IDENTITY_ID..."
         aws bedrock-agentcore-control delete-workload-identity --workload-identity-identifier "$IDENTITY_ID" --region ${self.triggers.region}

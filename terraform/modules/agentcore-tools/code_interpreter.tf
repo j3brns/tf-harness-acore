@@ -24,9 +24,9 @@ resource "null_resource" "code_interpreter" {
         echo "ERROR: Failed to create code interpreter"
         exit 1
       fi
-      
+
       INTERPRETER_ID=$(jq -r '.interpreterId' < "${path.module}/.terraform/interpreter_output.json")
-      
+
       # Rule 5.1: SSM Persistence
       echo "Persisting Interpreter ID to SSM..."
       aws ssm put-parameter \
@@ -46,7 +46,7 @@ resource "null_resource" "code_interpreter" {
     command = <<-EOT
       set +e
       INTERPRETER_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/interpreter/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
-      
+
       if [ -n "$INTERPRETER_ID" ]; then
         echo "Deleting Code Interpreter $INTERPRETER_ID..."
         aws bedrock-agentcore-control delete-code-interpreter --interpreter-identifier "$INTERPRETER_ID" --region ${self.triggers.region}

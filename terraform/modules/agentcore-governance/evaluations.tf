@@ -44,7 +44,7 @@ resource "null_resource" "custom_evaluator" {
 
       # Extract evaluator ID
       EVALUATOR_ID=$(jq -r '.evaluatorId // empty' < "${path.module}/.terraform/evaluator.json")
-      
+
       if [ -z "$EVALUATOR_ID" ]; then
         echo "ERROR: Evaluator ID missing from output"
         exit 1
@@ -72,7 +72,7 @@ resource "null_resource" "custom_evaluator" {
     command = <<-EOT
       set +e
       EVALUATOR_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/evaluator/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
-      
+
       if [ -n "$EVALUATOR_ID" ]; then
         echo "Deleting Evaluator $EVALUATOR_ID..."
         aws bedrock-agentcore-control delete-evaluator --evaluator-identifier "$EVALUATOR_ID" --region ${self.triggers.region}
