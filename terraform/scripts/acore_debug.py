@@ -19,7 +19,6 @@ try:
     from rich.table import Table
     from rich.text import Text
     from rich.style import Style
-    from rich.syntax import Syntax
     from rich.align import Align
 except ImportError:
     print("\033[0;32mError: The Matrix requires 'rich'. Install it via:\033[0m")
@@ -60,6 +59,7 @@ TRACES = [
 
 # --- Functions ---
 
+
 def discover_config():
     """Tries to discover configuration from Terraform outputs."""
     try:
@@ -72,16 +72,18 @@ def discover_config():
         outputs = json.loads(res)
 
         config = {
-            "region": "us-east-1", # Default
-            "agent_id": outputs.get("agentcore_runtime_arn", {}).get("value") or outputs.get("gateway_id", {}).get("value"),
-            "log_group": outputs.get("log_group_name", {}).get("value")
+            "region": "us-east-1",  # Default
+            "agent_id": outputs.get("agentcore_runtime_arn", {}).get("value")
+            or outputs.get("gateway_id", {}).get("value"),
+            "log_group": outputs.get("log_group_name", {}).get("value"),
         }
 
         # Region usually in provider or a variable, let's try to find it
         # If not in outputs, we might need to check terraform.tfstate or just default
         return config
-    except:
+    except Exception:
         return {"region": "us-east-1", "agent_id": None, "log_group": None}
+
 
 def matrix_rain_effect(duration=3.0):
     """Simulates the falling code effect before startup."""
@@ -100,6 +102,7 @@ def matrix_rain_effect(duration=3.0):
         time.sleep(0.05)
 
     console.clear()
+
 
 def show_kung_fu_banner():
     """Displays the epic banner."""
@@ -120,18 +123,13 @@ def show_kung_fu_banner():
     time.sleep(2)
     console.clear()
 
+
 def generate_layout():
     layout = Layout()
-    layout.split(
-        Layout(name="header", size=3),
-        Layout(name="main", ratio=1),
-        Layout(name="footer", size=3)
-    )
-    layout["main"].split_row(
-        Layout(name="logs", ratio=2),
-        Layout(name="status", ratio=1)
-    )
+    layout.split(Layout(name="header", size=3), Layout(name="main", ratio=1), Layout(name="footer", size=3))
+    layout["main"].split_row(Layout(name="logs", ratio=2), Layout(name="status", ratio=1))
     return layout
+
 
 def get_log_panel(log_buffer):
     text = Text()
@@ -139,12 +137,8 @@ def get_log_panel(log_buffer):
         text.append(f"[{ts}] ", style="dim green")
         text.append(f"{msg}\n", style=MATRIX_GREEN)
 
-    return Panel(
-        text,
-        title="[bold green]LIVE LOGS (CLOUDWATCH)[/bold green]",
-        border_style="green",
-        padding=(1, 1)
-    )
+    return Panel(text, title="[bold green]LIVE LOGS (CLOUDWATCH)[/bold green]", border_style="green", padding=(1, 1))
+
 
 def get_status_panel():
     table = Table(show_header=True, header_style="bold black on green", border_style="green", expand=True)
@@ -155,22 +149,19 @@ def get_status_panel():
     for comp, status, lat in TRACES:
         table.add_row(comp, status, lat)
 
-    return Panel(
-        table,
-        title="[bold green]SYSTEM TRACE[/bold green]",
-        border_style="green"
-    )
+    return Panel(table, title="[bold green]SYSTEM TRACE[/bold green]", border_style="green")
+
 
 class CloudWatchTailer:
     def __init__(self, region, log_group):
         self.region = region
         self.log_group = log_group
         self.log_buffer = []
-        self.last_timestamp = int((time.time() - 3600) * 1000) # Last hour
+        self.last_timestamp = int((time.time() - 3600) * 1000)  # Last hour
         try:
-            self.logs = boto3.client('logs', region_name=region)
+            self.logs = boto3.client("logs", region_name=region)
             self.active = True
-        except:
+        except Exception:
             self.active = False
 
     def fetch_logs(self):
@@ -178,17 +169,16 @@ class CloudWatchTailer:
             return
         try:
             response = self.logs.filter_log_events(
-                logGroupName=self.log_group,
-                startTime=self.last_timestamp + 1,
-                limit=10
+                logGroupName=self.log_group, startTime=self.last_timestamp + 1, limit=10
             )
-            for event in response.get('events', []):
-                ts = datetime.fromtimestamp(event['timestamp'] / 1000.0).strftime("%H:%M:%S")
-                self.log_buffer.append((ts, event['message']))
-                self.last_timestamp = max(self.last_timestamp, event['timestamp'])
-        except Exception as e:
+            for event in response.get("events", []):
+                ts = datetime.fromtimestamp(event["timestamp"] / 1000.0).strftime("%H:%M:%S")
+                self.log_buffer.append((ts, event["message"]))
+                self.last_timestamp = max(self.last_timestamp, event["timestamp"])
+        except Exception:
             # Silently fail or log briefly
             pass
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -214,15 +204,17 @@ def main():
     layout["header"].update(
         Panel(
             Align.center(f"[bold green]AGENTCORE MATRIX DEBUGGER // ID: {agent_id} // REGION: {region}[/bold green]"),
-            style="green on black"
+            style="green on black",
         )
     )
 
     # Footer
     layout["footer"].update(
         Panel(
-            Align.left("[green]COMMANDS: [bold]q[/bold]: Quit | [bold]c[/bold]: Clear Logs | [bold]r[/bold]: Reload Agent[/green]"),
-            border_style="green"
+            Align.left(
+                "[green]COMMANDS: [bold]q[/bold]: Quit | [bold]c[/bold]: Clear Logs | [bold]r[/bold]: Reload Agent[/green]"
+            ),
+            border_style="green",
         )
     )
 
@@ -238,17 +230,12 @@ def main():
         cwd = Path.cwd()
         tf_dir = cwd if (cwd / "main.tf").exists() else cwd.parent
 
-        cmd = [
-            "terraform", "apply",
-            "-auto-approve",
-            "-input=false",
-            f"-target={target_module}"
-        ]
+        cmd = ["terraform", "apply", "-auto-approve", "-input=false", f"-target={target_module}"]
         try:
             subprocess.run(cmd, cwd=tf_dir, check=True, capture_output=True)
             tailer.log_buffer.append((datetime.now().strftime("%H:%M:%S"), "[SYSTEM] Agent reloaded successfully."))
-        except Exception as e:
-            tailer.log_buffer.append((datetime.now().strftime("%H:%M:%S"), f"[ERROR] Reload failed: {e}"))
+        except Exception:
+            tailer.log_buffer.append((datetime.now().strftime("%H:%M:%S"), "[ERROR] Reload failed."))
         finally:
             reloading = False
 
@@ -265,31 +252,35 @@ def main():
     # Keyboard handling (Windows)
     import msvcrt
 
-    with Live(layout, refresh_per_second=4, screen=True) as live:
+    with Live(layout, refresh_per_second=4, screen=True):
         while True:
             # Check for input
             if msvcrt.kbhit():
-                key = msvcrt.getch().decode('utf-8').lower()
-                if key == 'q':
+                key = msvcrt.getch().decode("utf-8").lower()
+                if key == "q":
                     break
-                elif key == 'c':
+                elif key == "c":
                     tailer.log_buffer = []
-                elif key == 'r':
+                elif key == "r":
                     trigger_reload()
 
             # Status Update
             if reloading:
                 layout["header"].update(
                     Panel(
-                        Align.center(f"[bold yellow]SYSTEM REBUILDING... (OCDS STAGE 2) // ID: {agent_id}[/bold yellow]"),
-                        style="yellow on black"
+                        Align.center(
+                            f"[bold yellow]SYSTEM REBUILDING... (OCDS STAGE 2) // ID: {agent_id}[/bold yellow]"
+                        ),
+                        style="yellow on black",
                     )
                 )
             else:
                 layout["header"].update(
                     Panel(
-                        Align.center(f"[bold green]AGENTCORE MATRIX DEBUGGER // ID: {agent_id} // REGION: {region}[/bold green]"),
-                        style="green on black"
+                        Align.center(
+                            f"[bold green]AGENTCORE MATRIX DEBUGGER // ID: {agent_id} // REGION: {region}[/bold green]"
+                        ),
+                        style="green on black",
                     )
                 )
 
@@ -305,6 +296,7 @@ def main():
             layout["status"].update(get_status_panel())
 
             time.sleep(0.5)
+
 
 if __name__ == "__main__":
     try:

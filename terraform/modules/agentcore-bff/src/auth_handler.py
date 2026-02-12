@@ -171,6 +171,7 @@ def callback(event):
         "body": "",
     }
 
+
 def lambda_handler(event, context):
     path = event.get("path", "")
     if path.endswith("/login"):

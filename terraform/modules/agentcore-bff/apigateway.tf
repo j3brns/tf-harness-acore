@@ -181,4 +181,3 @@ resource "aws_api_gateway_integration" "chat" {
   response_transfer_mode  = "STREAM"
   timeout_milliseconds    = 900000
 }
-

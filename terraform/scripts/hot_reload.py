@@ -13,6 +13,7 @@ except ImportError:
     print("Error: 'watchdog' library is required. Install it via: pip install watchdog")
     sys.exit(1)
 
+
 class AgentCodeHandler(FileSystemEventHandler):
     def __init__(self, project_dir, target_module="module.agentcore_runtime"):
         self.project_dir = Path(project_dir)
@@ -33,28 +34,23 @@ class AgentCodeHandler(FileSystemEventHandler):
             return
         self.last_trigger = current_time
 
-        print(f"
-[HOT-RELOAD] Detected change in {event.src_path} at {datetime.now().strftime('%H:%M:%S')}")
+        print(f"\n[HOT-RELOAD] Detected change in {event.src_path} at {datetime.now().strftime('%H:%M:%S')}")
         self.trigger_apply()
 
     def trigger_apply(self):
         print(f"[HOT-RELOAD] Applying changes to {self.target_module}...")
 
-        cmd = [
-            "terraform", "apply",
-            "-auto-approve",
-            "-input=false",
-            f"-target={self.target_module}"
-        ]
+        cmd = ["terraform", "apply", "-auto-approve", "-input=false", f"-target={self.target_module}"]
 
         try:
             # We run this in the terraform directory
             subprocess.run(cmd, cwd=self.terraform_dir, check=True)
-            print(f"[HOT-RELOAD] Success! Agent updated.")
+            print("[HOT-RELOAD] Success! Agent updated.")
         except subprocess.CalledProcessError as e:
             print(f"[HOT-RELOAD] Error applying changes: {e}")
         except FileNotFoundError:
             print("[HOT-RELOAD] Error: 'terraform' executable not found in PATH.")
+
 
 def main():
     parser = argparse.ArgumentParser(description="Watch agent-code directory and hot-reload Terraform.")
@@ -73,8 +69,8 @@ def main():
         print(f"Error: Directory not found: {terraform_dir}")
         sys.exit(1)
 
-    print(f"[HOT-RELOAD] Watching {agent_code_dir} for Python changes...")
-    print(f"[HOT-RELOAD] Press Ctrl+C to stop.")
+    print("[HOT-RELOAD] Watching {agent_code_dir} for Python changes...")
+    print("[HOT-RELOAD] Press Ctrl+C to stop.")
 
     event_handler = AgentCodeHandler(project_dir)
     observer = Observer()
@@ -87,6 +83,7 @@ def main():
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
+
 
 if __name__ == "__main__":
     main()
