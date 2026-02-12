@@ -189,7 +189,7 @@ resource "null_resource" "patch_chat_streaming" {
   triggers = {
     integration_id = aws_api_gateway_integration.chat[0].id
     # Re-patch if the function URL changes
-    uri            = aws_lambda_function_url.proxy[0].function_url
+    uri = aws_lambda_function_url.proxy[0].function_url
   }
 
   provisioner "local-exec" {
