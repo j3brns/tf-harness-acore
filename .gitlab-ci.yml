@@ -25,11 +25,6 @@ variables:
   TEST_EXAMPLE: "2-gateway-tool"
   PROD_EXAMPLE: "3-deepresearch"
 
-# Required for WIF (Web Identity Federation)
-id_tokens:
-  CI_JOB_JWT_V2:
-    aud: https://gitlab.com
-
 # =============================================================================
 # Template: Install tools (cached binary, not re-downloaded each job)
 # =============================================================================
@@ -69,6 +64,9 @@ id_tokens:
 # Template: Authenticate with AWS via WIF
 # =============================================================================
 .aws_auth:
+  id_tokens:
+    CI_JOB_JWT_V2:
+      aud: https://gitlab.com
   before_script:
     - !reference [.install_tools, before_script]
     - |
