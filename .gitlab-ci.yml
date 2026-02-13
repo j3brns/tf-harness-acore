@@ -208,7 +208,7 @@ lint:checkov:
     - cd $TF_ROOT
     - checkov -d $TF_ROOT --framework terraform --quiet --compact
         --config-file $TF_ROOT/.checkov.yaml
-        --output junitxml --output-file-path $TF_ROOT/checkov-report.xml
+        --output junitxml > $TF_ROOT/checkov-report.xml
     - checkov -d $TF_ROOT --framework terraform --quiet --compact
         --config-file $TF_ROOT/.checkov.yaml
   artifacts:
