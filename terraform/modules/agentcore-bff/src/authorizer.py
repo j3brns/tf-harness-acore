@@ -3,6 +3,7 @@ import boto3
 import time
 
 DDB_TABLE = os.environ.get("SESSION_TABLE")
+APP_ID = os.environ.get("APP_ID")
 ddb = boto3.resource("dynamodb")
 table = ddb.Table(DDB_TABLE)
 
@@ -36,7 +37,7 @@ def lambda_handler(event, context):
         return generate_policy("user", "Deny", event["methodArn"])
 
     # Lookup Session
-    resp = table.get_item(Key={"session_id": session_id})
+    resp = table.get_item(Key={"app_id": APP_ID, "session_id": session_id})
     item = resp.get("Item")
 
     if not item or item["expires_at"] < time.time():

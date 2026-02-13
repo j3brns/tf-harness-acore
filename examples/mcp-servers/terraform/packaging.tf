@@ -9,11 +9,13 @@ locals {
   # Source paths
   s3_tools_path     = "${path.module}/../s3-tools"
   titanic_data_path = "${path.module}/../titanic-data"
+  awscli_tools_path = "${path.module}/../awscli-tools"
   build_dir         = "${path.module}/.build"
 
   # Dependency files (requirements.txt)
   s3_tools_requirements     = "${local.s3_tools_path}/requirements.txt"
   titanic_data_requirements = "${local.titanic_data_path}/requirements.txt"
+  awscli_tools_requirements = "${local.awscli_tools_path}/requirements.txt"
 
   # Source hashes for change detection
   s3_tools_files = var.deploy_s3_tools ? fileset(local.s3_tools_path, "**") : []
@@ -28,9 +30,16 @@ locals {
   ])) : "not-deployed"
   titanic_data_dependencies_hash = var.deploy_titanic_data && fileexists(local.titanic_data_requirements) ? filemd5(local.titanic_data_requirements) : "missing"
 
+  awscli_tools_files = var.deploy_awscli_tools ? fileset(local.awscli_tools_path, "**") : []
+  awscli_tools_source_hash = var.deploy_awscli_tools ? sha256(join("", [
+    for f in local.awscli_tools_files : filesha256("${local.awscli_tools_path}/${f}")
+  ])) : "not-deployed"
+  awscli_tools_dependencies_hash = var.deploy_awscli_tools && fileexists(local.awscli_tools_requirements) ? filemd5(local.awscli_tools_requirements) : "missing"
+
   # Package hashes (base64) for Lambda source_code_hash
   s3_tools_package_hash     = var.deploy_s3_tools ? base64sha256("${local.s3_tools_source_hash}:${local.s3_tools_dependencies_hash}") : "not-deployed"
   titanic_data_package_hash = var.deploy_titanic_data ? base64sha256("${local.titanic_data_source_hash}:${local.titanic_data_dependencies_hash}") : "not-deployed"
+  awscli_tools_package_hash = var.deploy_awscli_tools ? base64sha256("${local.awscli_tools_source_hash}:${local.awscli_tools_dependencies_hash}") : "not-deployed"
 }
 
 # -----------------------------------------------------------------------------
@@ -127,6 +136,51 @@ resource "null_resource" "build_titanic_data" {
   }
 }
 
+resource "null_resource" "build_awscli_tools" {
+  count = var.deploy_awscli_tools ? 1 : 0
+
+  triggers = {
+    dependencies_hash = local.awscli_tools_dependencies_hash
+    source_hash       = local.awscli_tools_source_hash
+  }
+
+  provisioner "local-exec" {
+    command     = <<-EOT
+      set -e
+      echo "Building awscli-tools package..."
+
+      if [ ! -d "${local.awscli_tools_path}" ]; then
+        echo "ERROR: Source path not found: ${local.awscli_tools_path}"
+        exit 1
+      fi
+      if [ ! -f "${local.awscli_tools_requirements}" ]; then
+        echo "ERROR: Requirements file not found: ${local.awscli_tools_requirements}"
+        exit 1
+      fi
+
+      BUILD_DIR=$(mktemp -d)
+      DEPS_DIR="$BUILD_DIR/deps"
+      CODE_DIR="$BUILD_DIR/code"
+
+      mkdir -p "$DEPS_DIR" "$CODE_DIR"
+
+      if grep -Eq "^[a-zA-Z]" "${local.awscli_tools_requirements}"; then
+        pip install -t "$DEPS_DIR" -r <(grep -E "^[a-zA-Z]" "${local.awscli_tools_requirements}")
+      else
+        echo "No dependencies to install for awscli-tools"
+      fi
+      cp -r "${local.awscli_tools_path}/"* "$CODE_DIR/"
+
+      mkdir -p "${local.build_dir}"
+      cd "$BUILD_DIR"
+      zip -r "${local.build_dir}/awscli-tools.zip" deps/ code/
+
+      rm -rf "$BUILD_DIR"
+    EOT
+    interpreter = ["bash", "-c"]
+  }
+}
+
 # -----------------------------------------------------------------------------
 # Outputs for debugging
 # -----------------------------------------------------------------------------
@@ -147,6 +201,13 @@ output "packaging_info" {
       package_hash      = local.titanic_data_package_hash
       package_path      = "${local.build_dir}/titanic-data.zip"
       requirements_file = local.titanic_data_requirements
+    } : null
+    awscli_tools = var.deploy_awscli_tools ? {
+      source_path       = local.awscli_tools_path
+      source_hash       = local.awscli_tools_source_hash
+      package_hash      = local.awscli_tools_package_hash
+      package_path      = "${local.build_dir}/awscli-tools.zip"
+      requirements_file = local.awscli_tools_requirements
     } : null
   }
 }

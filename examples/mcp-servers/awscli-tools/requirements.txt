@@ -1,0 +1,3 @@
+boto3>=1.34.0
+# We don't need the full aws-cli package because we'll use boto3 to simulate 
+# the CLI or use a specialized light wrapper if needed.

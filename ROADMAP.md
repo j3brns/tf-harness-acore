@@ -4,26 +4,23 @@ This document outlines planned features and improvements for the Bedrock AgentCo
 
 ## ✅ Completed
 
+- [x] **GitLab CI/CD & WIF Integration**: Secure credential-free deployments for enterprise GitLab on-prem/cloud.
+- [x] **Expanded MCP Server Library**: Added S3 Tools and a Generic AWS CLI MCP server for agent orchestration.
 - [x] **OIDC PKCE Support**: Hardened authorization code flow to prevent interception.
 - [x] **Native 15-Minute Streaming**: Upgraded to AWS Provider v6.x to bypass the 29s REST API timeout.
-- [x] **Standardized Response Formats**: Consistent use of `multiValueHeaders` for session cookie management.
+- [x] **Multi-Tenant Session Partitioning**: Refactored DynamoDB to use composite keys (app_id + session_id).
 
 ## 🚀 High Priority (Reliability & Security)
 
 - [ ] **OIDC Token Refresh Handler**
   * **Problem:** Sessions currently expire after 60 minutes when the access token dies.
   * **Solution:** Implement a refresh sidecar in the Authorizer or a dedicated endpoint to use the stored `refresh_token` to rotate sessions seamlessly.
-  * **Issue:** #12
-
-- [ ] **Multi-Tenant Session Partitioning**
-  * **Problem:** Current DynamoDB structure uses a single flat table for all sessions.
-  * **Solution:** Update the session schema to include `tenant_id` or `application_id` as a Sort Key to support multi-tenant deployments.
   * **Issue:** #13
 
 - [ ] **OIDC Discovery Integration**
   * **Problem:** OIDC endpoints (authorize/token) are currently constructed manually.
   * **Solution:** Implement auto-discovery by fetching `/.well-known/openid-configuration` from the ISSUER URL.
-  * **Issue:** #14
+  * **Issue:** #15
 
 ## 📈 Enterprise Features (Scale & Compliance)
 

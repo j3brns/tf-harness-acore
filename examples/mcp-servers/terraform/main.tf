@@ -4,7 +4,7 @@
 # Supports multiple MCP server types: s3-tools, titanic-data, custom.
 
 terraform {
-  required_version = "= 1.14.4"
+  required_version = "~> 1.14.0"
 
   required_providers {
     aws = {
@@ -49,6 +49,12 @@ variable "deploy_s3_tools" {
 
 variable "deploy_titanic_data" {
   description = "Deploy the Titanic data MCP server"
+  type        = bool
+  default     = true
+}
+
+variable "deploy_awscli_tools" {
+  description = "Deploy the AWS CLI tools MCP server"
   type        = bool
   default     = true
 }
@@ -360,6 +366,67 @@ resource "aws_lambda_permission" "titanic_data_bedrock_invoke" {
 resource "aws_cloudwatch_log_group" "titanic_data" {
   count             = var.deploy_titanic_data ? 1 : 0
   name              = "/aws/lambda/${var.name_prefix}-titanic-data-${var.environment}"
+  retention_in_days = var.log_retention_days
+  tags              = local.common_tags
+}
+
+# -----------------------------------------------------------------------------
+# Lambda: AWS CLI Tools MCP Server
+# -----------------------------------------------------------------------------
+# Note: Packaging is performed by null_resource in packaging.tf (deps + code)
+
+resource "aws_lambda_function" "awscli_tools" {
+  count = var.deploy_awscli_tools ? 1 : 0
+
+  filename         = "${local.build_dir}/awscli-tools.zip"
+  function_name    = "${var.name_prefix}-awscli-tools-${var.environment}"
+  role             = aws_iam_role.mcp_lambda.arn
+  handler          = "handler.lambda_handler"
+  runtime          = "python3.12"
+  source_code_hash = local.awscli_tools_package_hash
+  timeout          = var.lambda_timeout
+  memory_size      = var.lambda_memory
+
+  # Publish versions for rollback capability
+  publish = true
+
+  environment {
+    variables = {
+      ENVIRONMENT = var.environment
+      LOG_LEVEL   = var.environment == "prod" ? "INFO" : "DEBUG"
+    }
+  }
+
+  tags = local.common_tags
+
+  depends_on = [null_resource.build_awscli_tools]
+}
+
+# Lambda alias for stable ARN - Gateway references this, not $LATEST
+resource "aws_lambda_alias" "awscli_tools_live" {
+  count = var.deploy_awscli_tools ? 1 : 0
+
+  name             = "live"
+  description      = "Live version for Gateway integration"
+  function_name    = aws_lambda_function.awscli_tools[0].function_name
+  function_version = aws_lambda_function.awscli_tools[0].version
+}
+
+resource "aws_lambda_permission" "awscli_tools_bedrock_invoke" {
+  count = var.enable_bedrock_agentcore_invoke_permission && var.deploy_awscli_tools ? 1 : 0
+
+  statement_id   = "AllowBedrockAgentcoreInvokeAwscliTools"
+  action         = "lambda:InvokeFunction"
+  function_name  = aws_lambda_function.awscli_tools[0].function_name
+  qualifier      = aws_lambda_alias.awscli_tools_live[0].name
+  principal      = var.bedrock_agentcore_invoke_principal
+  source_account = local.bedrock_agentcore_source_account
+  source_arn     = var.bedrock_agentcore_source_arn != "" ? var.bedrock_agentcore_source_arn : null
+}
+
+resource "aws_cloudwatch_log_group" "awscli_tools" {
+  count             = var.deploy_awscli_tools ? 1 : 0
+  name              = "/aws/lambda/${var.name_prefix}-awscli-tools-${var.environment}"
   retention_in_days = var.log_retention_days
   tags              = local.common_tags
 }

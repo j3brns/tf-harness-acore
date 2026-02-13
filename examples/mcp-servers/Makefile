@@ -9,7 +9,7 @@
 #   make plan       - Terraform plan
 #   make deploy     - Deploy to AWS
 
-.PHONY: setup dev test test-s3 test-titanic validate plan deploy clean help smoke-awsdocs smoke-terraform validate-inference-profiles
+.PHONY: setup dev test test-s3 test-titanic validate plan deploy clean help smoke-terraform validate-inference-profiles
 
 # Python virtual environment
 VENV := .venv
@@ -94,9 +94,6 @@ test-unit: ## Run pytest unit tests
 	@echo "$(GREEN)Running unit tests...$(NC)"
 	$(PYTHON) -m pytest s3-tools/tests/ titanic-data/tests/ -v 2>/dev/null || \
 		echo "  ⚠ No tests directory found"
-
-smoke-awsdocs: ## Smoke test AWS docs MCP server (inference profile search)
-	python3 scripts/smoke_awsdocs_inference_profile.py
 
 smoke-terraform: ## Smoke test Terraform MCP server (tools list)
 	python3 scripts/smoke_terraform_mcp.py

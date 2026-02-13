@@ -5,7 +5,13 @@ resource "aws_dynamodb_table" "sessions" {
 
   name         = "agentcore-sessions-${var.agent_name}-${var.environment}"
   billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "session_id"
+  hash_key     = "app_id"
+  range_key    = "session_id"
+
+  attribute {
+    name = "app_id"
+    type = "S"
+  }
 
   attribute {
     name = "session_id"

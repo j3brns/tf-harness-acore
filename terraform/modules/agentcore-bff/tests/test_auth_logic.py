@@ -28,7 +28,9 @@ def test_login_flow():
     # Mock DynamoDB table
     auth_handler.table = MagicMock()
 
-    with patch("auth_handler.ISSUER", "https://login.microsoftonline.com/tenant"):
+    with patch("auth_handler.ISSUER", "https://login.microsoftonline.com/tenant"), patch(
+        "auth_handler.APP_ID", "test-agent"
+    ):
         response = auth_handler.login(event)
 
         assert response["statusCode"] == 302
@@ -39,6 +41,7 @@ def test_login_flow():
         # Verify DDB storage
         auth_handler.table.put_item.assert_called_once()
         item = auth_handler.table.put_item.call_args[1]["Item"]
+        assert item["app_id"] == "test-agent"
         assert item["session_id"].startswith("temp_")
         assert "code_verifier" in item
 

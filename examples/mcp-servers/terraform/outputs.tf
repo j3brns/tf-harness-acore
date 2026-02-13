@@ -66,6 +66,30 @@ output "titanic_data_lambda_version" {
 }
 
 # -----------------------------------------------------------------------------
+# AWS CLI Tools Lambda Outputs
+# -----------------------------------------------------------------------------
+
+output "awscli_tools_lambda_arn" {
+  description = "ARN of the AWS CLI tools MCP server Lambda (alias ARN for versioning)"
+  value       = var.deploy_awscli_tools ? aws_lambda_alias.awscli_tools_live[0].arn : null
+}
+
+output "awscli_tools_lambda_function_arn" {
+  description = "Function ARN (not alias) - use for IAM permissions only"
+  value       = var.deploy_awscli_tools ? aws_lambda_function.awscli_tools[0].arn : null
+}
+
+output "awscli_tools_lambda_name" {
+  description = "Name of the AWS CLI tools MCP server Lambda"
+  value       = var.deploy_awscli_tools ? aws_lambda_function.awscli_tools[0].function_name : null
+}
+
+output "awscli_tools_lambda_version" {
+  description = "Current deployed version of AWS CLI tools Lambda"
+  value       = var.deploy_awscli_tools ? aws_lambda_function.awscli_tools[0].version : null
+}
+
+# -----------------------------------------------------------------------------
 # Shared Outputs
 # -----------------------------------------------------------------------------
 
@@ -103,6 +127,14 @@ output "mcp_targets" {
         version     = aws_lambda_function.titanic_data[0].version
         description = "Titanic dataset for analysis"
       }
+    } : {},
+    var.deploy_awscli_tools ? {
+      awscli_tools = {
+        name        = "awscli-tools"
+        lambda_arn  = aws_lambda_alias.awscli_tools_live[0].arn
+        version     = aws_lambda_function.awscli_tools[0].version
+        description = "AWS CLI-like operations"
+      }
     } : {}
   )
 }
@@ -127,6 +159,13 @@ output "deployment_info" {
       alias         = "live"
       alias_arn     = aws_lambda_alias.titanic_data_live[0].arn
       code_sha256   = aws_lambda_function.titanic_data[0].source_code_hash
+    } : null
+    awscli_tools = var.deploy_awscli_tools ? {
+      function_name = aws_lambda_function.awscli_tools[0].function_name
+      version       = aws_lambda_function.awscli_tools[0].version
+      alias         = "live"
+      alias_arn     = aws_lambda_alias.awscli_tools_live[0].arn
+      code_sha256   = aws_lambda_function.awscli_tools[0].source_code_hash
     } : null
   }
 }

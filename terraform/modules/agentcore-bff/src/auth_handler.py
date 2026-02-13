@@ -10,6 +10,7 @@ import secrets
 import boto3
 
 DDB_TABLE = os.environ.get("SESSION_TABLE")
+APP_ID = os.environ.get("APP_ID")
 CLIENT_ID = os.environ.get("CLIENT_ID")
 CLIENT_SECRET_ARN = os.environ.get("CLIENT_SECRET_ARN")
 REDIRECT_URI = os.environ.get("REDIRECT_URI")
@@ -50,6 +51,7 @@ def login(event):
 
     table.put_item(
         Item={
+            "app_id": APP_ID,
             "session_id": f"temp_{temp_session_id}",
             "state": state,
             "nonce": nonce,
@@ -103,7 +105,7 @@ def callback(event):
         return {"statusCode": 400, "body": "Missing temporary session cookie"}
 
     # Lookup Temp Session
-    resp = table.get_item(Key={"session_id": f"temp_{temp_session_id}"})
+    resp = table.get_item(Key={"app_id": APP_ID, "session_id": f"temp_{temp_session_id}"})
     temp_item = resp.get("Item")
 
     if not temp_item:
@@ -141,7 +143,7 @@ def callback(event):
         return {"statusCode": 500, "body": "Token exchange failed"}
 
     # Cleanup temp session
-    table.delete_item(Key={"session_id": f"temp_{temp_session_id}"})
+    table.delete_item(Key={"app_id": APP_ID, "session_id": f"temp_{temp_session_id}"})
 
     # Create Permanent Session
     session_id = str(uuid.uuid4())
@@ -150,6 +152,7 @@ def callback(event):
 
     table.put_item(
         Item={
+            "app_id": APP_ID,
             "session_id": session_id,
             "access_token": token_resp["access_token"],
             "id_token": token_resp.get("id_token"),
