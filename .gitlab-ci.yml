@@ -2,7 +2,9 @@
 # Uses Web Identity Federation (WIF) for AWS authentication
 # Requires: CI_ENVIRONMENT_ROLE_ARN_DEV/TEST/PROD, TF_STATE_BUCKET_DEV/TEST/PROD
 
-image: amazon/aws-cli:latest
+image:
+  name: amazon/aws-cli:latest
+  entrypoint: [""]
 
 stages:
   - validate     # Terraform syntax, formatting (no AWS)
