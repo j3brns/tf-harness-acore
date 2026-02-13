@@ -1,0 +1,10 @@
+{
+  "name": "agentcore-bff-proxy",
+  "private": true,
+  "scripts": {
+    "test": "jest --verbose"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
