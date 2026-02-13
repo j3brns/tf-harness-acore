@@ -25,6 +25,8 @@ process.env.AGENTCORE_REGION = "us-east-1";
 
 setupAwsLambdaGlobal();
 const { handler, _writeError } = require("./proxy");
+// Capture the SAME SignatureV4 mock that proxy.js uses (before resetModules corrupts cache)
+const { SignatureV4 } = require("@smithy/signature-v4");
 
 // --- Helpers ---
 function makeEvent(body, overrides = {}) {
@@ -243,7 +245,6 @@ describe("proxy.js", () => {
 
   describe("access token forwarding", () => {
     test("includes authorization header when access_token is present", async () => {
-      const { SignatureV4 } = require("@smithy/signature-v4");
       setupMockRequest(200, {}, ["ok"]);
 
       const stream = mockResponseStream();
@@ -261,14 +262,13 @@ describe("proxy.js", () => {
     });
 
     test("does not include authorization header when access_token is absent", async () => {
-      const { SignatureV4 } = require("@smithy/signature-v4");
       setupMockRequest(200, {}, ["ok"]);
 
       const stream = mockResponseStream();
       await handler(makeEvent({ prompt: "hello" }), stream);
 
-      const signerInstance = SignatureV4.mock.results[0].value;
-      const signCall = signerInstance.sign.mock.calls[0][0];
+      const instance = SignatureV4.mock.results[SignatureV4.mock.results.length - 1].value;
+      const signCall = instance.sign.mock.calls[0][0];
       expect(signCall.headers.authorization).toBeUndefined();
     });
   });
