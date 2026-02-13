@@ -18,14 +18,17 @@ stages:
 variables:
   REPO_ROOT: ${CI_PROJECT_DIR}
   TF_ROOT: ${CI_PROJECT_DIR}/terraform
-  TF_VERSION: "1.10.5"
+  TF_VERSION: "1.14.3"
   TFLINT_VERSION: "0.50.3"
   AWS_DEFAULT_REGION: us-east-1
   DEV_EXAMPLE: "1-hello-world"
   TEST_EXAMPLE: "2-gateway-tool"
   PROD_EXAMPLE: "3-deepresearch"
-  # Slack webhook - set in GitLab CI/CD Variables
-  # SLACK_WEBHOOK_URL: https://hooks.slack.com/...
+
+# Required for WIF (Web Identity Federation)
+id_tokens:
+  CI_JOB_JWT_V2:
+    aud: https://gitlab.com
 
 # =============================================================================
 # Template: Install tools (cached binary, not re-downloaded each job)
