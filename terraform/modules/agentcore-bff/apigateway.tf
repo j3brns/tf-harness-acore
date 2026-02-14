@@ -44,6 +44,7 @@ resource "aws_api_gateway_deployment" "bff" {
 resource "aws_api_gateway_stage" "bff" {
   # checkov:skip=CKV2_AWS_51: Client Cert not used (Token Handler pattern)
   # checkov:skip=CKV2_AWS_29: WAF managed at CloudFront layer (if enabled)
+  # checkov:skip=CKV2_AWS_77: Log4j AMR managed by AWSManagedRulesCommonRuleSet in WAF ACL
   count = var.enable_bff ? 1 : 0
 
   deployment_id = aws_api_gateway_deployment.bff[0].id

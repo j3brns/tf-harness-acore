@@ -1,6 +1,5 @@
 # WAF for API Gateway protection
 resource "aws_wafv2_web_acl" "main" {
-  # checkov:skip=CKV_AWS_192: WAF logging requires additional cost decision
   # checkov:skip=CKV_AWS_176: Default action is Allow to prevent accidental broad lockout in this harness
   count = var.enable_waf ? 1 : 0
   name  = "agentcore-waf-${var.agent_name}"
@@ -63,6 +62,24 @@ resource "aws_wafv2_web_acl" "main" {
   }
 
   tags = var.tags
+}
+
+# WAF Logging
+resource "aws_cloudwatch_log_group" "waf" {
+  count = var.enable_waf ? 1 : 0
+
+  # WAF logging requires the log group name to start with aws-waf-logs-
+  name              = "aws-waf-logs-agentcore-${var.agent_name}"
+  retention_in_days = 30
+
+  tags = var.tags
+}
+
+resource "aws_wafv2_web_acl_logging_configuration" "main" {
+  count = var.enable_waf ? 1 : 0
+
+  log_destination_configs = [aws_cloudwatch_log_group.waf[0].arn]
+  resource_arn            = aws_wafv2_web_acl.main[0].arn
 }
 
 output "waf_acl_arn" {
