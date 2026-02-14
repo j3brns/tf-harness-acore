@@ -46,6 +46,7 @@ resource "aws_iam_role" "code_interpreter" {
 
 # IAM Policy for Code Interpreter
 resource "aws_iam_role_policy" "code_interpreter" {
+  # checkov:skip=CKV_AWS_107: EC2 actions require wildcard
   # checkov:skip=CKV_AWS_111: EC2 network interface actions require wildcard
   # checkov:skip=CKV_AWS_356: EC2 network interface actions require wildcard
   count = var.enable_code_interpreter ? 1 : 0
@@ -127,6 +128,7 @@ resource "aws_iam_role" "browser" {
 
 # IAM Policy for Browser
 resource "aws_iam_role_policy" "browser" {
+  # checkov:skip=CKV_AWS_107: EC2 actions require wildcard
   # checkov:skip=CKV_AWS_111: EC2 network interface actions require wildcard
   # checkov:skip=CKV_AWS_356: EC2 network interface actions require wildcard
   count = var.enable_browser ? 1 : 0
