@@ -86,7 +86,7 @@ resource "null_resource" "agent_runtime" {
 
   # Rule 6.1: Cleanup Hooks
   provisioner "local-exec" {
-    when    = destroy
+    when = destroy
     command = replace(<<-EOT
       set +e
       RUNTIME_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/runtime/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
@@ -184,7 +184,7 @@ resource "null_resource" "agent_memory" {
   }
 
   provisioner "local-exec" {
-    when    = destroy
+    when = destroy
     command = replace(<<-EOT
       set +e
       # Short-term memory cleanup
