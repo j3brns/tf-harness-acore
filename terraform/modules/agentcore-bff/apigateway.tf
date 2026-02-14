@@ -51,6 +51,24 @@ resource "aws_api_gateway_stage" "bff" {
   stage_name    = var.environment
 
   xray_tracing_enabled = true
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.apigw_access[0].arn
+    format          = jsonencode({
+      requestId      = "$context.requestId"
+      ip             = "$context.identity.sourceIp"
+      caller         = "$context.identity.caller"
+      user           = "$context.identity.user"
+      requestTime    = "$context.requestTime"
+      httpMethod     = "$context.httpMethod"
+      resourcePath   = "$context.resourcePath"
+      status         = "$context.status"
+      protocol       = "$context.protocol"
+      responseLength = "$context.responseLength"
+      tenantId       = "$context.authorizer.tenant_id"
+      appId          = "$context.authorizer.app_id"
+    })
+  }
 }
 
 resource "aws_api_gateway_method_settings" "bff" {

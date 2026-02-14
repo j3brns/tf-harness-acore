@@ -24,6 +24,7 @@ module "agentcore_foundation" {
   enable_observability = var.enable_observability
   log_retention_days   = var.log_retention_days
   enable_xray          = var.enable_xray
+  alarm_sns_topic_arn  = var.alarm_sns_topic_arn
 
   # Encryption
   enable_kms  = var.enable_kms

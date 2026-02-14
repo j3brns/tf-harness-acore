@@ -111,3 +111,13 @@ resource "aws_s3_bucket_policy" "spa" {
   bucket = aws_s3_bucket.spa[0].id
   policy = data.aws_iam_policy_document.spa_access[0].json
 }
+
+# API Gateway Access Logs
+resource "aws_cloudwatch_log_group" "apigw_access" {
+  count = var.enable_bff ? 1 : 0
+
+  name              = "/aws/apigateway/agentcore-bff-${var.agent_name}-access"
+  retention_in_days = var.log_retention_days
+
+  tags = var.tags
+}

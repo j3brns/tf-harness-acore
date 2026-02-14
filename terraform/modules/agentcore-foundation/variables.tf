@@ -130,6 +130,12 @@ variable "enable_xray" {
   default     = true
 }
 
+variable "alarm_sns_topic_arn" {
+  description = "SNS topic ARN for CloudWatch alarm notifications"
+  type        = string
+  default     = ""
+}
+
 variable "xray_sampling_rate" {
   description = "X-Ray sampling rate (0.0 to 1.0)"
   type        = number

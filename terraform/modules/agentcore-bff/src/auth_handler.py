@@ -8,6 +8,11 @@ import hashlib
 import base64
 import secrets
 import boto3
+import logging
+
+# Configure logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 DDB_TABLE = os.environ.get("SESSION_TABLE")
 APP_ID = os.environ.get("APP_ID")
@@ -28,7 +33,7 @@ def get_secret(arn):
         resp = secrets_client.get_secret_value(SecretId=arn)
         return resp["SecretString"]
     except Exception as e:
-        print(f"Error fetching secret: {e}")
+        logger.error(f"Error fetching secret: {e}")
         return None
 
 
@@ -54,7 +59,7 @@ def decode_jwt_claims(token):
         decoded = base64.urlsafe_b64decode(payload).decode("utf-8")
         return json.loads(decoded)
     except Exception as e:
-        print(f"Error decoding JWT: {e}")
+        logger.error(f"Error decoding JWT: {e}")
         return {}
 
 
@@ -158,7 +163,7 @@ def callback(event):
         with urllib.request.urlopen(req) as resp:
             token_resp = json.loads(resp.read().decode())
     except Exception as e:
-        print(f"Token exchange failed: {e}")
+        logger.error(f"Token exchange failed: {e}")
         return {"statusCode": 500, "body": "Token exchange failed"}
 
     # Cleanup temp session

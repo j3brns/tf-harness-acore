@@ -138,6 +138,12 @@ variable "enable_xray" {
   default     = true
 }
 
+variable "alarm_sns_topic_arn" {
+  description = "Optional SNS topic ARN for CloudWatch alarm notifications"
+  type        = string
+  default     = ""
+}
+
 variable "enable_kms" {
   description = "Enable KMS encryption for logs and artifacts"
   type        = bool

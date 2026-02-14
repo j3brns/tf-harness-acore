@@ -63,6 +63,7 @@ resource "aws_cloudwatch_metric_alarm" "gateway_errors" {
   threshold           = "5"
   alarm_description   = "Alert when gateway errors exceed threshold"
   treat_missing_data  = "notBreaching"
+  alarm_actions       = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
 
   dimensions = {
     GatewayId = var.enable_gateway ? data.aws_ssm_parameter.gateway_id[0].value : ""
@@ -85,6 +86,7 @@ resource "aws_cloudwatch_metric_alarm" "target_duration" {
   threshold           = "30000" # 30 seconds in milliseconds
   alarm_description   = "Alert when target invocation duration is high"
   treat_missing_data  = "notBreaching"
+  alarm_actions       = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
 
   dimensions = {
     GatewayId = var.enable_gateway ? data.aws_ssm_parameter.gateway_id[0].value : ""
