@@ -25,7 +25,7 @@ variables:
   TF_ROOT: ${CI_PROJECT_DIR}/terraform
   TF_VERSION: "1.14.3"
   TFLINT_VERSION: "0.50.3"
-  AWS_DEFAULT_REGION: us-east-1
+  AWS_DEFAULT_REGION: eu-west-2
   DEV_EXAMPLE: "1-hello-world"
   TEST_EXAMPLE: "2-gateway-tool"
   PROD_EXAMPLE: "3-deepresearch"
