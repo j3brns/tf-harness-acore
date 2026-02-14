@@ -248,6 +248,12 @@ variable "runtime_source_path" {
   default     = "./agent-code"
 }
 
+variable "runtime_entry_file" {
+  description = "Entry point file for agent runtime"
+  type        = string
+  default     = "runtime.py"
+}
+
 variable "runtime_config" {
   description = "Runtime configuration as JSON"
   type        = map(any)

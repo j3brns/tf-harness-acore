@@ -8,7 +8,7 @@ resource "aws_s3_bucket" "deployment" {
 
 # S3 Access Logging
 resource "aws_s3_bucket_logging" "deployment" {
-  count  = var.deployment_bucket_name == "" && var.logging_bucket_id != "" ? 1 : 0
+  count  = var.deployment_bucket_name == "" && var.enable_observability ? 1 : 0
   bucket = aws_s3_bucket.deployment[0].id
 
   target_bucket = var.logging_bucket_id

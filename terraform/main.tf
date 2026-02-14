@@ -71,6 +71,7 @@ module "agentcore_runtime" {
   # Runtime configuration
   enable_runtime          = var.enable_runtime
   runtime_source_path     = var.runtime_source_path
+  runtime_entry_file      = var.runtime_entry_file
   runtime_config          = var.runtime_config
   runtime_role_arn        = var.runtime_role_arn
   runtime_policy_arns     = var.runtime_policy_arns
@@ -90,6 +91,7 @@ module "agentcore_runtime" {
   # S3 deployment
   deployment_bucket_name = var.deployment_bucket_name
   enable_s3_encryption   = var.enable_s3_encryption
+  enable_observability   = var.enable_observability
   logging_bucket_id      = module.agentcore_foundation.access_logs_bucket_id
   proxy_role_arn         = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/agentcore-bff-proxy-${var.agent_name}-${var.environment}"
 

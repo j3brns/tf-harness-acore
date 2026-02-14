@@ -37,6 +37,12 @@ variable "runtime_source_path" {
   type        = string
 }
 
+variable "runtime_entry_file" {
+  description = "Entry point file for agent runtime"
+  type        = string
+  default     = "runtime.py"
+}
+
 variable "runtime_config" {
   description = "Runtime configuration as JSON"
   type        = map(any)
@@ -190,6 +196,12 @@ variable "python_version" {
   description = "Python version for packaging (e.g., 3.11, 3.12)"
   type        = string
   default     = "3.12"
+}
+
+variable "enable_observability" {
+  description = "Enable observability features"
+  type        = bool
+  default     = true
 }
 
 variable "lambda_architecture" {
