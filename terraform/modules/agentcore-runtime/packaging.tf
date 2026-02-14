@@ -52,11 +52,11 @@ resource "null_resource" "package_dependencies" {
         fi
         
         # Use pip to install from pyproject.toml/setup.py correctly
-        python3 -m pip install "${local.source_path}" \
+        python3.12 -m pip install "${local.source_path}" \
           --platform "$PLATFORM" \
           --target "${local.deps_dir}" \
           --implementation cp \
-          --python ${var.python_version} \
+          --python 3.12 \
           --only-binary=:all: \
           --upgrade
       fi
