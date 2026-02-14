@@ -43,6 +43,12 @@ variable "agent_name" {
   }
 }
 
+variable "app_id" {
+  description = "Application ID for multi-tenant isolation (North anchor). Defaults to agent_name."
+  type        = string
+  default     = ""
+}
+
 variable "tags" {
   description = "Additional tags to apply to all resources"
   type        = map(string)

@@ -41,8 +41,8 @@ def test_login_flow():
         # Verify DDB storage
         auth_handler.table.put_item.assert_called_once()
         item = auth_handler.table.put_item.call_args[1]["Item"]
-        assert item["app_id"] == "test-agent"
-        assert item["session_id"].startswith("temp_")
+        assert item["pk"] == "APP#test-agent#TEMP"
+        assert item["sk"].startswith("SESSION#")
         assert "code_verifier" in item
 
         # Verify Cookie

@@ -273,6 +273,54 @@ describe("proxy.js", () => {
     });
   });
 
+  describe("Multi-tenancy and Isolation (Rule 14)", () => {
+    test("forwards tenant_id header when present in authorizer context", async () => {
+      setupMockRequest(200, {}, ["ok"]);
+
+      const stream = mockResponseStream();
+      await handler(
+        makeEvent(
+          { prompt: "hello" },
+          { authorizer: { tenant_id: "tenant-123", access_token: "tok", app_id: "test-app" } }
+        ),
+        stream
+      );
+
+      const instance = SignatureV4.mock.results[SignatureV4.mock.results.length - 1].value;
+      const signCall = instance.sign.mock.calls[0][0];
+      expect(signCall.headers["x-tenant-id"]).toBe("tenant-123");
+      expect(signCall.headers["x-app-id"]).toBe("test-app");
+    });
+
+    test("prevents cross-tenant session access (Rule 14.1)", async () => {
+      // Scenario: User from Tenant A tries to use a session ID from Tenant B
+      // Note: This requires the authorizer to have verified the session/tenant mapping
+      // and passed the 'authorized_session_id' in the context.
+      
+      const stream = mockResponseStream();
+      const event = makeEvent(
+        { prompt: "hello", sessionId: "session-tenant-B" },
+        { 
+          authorizer: { 
+            tenant_id: "tenant-A",
+            session_id: "session-tenant-A" // The ID actually associated with this auth token
+          } 
+        }
+      );
+
+      await handler(event, stream);
+
+      // Should return 403 Forbidden because of session/tenant mismatch
+      expect(global.awslambda.HttpResponseStream.from).toHaveBeenCalledWith(stream, {
+        statusCode: 403,
+        headers: { "content-type": "application/json" },
+      });
+      expect(mockStreamEnd).toHaveBeenCalledWith(
+        JSON.stringify({ error: "Session isolation violation: tenant mismatch" })
+      );
+    });
+  });
+
   describe("writeError helper", () => {
     test("writes structured JSON error to response stream", () => {
       const stream = mockResponseStream();

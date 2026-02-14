@@ -234,3 +234,38 @@ pre-commit run --all-files
 | 0009 | B2E Publishing & Identity | Streaming + Entra ID |
 | 0010 | Service Discovery (Dual-Tier) | Cloud Map + Registry |
 | 0011 | Serverless SPA & BFF | Token Handler Pattern (No XSS) |
+
+---
+
+## RULE 14: Multi-Tenant Isolation (MANDATORY)
+
+### Rule 14.1: No Implicit Tenant Trust
+- **Requirement**: Components MUST NOT trust a `tenant_id` or `session_id` provided in the request body without verifying it against the authenticated OIDC context (JWT claims).
+- **Enforcement**: The `Agent Proxy` MUST validate that the `sessionId` belongs to the `tenant_id` and `app_id` extracted from the authorizer context.
+
+### Rule 14.2: Partitioned Storage
+- **Requirement**: All persistent state (S3 Memory, DynamoDB Sessions) MUST be partitioned by `app_id` and `tenant_id`.
+- **Pattern (S3)**: `s3://{bucket}/{app_id}/{tenant_id}/{agent_name}/memory/`.
+- **Pattern (DynamoDB)**: 
+  - `PartitionKey (PK)`: `APP#{app_id}#TENANT#{tenant_id}`
+  - `SortKey (SK)`: `SESSION#{session_id}`
+
+### Rule 14.3: ABAC Enforcement
+- **Requirement**: Access to resources MUST be restricted using **Attribute-Based Access Control (ABAC)**.
+- **Implementation**: IAM and Cedar policies MUST use conditions comparing the `principal.tenant_id` with the `resource.tenant_id`.
+- **Example**: 
+  ```hcl
+  Condition = {
+    StringEquals = { "s3:ExistingObjectTag/TenantID" = "${aws:PrincipalTag/TenantID}" }
+  }
+  ```
+
+### Rule 14.4: Hierarchical Identity (North-South Join)
+- **Requirement**: Every interaction MUST be anchored by the North-South hierarchy.
+- **North Anchor**: `AppID` (Logical application/environment boundary).
+- **Middle Anchor**: `TenantID` (Unit of ownership).
+- **South Anchor**: `AgentName` (Physical compute resource).
+- **Join Logic**: `Identity = [AppID] + [TenantID]`, `Compute = [AgentName]`.
+
+### Rule 14.5: Just-in-Time (ZTO) Onboarding
+- **Requirement**: Tenant-specific logical resources (S3 prefixes, DDB items) MUST be provisioned just-in-time upon first successful OIDC authentication.

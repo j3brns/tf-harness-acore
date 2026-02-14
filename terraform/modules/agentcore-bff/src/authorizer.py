@@ -31,13 +31,24 @@ def lambda_handler(event, context):
 
     # Parse Cookie
     cookies = {c.split("=")[0].strip(): c.split("=")[1].strip() for c in cookie_header.split(";") if "=" in c}
-    session_id = cookies.get("session_id")
+    raw_session = cookies.get("session_id")
 
-    if not session_id:
+    if not raw_session:
         return generate_policy("user", "Deny", event["methodArn"])
 
-    # Lookup Session
-    resp = table.get_item(Key={"app_id": APP_ID, "session_id": session_id})
+    # Split tenant_id and session_id from composite cookie
+    if ":" not in raw_session:
+        return generate_policy("user", "Deny", event["methodArn"])
+    
+    tenant_id, session_id = raw_session.split(":", 1)
+
+    # Lookup Session using North-South Join PK/SK
+    resp = table.get_item(
+        Key={
+            "pk": f"APP#{APP_ID}#TENANT#{tenant_id}",
+            "sk": f"SESSION#{session_id}"
+        }
+    )
     item = resp.get("Item")
 
     if not item or item["expires_at"] < time.time():
@@ -48,5 +59,10 @@ def lambda_handler(event, context):
         principal_id=session_id,
         effect="Allow",
         resource=event["methodArn"],
-        context={"access_token": item["access_token"]},  # Injected for Proxy
+        context={
+            "access_token": item["access_token"],
+            "session_id": session_id,
+            "tenant_id": tenant_id,
+            "app_id": APP_ID,
+        },
     )

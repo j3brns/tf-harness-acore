@@ -39,7 +39,7 @@ resource "aws_lambda_function" "auth_handler" {
 
   environment {
     variables = {
-      APP_ID            = var.agent_name
+      APP_ID            = var.app_id
       SESSION_TABLE     = aws_dynamodb_table.sessions[0].name
       CLIENT_ID         = var.oidc_client_id
       CLIENT_SECRET_ARN = var.oidc_client_secret_arn
@@ -67,7 +67,7 @@ resource "aws_lambda_function" "authorizer" {
 
   environment {
     variables = {
-      APP_ID        = var.agent_name
+      APP_ID        = var.app_id
       SESSION_TABLE = aws_dynamodb_table.sessions[0].name
     }
   }

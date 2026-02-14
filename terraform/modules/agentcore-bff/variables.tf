@@ -3,6 +3,11 @@ variable "agent_name" {
   type        = string
 }
 
+variable "app_id" {
+  description = "Application ID for multi-tenant isolation"
+  type        = string
+}
+
 variable "environment" {
   description = "Deployment environment (e.g., dev, prod)"
   type        = string

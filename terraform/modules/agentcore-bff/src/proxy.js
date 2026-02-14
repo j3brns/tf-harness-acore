@@ -112,6 +112,9 @@ exports.handler = awslambda.streamifyResponse(async (event, responseStream) => {
 
   const authorizer = (event.requestContext || {}).authorizer || {};
   const accessToken = authorizer.access_token;
+  const tenantId = authorizer.tenant_id;
+  const appId = authorizer.app_id;
+  const authorizedSessionId = authorizer.session_id;
 
   let prompt;
   let sessionId;
@@ -134,6 +137,12 @@ exports.handler = awslambda.streamifyResponse(async (event, responseStream) => {
     return;
   }
 
+  // Multi-tenancy Isolation Check (Rule 14.1)
+  if (authorizedSessionId && sessionId !== authorizedSessionId) {
+    writeError(responseStream, 403, "Session isolation violation: tenant mismatch");
+    return;
+  }
+
   try {
     const arnParts = AGENTCORE_RUNTIME_ARN.split(":");
     if (arnParts.length < 6) {
@@ -153,6 +162,12 @@ exports.handler = awslambda.streamifyResponse(async (event, responseStream) => {
     };
     if (accessToken) {
       headers.authorization = `Bearer ${accessToken}`;
+    }
+    if (tenantId) {
+      headers["x-tenant-id"] = tenantId;
+    }
+    if (appId) {
+      headers["x-app-id"] = appId;
     }
 
     const payload = JSON.stringify({ prompt });

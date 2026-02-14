@@ -5,16 +5,16 @@ resource "aws_dynamodb_table" "sessions" {
 
   name         = "agentcore-sessions-${var.agent_name}-${var.environment}"
   billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "app_id"
-  range_key    = "session_id"
+  hash_key     = "pk"
+  range_key    = "sk"
 
   attribute {
-    name = "app_id"
+    name = "pk"
     type = "S"
   }
 
   attribute {
-    name = "session_id"
+    name = "sk"
     type = "S"
   }
 
@@ -77,6 +77,8 @@ resource "aws_cloudfront_origin_access_control" "spa" {
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
 }
+
+data "aws_caller_identity" "current" {}
 
 # Bucket Policy: Allow CloudFront
 data "aws_iam_policy_document" "spa_access" {

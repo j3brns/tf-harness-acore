@@ -136,6 +136,7 @@ module "agentcore_bff" {
 
   enable_bff       = var.enable_bff
   agent_name       = var.agent_name
+  app_id           = local.app_id
   region           = local.bff_region
   agentcore_region = local.agentcore_region
   environment      = var.environment

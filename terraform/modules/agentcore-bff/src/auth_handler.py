@@ -40,6 +40,24 @@ def generate_pkce_pair():
     return verifier, challenge
 
 
+def decode_jwt_claims(token):
+    try:
+        # JWT format: header.payload.signature
+        parts = token.split(".")
+        if len(parts) != 3:
+            return {}
+        payload = parts[1]
+        # Add padding if needed
+        missing_padding = len(payload) % 4
+        if missing_padding:
+            payload += "=" * (4 - missing_padding)
+        decoded = base64.urlsafe_b64decode(payload).decode("utf-8")
+        return json.loads(decoded)
+    except Exception as e:
+        print(f"Error decoding JWT: {e}")
+        return {}
+
+
 def login(event):
     state = str(uuid.uuid4())
     nonce = str(uuid.uuid4())
@@ -51,13 +69,14 @@ def login(event):
 
     table.put_item(
         Item={
-            "app_id": APP_ID,
-            "session_id": f"temp_{temp_session_id}",
+            "pk": f"APP#{APP_ID}#TEMP",
+            "sk": f"SESSION#{temp_session_id}",
             "state": state,
             "nonce": nonce,
             "code_verifier": code_verifier,
             "expires_at": expires_at,
             "type": "temp",
+            "app_id": APP_ID,
         }
     )
 
@@ -105,7 +124,7 @@ def callback(event):
         return {"statusCode": 400, "body": "Missing temporary session cookie"}
 
     # Lookup Temp Session
-    resp = table.get_item(Key={"app_id": APP_ID, "session_id": f"temp_{temp_session_id}"})
+    resp = table.get_item(Key={"pk": f"APP#{APP_ID}#TEMP", "sk": f"SESSION#{temp_session_id}"})
     temp_item = resp.get("Item")
 
     if not temp_item:
@@ -143,27 +162,35 @@ def callback(event):
         return {"statusCode": 500, "body": "Token exchange failed"}
 
     # Cleanup temp session
-    table.delete_item(Key={"app_id": APP_ID, "session_id": f"temp_{temp_session_id}"})
+    table.delete_item(Key={"pk": f"APP#{APP_ID}#TEMP", "sk": f"SESSION#{temp_session_id}"})
 
     # Create Permanent Session
     session_id = str(uuid.uuid4())
     expires_in = token_resp.get("expires_in", 3600)
     expires_at = int(time.time()) + expires_in
 
+    # Extract tenant_id from id_token (tid claim for Entra ID)
+    id_token = token_resp.get("id_token")
+    claims = decode_jwt_claims(id_token) if id_token else {}
+    tenant_id = claims.get("tid", "unknown")
+
     table.put_item(
         Item={
+            "pk": f"APP#{APP_ID}#TENANT#{tenant_id}",
+            "sk": f"SESSION#{session_id}",
+            "tenant_id": tenant_id,
             "app_id": APP_ID,
             "session_id": session_id,
             "access_token": token_resp["access_token"],
-            "id_token": token_resp.get("id_token"),
+            "id_token": id_token,
             "refresh_token": token_resp.get("refresh_token"),
             "expires_at": expires_at,
             "type": "session",
         }
     )
 
-    # Secure Cookie
-    cookie = f"session_id={session_id}; Secure; HttpOnly; SameSite=Strict; Path=/; Max-Age={expires_in}"
+    # Secure Cookie including tenant_id for PK construction
+    cookie = f"session_id={tenant_id}:{session_id}; Secure; HttpOnly; SameSite=Strict; Path=/; Max-Age={expires_in}"
     # Expire the temp cookie
     expire_temp = "temp_session_id=; Secure; HttpOnly; SameSite=Strict; Path=/; Max-Age=0"
 
