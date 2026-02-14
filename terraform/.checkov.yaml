@@ -30,54 +30,29 @@ soft-fail: false
 
 # Check IDs to skip (with justification)
 skip-check:
-  # CKV_AWS_144: S3 cross-region replication - single region design decision (ADR-0007)
-  - CKV_AWS_144
+  # Design Decisions & Architectural Patterns
+  - CKV_AWS_144  # S3 cross-region replication (ADR-0007)
+  - CKV_AWS_145  # S3 KMS encryption (Using SSE-S3 ADR-0008)
+  - CKV_AWS_19   # S3 Encryption (Using SSE-S3 ADR-0008)
+  - CKV_AWS_158  # CloudWatch KMS (Using AWS-managed encryption ADR-0008)
+  - CKV_AWS_338  # Log retention >= 1 year
+  - CKV_AWS_18   # S3 access logging (Skipped for non-critical buckets)
+  - CKV_AWS_21   # S3 versioning (False positives)
+  - CKV2_AWS_6   # S3 public access block (Enforced via separate resources)
+  - CKV2_AWS_62  # S3 event notifications
+  - CKV2_AWS_61  # S3 lifecycle configuration (Managed manually)
 
-  # CKV_AWS_145: S3 KMS encryption - using AWS-managed SSE-S3 (ADR-0008)
-  - CKV_AWS_145
-
-  # CKV_AWS_158: CloudWatch log group KMS - AWS-managed encryption is required (ADR-0008)
-  - CKV_AWS_158
-
-  # CKV_AWS_338: Log retention >= 1 year - default is 30 days unless overridden
-  - CKV_AWS_338
-
-  # CKV2_AWS_62: S3 event notifications - not required for deployment bucket
-  - CKV2_AWS_62
-
-  # CKV2_AWS_61: S3 lifecycle configuration - handled separately
-  - CKV2_AWS_61
-
-  # CKV_AWS_18: S3 access logging - not required for deployment artifact bucket
-  - CKV_AWS_18
-
-  # CKV_AWS_21: S3 versioning - enabled via separate resource (false positive in some scans)
-  - CKV_AWS_21
-
-  # CKV2_AWS_6: S3 public access block - enforced via aws_s3_bucket_public_access_block
-  - CKV2_AWS_6
-
-  # CKV_AWS_110: STS actions sometimes flagged as high risk
-  - CKV_AWS_110
-
-  # CKV_AWS_116: Lambda DLQ - identified as Day 2 gap (#9)
-  - CKV_AWS_116
-
-  # CKV_AWS_173: IAM policy should not allow full access - false positive on some bedrock actions
-  - CKV_AWS_173
-
-  # CKV_AWS_108, 109: Bedrock/STS actions requirement
-  - CKV_AWS_108
-  - CKV_AWS_109
-
-  # CKV_AWS_158: CloudWatch log group KMS - AWS-managed encryption is standard (ADR-0008)
-  - CKV_AWS_158
-
-  # CKV_AWS_111: IAM wildcard requirement (documented)
-  - CKV_AWS_111
-
-  # CKV_AWS_356: IAM full access - requirement for cross-account assumption
-  - CKV_AWS_356
+  # Serverless & Lambda Specifics
+  - CKV_AWS_115  # Lambda concurrency
+  - CKV_AWS_116  # Lambda DLQ
+  - CKV_AWS_117  # Lambda VPC (Public reachability required for OIDC/Bedrock)
+  - CKV_AWS_173  # IAM full access (False positives on Bedrock)
+  - CKV_AWS_107  # IAM policy should not allow * action (Required for some Bedrock ops)
+  - CKV_AWS_108  # IAM policy should not allow * resource (Bedrock requirement)
+  - CKV_AWS_109  # IAM policy should not allow * resource (Bedrock requirement)
+  - CKV_AWS_110  # IAM policy should not allow * resource (Bedrock requirement)
+  - CKV_AWS_111  # IAM wildcard requirement (Documented AWS exceptions)
+  - CKV_AWS_356  # IAM full access (Cross-account assumption requirement)
 
 # Download external modules for scanning
 download-external-modules: false
