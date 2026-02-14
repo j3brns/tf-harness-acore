@@ -7,7 +7,8 @@ Accepted
 ## Context
 
 Need CI/CD pipeline for automated testing and deployment.
-- GitLab on-premises infrastructure available
+- GitLab CI is the primary deployment pipeline
+- Repository is mirrored on GitHub (GitHub Actions used for minimal validation)
 - Three AWS accounts (dev, test, prod) for environments
 - Need secure authentication without storing credentials
 - Want maximum local testing before AWS deployment
@@ -15,21 +16,31 @@ Need CI/CD pipeline for automated testing and deployment.
 ## Decision
 
 Use GitLab CI with:
-- 6 stages (validate, lint, test, deploy-dev, deploy-test, deploy-prod)
+- 12 stages (validate, lint, test, plan-dev, deploy-dev, smoke-test-dev, plan-test, deploy-test, smoke-test-test, plan-prod, deploy-prod, smoke-test-prod)
 - AWS Web Identity Federation (WIF) for authentication
-- Branch-based promotion (main -> release/* -> tags)
+- Branch/tag promotion:
+  - `main` -> dev plan + auto deploy + smoke test
+  - `release/*` -> test plan + manual deploy + smoke test
+  - tags -> prod plan + manual deploy + smoke test
 - Maximum local testing (no AWS for validate/lint/test stages)
+- Scheduled drift detection (non-blocking) runs in the test stage
 
 ## Pipeline Structure
 
 ```yaml
 stages:
-  - validate     # Terraform fmt, validate, plan (NO AWS)
-  - lint         # TFLint, Checkov (NO AWS)
-  - test         # Example validation, Cedar policies (NO AWS)
-  - deploy-dev   # Auto-deploy to dev (AWS dev account)
-  - deploy-test  # Manual approval -> test (AWS test account)
-  - deploy-prod  # Manual approval -> prod (AWS prod account)
+  - validate        # Terraform fmt, validate (NO AWS)
+  - lint            # TFLint, Checkov (NO AWS)
+  - test            # Example validation, Cedar policies (NO AWS)
+  - plan-dev        # Plan dev deployment (no apply)
+  - deploy-dev      # Auto-deploy to dev (AWS dev account)
+  - smoke-test-dev  # Verify dev deployment
+  - plan-test       # Plan test deployment for review
+  - deploy-test     # Manual deploy to test (AWS test account)
+  - smoke-test-test # Verify test deployment
+  - plan-prod       # Plan prod deployment for review
+  - deploy-prod     # Manual deploy to prod (AWS prod account)
+  - smoke-test-prod # Verify prod deployment
 ```
 
 ## WIF Authentication Flow
@@ -52,9 +63,9 @@ Terraform commands with AWS access
 
 ## Rationale
 
-- GitLab already deployed on-prem
+- GitLab CI is the deployment control plane
 - WIF more secure than static IAM credentials (no secrets to rotate)
-- Branch/tag strategy provides clear promotion path
+- Branch/tag strategy provides clear promotion path with explicit plan gates
 - Local testing reduces AWS costs
 - Stages 1-3 run without AWS account
 
@@ -83,7 +94,7 @@ Terraform commands with AWS access
 ## Implementation Notes
 
 While the repository is hosted on GitHub, a minimal GitHub Actions workflow runs validation only.
-This does not change the decision to use GitLab CI with WIF for deployment after migration.
+GitLab CI remains the source of truth for environment deployments with WIF.
 
 ### GitLab CI Variables Required
 

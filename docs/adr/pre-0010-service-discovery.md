@@ -1,5 +1,9 @@
 # Pre-ADR 0010: Detailed Service Discovery & A2A Architecture
 
+## Status
+
+Superseded by ADR 0010. Retained for discovery history.
+
 ## 1. Objective
 Define the Service Discovery and Agent-to-Agent (A2A) Registry architecture for the **Strands** multi-agent ecosystem. This document bridges the gap between individual agent deployments and a cohesive, discoverable agent mesh.
 
@@ -54,6 +58,5 @@ The **AgentCore Gateway** serves a specialized role:
 *   **Cloud Map Integration:** Supported natively by ECS/Fargate, but for **AgentCore Runtime** (serverless), we must register instances explicitly via Terraform (`aws_service_discovery_instance`).
 *   **Agent Card Availability:** Verified that Bedrock Runtime exposes `/.well-known/agent-card.json` automatically for all provisioned agents.
 
-## 5. Next Steps
-*   Formalize the **Cloud Map** namespace design in **ADR 0010**.
-*   Define the **CI/CD hook** that populates the Northbound Catalog.
+## 5. Superseded
+See **ADR 0010** for the formal architectural decision and implementation details.

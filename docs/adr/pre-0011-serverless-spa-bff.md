@@ -1,5 +1,9 @@
 # Pre-ADR 0011: Serverless SPA & BFF Architecture Discovery
 
+## Status
+
+Superseded by ADR 0011. Retained for discovery history.
+
 ## 1. Context
 We need to serve a Single Page Application (SPA) that acts as the frontend for our Bedrock Agents. The enterprise requirement is to use **Microsoft Entra ID** for authentication.
 
@@ -48,6 +52,5 @@ graph LR
     Proxy -->|6. Invoke| Bedrock
 ```
 
-## 5. Next Steps
-*   Formalize in **ADR 0011**.
-*   Implement `terraform/modules/spa-bff` Terraform module.
+## 5. Superseded
+See **ADR 0011** for the formal architectural decision and implementation details.

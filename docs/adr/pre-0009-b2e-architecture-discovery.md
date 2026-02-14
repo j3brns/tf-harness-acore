@@ -1,5 +1,9 @@
 # Pre-ADR 0009: Detailed Architecture Discovery & Feasibility Assessment
 
+## Status
+
+Superseded by ADR 0009. Retained for discovery history.
+
 ## 1. Objective
 Record the exhaustive discovery process, technical evidence, and feasibility analysis for publishing **Strands SDK** agents to a B2E environment using **Entra ID** and **Bedrock AgentCore**.
 
@@ -65,4 +69,4 @@ We determined that **API Gateway Stages** (dev, test, prod) should map 1:1 to **
 ## 6. Conclusion
 The proposed architecture -- **REST API with Streaming, STS-based WebIdentity Federation, and a Dedicated Callback Handler** -- is the only path that satisfies the enterprise requirement for security, UX, and multi-agent (Strands) collaboration.
 
-**Next Step:** Proceed to **ADR 0009** for formal architectural approval.
+**Superseded:** See **ADR 0009** for the formal architectural decision.
