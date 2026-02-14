@@ -63,6 +63,7 @@ module "agentcore_runtime" {
   source = "./modules/agentcore-runtime"
 
   agent_name     = var.agent_name
+  app_id         = local.app_id
   region         = local.agentcore_region
   bedrock_region = local.bedrock_region
   environment    = var.environment

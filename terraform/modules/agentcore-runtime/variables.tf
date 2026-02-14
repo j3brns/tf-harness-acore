@@ -3,6 +3,12 @@ variable "agent_name" {
   type        = string
 }
 
+variable "app_id" {
+  description = "Application ID for isolation"
+  type        = string
+  default     = "agentcore"
+}
+
 variable "region" {
   description = "AWS region"
   type        = string
