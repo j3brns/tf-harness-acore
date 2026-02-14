@@ -181,6 +181,7 @@ resource "aws_cloudwatch_log_group" "gateway" {
 
 # CloudWatch Log Resource Policy for Bedrock AgentCore service
 resource "aws_cloudwatch_log_resource_policy" "bedrock_agentcore" {
+  # checkov:skip=CKV_AWS_111: PutResourcePolicy requires wildcard
   count = var.enable_observability ? 1 : 0
 
   policy_name = "bedrock-agentcore-log-policy-${var.agent_name}"

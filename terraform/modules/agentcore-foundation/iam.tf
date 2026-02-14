@@ -144,6 +144,11 @@ resource "aws_iam_role" "workload_identity" {
 }
 
 resource "aws_iam_role_policy" "workload_identity" {
+  # checkov:skip=CKV_AWS_108: Bedrock actions require wildcard with ABAC condition
+  # checkov:skip=CKV_AWS_109: Bedrock actions require wildcard with ABAC condition
+  # checkov:skip=CKV_AWS_110: Bedrock actions require wildcard with ABAC condition
+  # checkov:skip=CKV_AWS_111: Bedrock actions require wildcard with ABAC condition
+  # checkov:skip=CKV_AWS_356: Bedrock actions require wildcard with ABAC condition
   name = "${var.agent_name}-workload-policy"
   role = aws_iam_role.workload_identity.id
 

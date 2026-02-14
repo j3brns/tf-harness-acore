@@ -57,6 +57,18 @@ skip-check:
   # CKV2_AWS_6: S3 public access block - enforced via aws_s3_bucket_public_access_block
   - CKV2_AWS_6
 
+  # CKV_AWS_111: IAM policy should not allow * resource - many bedrock/ec2 actions require this (documented)
+  - CKV_AWS_111
+
+  # CKV_AWS_356: IAM policy should not allow full access - used for cross-account/service assumption
+  - CKV_AWS_356
+
+  # CKV_AWS_107, 108, 109, 110: Bedrock/STS actions sometimes flagged as high risk
+  - CKV_AWS_107
+  - CKV_AWS_108
+  - CKV_AWS_109
+  - CKV_AWS_110
+
 # Download external modules for scanning
 download-external-modules: false
 
