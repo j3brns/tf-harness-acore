@@ -28,7 +28,12 @@ resource "aws_iam_role" "runtime" {
         Action = "sts:AssumeRole"
         Effect = "Allow"
         Principal = {
-          AWS = var.proxy_role_arn
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+        Condition = {
+          ArnEquals = {
+            "aws:PrincipalArn" = var.proxy_role_arn
+          }
         }
       }] : []
     )

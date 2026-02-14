@@ -76,7 +76,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "deployment" {
 resource "aws_cloudwatch_log_group" "packaging" {
   count = var.enable_packaging ? 1 : 0
 
-  name              = "/aws/bedrock/agentcore/packaging/${var.agent_name}"
+  name              = "/aws/bedrock/agentcore/packaging/${var.agent_name}-${var.environment}"
   retention_in_days = var.log_retention_days
 
   tags = var.tags
@@ -86,7 +86,7 @@ resource "aws_cloudwatch_log_group" "packaging" {
 resource "aws_cloudwatch_log_group" "runtime" {
   count = var.enable_runtime ? 1 : 0
 
-  name              = "/aws/bedrock/agentcore/runtime/${var.agent_name}"
+  name              = "/aws/bedrock/agentcore/runtime/${var.agent_name}-${var.environment}"
   retention_in_days = var.log_retention_days
 
   tags = var.tags

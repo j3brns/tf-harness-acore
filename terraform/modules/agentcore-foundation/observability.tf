@@ -1,15 +1,3 @@
-# CloudWatch Log Group for Agent Runtime
-resource "aws_cloudwatch_log_group" "agentcore" {
-  count = var.enable_observability ? 1 : 0
-
-  name              = "/aws/bedrock/agentcore/runtime/${var.agent_name}"
-  retention_in_days = var.log_retention_days
-
-  tags = var.tags
-
-  depends_on = [aws_cloudwatch_log_resource_policy.bedrock_agentcore]
-}
-
 # X-Ray Sampling Rule for AgentCore
 resource "aws_xray_sampling_rule" "agentcore" {
   count = var.enable_observability && var.enable_xray ? 1 : 0
