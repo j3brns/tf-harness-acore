@@ -53,16 +53,16 @@ validate_example() {
     if [ "$status" -eq 0 ]; then
         echo "  PASS: Plan generated successfully"
         rm -f "test-${example_name}.tfplan"
-        ((PASS_COUNT++))
+        PASS_COUNT=$((PASS_COUNT + 1))
         return 0
     elif echo "$output" | grep -qE "No valid credential sources found|failed to refresh cached credentials"; then
         echo "  SKIP: AWS credentials not available for plan"
-        ((SKIP_COUNT++))
+        SKIP_COUNT=$((SKIP_COUNT + 1))
         return 0
     else
         echo "  FAIL: Plan failed for $example_file"
         echo "$output"
-        ((FAIL_COUNT++))
+        FAIL_COUNT=$((FAIL_COUNT + 1))
         return 1
     fi
 }
@@ -79,7 +79,7 @@ if [ -d "$EXAMPLES_DIR" ]; then
         echo "Found configurations:"
         echo "$FILES"
         for example_file in $FILES; do
-            ((EXAMPLE_COUNT++))
+            EXAMPLE_COUNT=$((EXAMPLE_COUNT + 1))
             # Don't let a single failure stop the script, so we can see the summary
             validate_example "$example_file" || true
         done
