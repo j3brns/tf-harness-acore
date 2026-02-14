@@ -70,8 +70,8 @@ validate_example() {
 # Find all .tfvars and .tfvars.example files in subdirectories
 echo "Scanning for configuration files in $EXAMPLES_DIR subdirectories..."
 if [ -d "$EXAMPLES_DIR" ]; then
-    # Use a robust find command with escaped parentheses
-    FILES=$(find "$EXAMPLES_DIR" -mindepth 2 -maxdepth 3 \( -name "*.tfvars" -o -name "*.tfvars.example" \))
+    # Use a robust find command with escaped parentheses, excluding mcp-servers
+    FILES=$(find "$EXAMPLES_DIR" -maxdepth 3 -not -path "*/mcp-servers/*" \( -name "*.tfvars" -o -name "*.tfvars.example" \))
 
     if [ -z "$FILES" ]; then
         echo "WARN: No .tfvars or .tfvars.example files found in $EXAMPLES_DIR"
