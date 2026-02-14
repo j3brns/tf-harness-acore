@@ -1,7 +1,7 @@
 # S3 bucket for deployment artifacts
 resource "aws_s3_bucket" "deployment" {
   count  = var.deployment_bucket_name == "" ? 1 : 0
-  bucket = "${var.agent_name}-deploy-${var.environment}-${data.aws_caller_identity.current.account_id}"
+  bucket = "${var.app_id}-${var.agent_name}-${data.aws_caller_identity.current.account_id}"
 
   tags = var.tags
 }
