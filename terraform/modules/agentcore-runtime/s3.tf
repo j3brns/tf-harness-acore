@@ -6,6 +6,15 @@ resource "aws_s3_bucket" "deployment" {
   tags = var.tags
 }
 
+# S3 Access Logging
+resource "aws_s3_bucket_logging" "deployment" {
+  count  = var.deployment_bucket_name == "" && var.logging_bucket_id != "" ? 1 : 0
+  bucket = aws_s3_bucket.deployment[0].id
+
+  target_bucket = var.logging_bucket_id
+  target_prefix = "s3-access-logs/deployment/"
+}
+
 # Block public access to deployment bucket
 resource "aws_s3_bucket_public_access_block" "deployment" {
   count  = var.deployment_bucket_name == "" ? 1 : 0

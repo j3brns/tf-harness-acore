@@ -41,6 +41,16 @@ output "log_group_arn" {
   value       = var.enable_observability ? aws_cloudwatch_log_group.agentcore[0].arn : null
 }
 
+output "access_logs_bucket_id" {
+  description = "Name of the S3 bucket for access logs"
+  value       = var.enable_observability ? aws_s3_bucket.access_logs[0].id : null
+}
+
+output "access_logs_bucket_arn" {
+  description = "ARN of the S3 bucket for access logs"
+  value       = var.enable_observability ? aws_s3_bucket.access_logs[0].arn : null
+}
+
 output "kms_key_id" {
   description = "DEPRECATED: Customer-managed KMS is no longer used. AWS-managed encryption is applied."
   value       = null

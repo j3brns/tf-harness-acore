@@ -86,6 +86,7 @@ module "agentcore_runtime" {
   # S3 deployment
   deployment_bucket_name = var.deployment_bucket_name
   enable_s3_encryption   = var.enable_s3_encryption
+  logging_bucket_id      = module.agentcore_foundation.access_logs_bucket_id
 
   # Packaging
   enable_packaging    = var.enable_packaging
@@ -149,6 +150,7 @@ module "agentcore_bff" {
   oidc_issuer            = var.oidc_issuer
   oidc_client_id         = var.oidc_client_id
   oidc_client_secret_arn = var.oidc_client_secret_arn
+  logging_bucket_id      = module.agentcore_foundation.access_logs_bucket_id
 
   # Integration
   agentcore_runtime_arn = var.bff_agentcore_runtime_arn != "" ? var.bff_agentcore_runtime_arn : module.agentcore_runtime.runtime_arn

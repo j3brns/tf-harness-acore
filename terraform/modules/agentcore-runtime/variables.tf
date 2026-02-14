@@ -114,6 +114,12 @@ variable "deployment_bucket_name" {
   default     = ""
 }
 
+variable "logging_bucket_id" {
+  description = "Optional S3 bucket ID for access logs"
+  type        = string
+  default     = ""
+}
+
 variable "enable_s3_versioning" {
   description = "Enable S3 versioning for deployment bucket"
   type        = bool

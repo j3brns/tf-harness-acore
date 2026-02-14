@@ -1,0 +1,70 @@
+# Centralized S3 Logging Bucket
+resource "aws_s3_bucket" "access_logs" {
+  count  = var.enable_observability ? 1 : 0
+  bucket = "${var.agent_name}-access-logs-${data.aws_caller_identity.current.account_id}"
+
+  tags = var.tags
+}
+
+# Block public access
+resource "aws_s3_bucket_public_access_block" "access_logs" {
+  count  = var.enable_observability ? 1 : 0
+  bucket = aws_s3_bucket.access_logs[0].id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# Encryption
+resource "aws_s3_bucket_server_side_encryption_configuration" "access_logs" {
+  count  = var.enable_observability ? 1 : 0
+  bucket = aws_s3_bucket.access_logs[0].id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+# Lifecycle: Expire logs after 90 days
+resource "aws_s3_bucket_lifecycle_configuration" "access_logs" {
+  count  = var.enable_observability ? 1 : 0
+  bucket = aws_s3_bucket.access_logs[0].id
+
+  rule {
+    id     = "expire-logs"
+    status = "Enabled"
+    expiration {
+      days = 90
+    }
+  }
+}
+
+# Policy to allow Log Delivery
+resource "aws_s3_bucket_policy" "access_logs" {
+  count  = var.enable_observability ? 1 : 0
+  bucket = aws_s3_bucket.access_logs[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "S3ServerAccessLogsPolicy"
+        Effect = "Allow"
+        Principal = {
+          Service = "logging.s3.amazonaws.com"
+        }
+        Action   = "s3:PutObject"
+        Resource = "${aws_s3_bucket.access_logs[0].arn}/*"
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+        }
+      }
+    ]
+  })
+}

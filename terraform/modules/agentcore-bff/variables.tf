@@ -50,6 +50,12 @@ variable "spa_bucket_name" {
   default     = "" # Generated if empty
 }
 
+variable "logging_bucket_id" {
+  description = "Optional S3 bucket ID for access logs"
+  type        = string
+  default     = ""
+}
+
 variable "oidc_issuer" {
   description = "OIDC Issuer URL (e.g., https://login.microsoftonline.com/...)"
   type        = string

@@ -47,6 +47,15 @@ resource "aws_s3_bucket" "spa" {
   tags = var.tags
 }
 
+# S3 Access Logging
+resource "aws_s3_bucket_logging" "spa" {
+  count  = var.enable_bff && var.logging_bucket_id != "" ? 1 : 0
+  bucket = aws_s3_bucket.spa[0].id
+
+  target_bucket = var.logging_bucket_id
+  target_prefix = "s3-access-logs/spa/"
+}
+
 # Strict Security: Block all public access
 resource "aws_s3_bucket_public_access_block" "spa" {
   count = var.enable_bff ? 1 : 0

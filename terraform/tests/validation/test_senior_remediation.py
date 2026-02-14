@@ -74,6 +74,29 @@ def test_apigw_access_logs():
             
     print("  PASS: APIGW Access Logging verified.")
 
+def test_s3_access_logging():
+    print("[Senior Test 7] Verifying Centralized S3 Access Logging...")
+    foundation_s3_path = "terraform/modules/agentcore-foundation/s3.tf"
+    runtime_s3_path = "terraform/modules/agentcore-runtime/s3.tf"
+    bff_data_path = "terraform/modules/agentcore-bff/data.tf"
+    
+    with open(foundation_s3_path, "r") as f:
+        content = f.read()
+        if 'resource "aws_s3_bucket" "access_logs"' not in content:
+            raise Exception("FAILED: Centralized logging bucket missing from foundation")
+        if '"logging.s3.amazonaws.com"' not in content:
+            raise Exception("FAILED: S3 logging service principal missing from bucket policy")
+            
+    with open(runtime_s3_path, "r") as f:
+        if 'resource "aws_s3_bucket_logging" "deployment"' not in f.read():
+            raise Exception("FAILED: Access logging missing from deployment bucket")
+            
+    with open(bff_data_path, "r") as f:
+        if 'resource "aws_s3_bucket_logging" "spa"' not in f.read():
+            raise Exception("FAILED: Access logging missing from SPA bucket")
+            
+    print("  PASS: Centralized S3 Access Logging verified.")
+
 if __name__ == "__main__":
     try:
         test_s3_lifecycle()
@@ -82,6 +105,7 @@ if __name__ == "__main__":
         test_alarm_actions()
         test_python_logging_hygiene()
         test_apigw_access_logs()
+        test_s3_access_logging()
         print("\nAll Senior Engineer operational tests PASSED successfully.")
     except Exception as e:
         print("\nSENIOR OPERATIONAL TEST FAILED: " + str(e))
