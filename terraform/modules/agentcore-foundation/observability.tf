@@ -39,7 +39,7 @@ resource "aws_xray_group" "agentcore_errors" {
   count = var.enable_observability && var.enable_xray ? 1 : 0
 
   group_name        = "${var.agent_name}-errors"
-  filter_expression = "status code >= 400"
+  filter_expression = "http.status >= 400"
 
   insights_configuration {
     insights_enabled      = true
