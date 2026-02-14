@@ -14,7 +14,7 @@ Features demonstrated:
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Any, Optional
 
 # Configure logging
@@ -140,7 +140,7 @@ class ResearchAgent:
     def store_memory(self, key: str, value: Any) -> None:
         """Store findings in long-term memory."""
         logger.info(f"Storing in memory: {key}")
-        self.memory[key] = {"value": value, "timestamp": datetime.utcnow().isoformat()}
+        self.memory[key] = {"value": value, "timestamp": datetime.now(UTC).isoformat()}
 
     def recall_memory(self, key: str) -> Optional[Any]:
         """Recall from long-term memory."""
@@ -150,7 +150,7 @@ class ResearchAgent:
         """Generate comprehensive research report."""
         return {
             "title": f"Research Report: {query}",
-            "generated": datetime.utcnow().isoformat() + "Z",
+            "generated": datetime.now(UTC).isoformat() + "Z",
             "summary": f"Comprehensive analysis of {len(papers)} papers on {query}",
             "methodology": {
                 "sources": ["ArXiv", "PubMed"],
@@ -204,7 +204,7 @@ class ResearchAgent:
         logger.info("Step 4: Storing in memory...")
         self.store_memory(
             f"research_{query}",
-            {"papers": len(all_papers), "findings": findings, "timestamp": datetime.utcnow().isoformat()},
+            {"papers": len(all_papers), "findings": findings, "timestamp": datetime.now(UTC).isoformat()},
         )
 
         # Step 5: Generate report
@@ -239,7 +239,7 @@ def handler(event: dict, context: Any) -> dict:
         return {
             "status": "success",
             "message": f"Research completed on: {query}",
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             "report": report,
         }
 
@@ -248,7 +248,7 @@ def handler(event: dict, context: Any) -> dict:
         return {
             "status": "error",
             "message": f"Research failed: {str(e)}",
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         }
 
 

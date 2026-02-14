@@ -13,7 +13,7 @@ Features demonstrated:
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, UTC
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -48,7 +48,7 @@ def handler(event, context):
         result = {
             "status": "success",
             "message": "Hello from Bedrock AgentCore!",
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             "data": {
                 "bucket_count": len(buckets),
                 "buckets": [
@@ -67,7 +67,7 @@ def handler(event, context):
         return {
             "status": "success",
             "message": "Hello from Bedrock AgentCore! (demo mode - boto3 not available)",
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             "data": {"bucket_count": 0, "buckets": [], "demo_mode": True},
         }
 
@@ -76,7 +76,7 @@ def handler(event, context):
         return {
             "status": "error",
             "message": f"Failed to list buckets: {str(e)}",
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         }
 
 

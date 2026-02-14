@@ -14,7 +14,7 @@ Features demonstrated:
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Any
 
 # Configure logging
@@ -77,10 +77,30 @@ def analyze_survival(data: list) -> dict:
 
     Uses pandas if available, falls back to manual calculation.
     """
+    if not data:
+        return {
+            "total_passengers": 0,
+            "survivors": 0,
+            "overall_survival_rate": 0,
+            "survival_by_class": {},
+            "survival_by_gender": {},
+            "avg_age": {"survivors": None, "non_survivors": None},
+        }
+
     try:
         import pandas as pd
 
         df = pd.DataFrame(data)
+
+        if df.empty or "Survived" not in df.columns:
+            return {
+                "total_passengers": len(df),
+                "survivors": 0,
+                "overall_survival_rate": 0,
+                "survival_by_class": {},
+                "survival_by_gender": {},
+                "avg_age": {"survivors": None, "non_survivors": None},
+            }
 
         # Calculate survival statistics
         total = len(df)
@@ -183,7 +203,7 @@ def handler(event: dict, context: Any) -> dict:
         result = {
             "status": "success",
             "message": "Titanic survival analysis complete",
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             "analysis": analysis,
             "insights": insights,
         }
@@ -196,7 +216,7 @@ def handler(event: dict, context: Any) -> dict:
         return {
             "status": "error",
             "message": f"Analysis failed: {str(e)}",
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         }
 
 

@@ -22,6 +22,11 @@ cd "$TERRAFORM_DIR"
 # Initialize Terraform
 echo ""
 echo "Initializing Terraform..."
+export PATH=$PATH:/usr/local/bin
+if ! command -v terraform &> /dev/null; then
+    echo "ERROR: terraform command not found in PATH"
+    exit 1
+fi
 terraform init -backend=false -input=false
 
 # Counter and tracking
