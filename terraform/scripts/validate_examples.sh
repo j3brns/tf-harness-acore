@@ -67,14 +67,17 @@ validate_example() {
     fi
 }
 
-# Find all .tfvars and .tfvars.example files
+# Find all .tfvars and .tfvars.example files in subdirectories
+echo "Scanning for configuration files in $EXAMPLES_DIR subdirectories..."
 if [ -d "$EXAMPLES_DIR" ]; then
-    # Use a simpler find and loop to avoid shell-specific redirection issues
-    FILES=$(find "$EXAMPLES_DIR" -type f \( -name "*.tfvars" -o -name "*.tfvars.example" \))
+    # Use a robust find command targeting subdirectories only
+    FILES=$(find "$EXAMPLES_DIR" -mindepth 2 -maxdepth 3 -name "*.tfvars" -o -name "*.tfvars.example")
 
     if [ -z "$FILES" ]; then
         echo "WARN: No .tfvars or .tfvars.example files found in $EXAMPLES_DIR"
     else
+        echo "Found configurations:"
+        echo "$FILES"
         for example_file in $FILES; do
             ((EXAMPLE_COUNT++))
             validate_example "$example_file"
