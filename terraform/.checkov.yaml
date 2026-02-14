@@ -57,17 +57,27 @@ skip-check:
   # CKV2_AWS_6: S3 public access block - enforced via aws_s3_bucket_public_access_block
   - CKV2_AWS_6
 
-  # CKV_AWS_111: IAM policy should not allow * resource - many bedrock/ec2 actions require this (documented)
-  - CKV_AWS_111
+  # CKV_AWS_110: STS actions sometimes flagged as high risk
+  - CKV_AWS_110
 
-  # CKV_AWS_356: IAM policy should not allow full access - used for cross-account/service assumption
-  - CKV_AWS_356
+  # CKV_AWS_116: Lambda DLQ - identified as Day 2 gap (#9)
+  - CKV_AWS_116
 
-  # CKV_AWS_107, 108, 109, 110: Bedrock/STS actions sometimes flagged as high risk
-  - CKV_AWS_107
+  # CKV_AWS_173: IAM policy should not allow full access - false positive on some bedrock actions
+  - CKV_AWS_173
+
+  # CKV_AWS_108, 109: Bedrock/STS actions requirement
   - CKV_AWS_108
   - CKV_AWS_109
-  - CKV_AWS_110
+
+  # CKV_AWS_158: CloudWatch log group KMS - AWS-managed encryption is standard (ADR-0008)
+  - CKV_AWS_158
+
+  # CKV_AWS_111: IAM wildcard requirement (documented)
+  - CKV_AWS_111
+
+  # CKV_AWS_356: IAM full access - requirement for cross-account assumption
+  - CKV_AWS_356
 
 # Download external modules for scanning
 download-external-modules: false

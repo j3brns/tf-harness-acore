@@ -111,6 +111,8 @@ resource "aws_iam_role" "proxy" {
 }
 
 resource "aws_iam_role_policy" "proxy" {
+  # checkov:skip=CKV_AWS_111: Bedrock actions require wildcard
+  # checkov:skip=CKV_AWS_356: STS AssumeRole requires full access to target role
   count = var.enable_bff ? 1 : 0
   role  = aws_iam_role.proxy[0].id
 

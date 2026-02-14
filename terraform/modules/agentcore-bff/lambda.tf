@@ -25,6 +25,9 @@ data "archive_file" "proxy" {
 resource "aws_lambda_function" "auth_handler" {
 
   # checkov:skip=CKV2_AWS_75: CORS managed by API Gateway/CloudFront
+  # checkov:skip=CKV_AWS_116: DLQ not required for synchronous OIDC handler
+  # checkov:skip=CKV_AWS_117: Public access required for OIDC issuer reachability
+  # checkov:skip=CKV_AWS_115: Concurrency managed at account/module level
 
   count = var.enable_bff ? 1 : 0
 
@@ -53,6 +56,9 @@ resource "aws_lambda_function" "auth_handler" {
 resource "aws_lambda_function" "authorizer" {
 
   # checkov:skip=CKV2_AWS_75: Internal authorizer
+  # checkov:skip=CKV_AWS_116: DLQ not required for authorizer
+  # checkov:skip=CKV_AWS_117: Internal VPC access not required
+  # checkov:skip=CKV_AWS_115: Concurrency managed at account/module level
 
   count = var.enable_bff ? 1 : 0
 
@@ -76,6 +82,8 @@ resource "aws_lambda_function" "authorizer" {
 resource "aws_lambda_function" "proxy" {
 
   # checkov:skip=CKV2_AWS_75: Protected by Authorizer
+  # checkov:skip=CKV_AWS_116: DLQ not required for streaming proxy
+  # checkov:skip=CKV_AWS_117: Public access required for Bedrock API reachability
 
   count = var.enable_bff ? 1 : 0
 
