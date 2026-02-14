@@ -54,7 +54,7 @@ resource "aws_api_gateway_stage" "bff" {
 
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.apigw_access[0].arn
-    format          = jsonencode({
+    format = jsonencode({
       requestId      = "$context.requestId"
       ip             = "$context.identity.sourceIp"
       caller         = "$context.identity.caller"
@@ -81,7 +81,7 @@ resource "aws_api_gateway_method_settings" "bff" {
   settings {
     metrics_enabled = true
     logging_level   = "INFO"
-    
+
     # Senior Engineer: Global Throttling
     throttling_burst_limit = 100
     throttling_rate_limit  = 50

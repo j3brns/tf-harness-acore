@@ -74,12 +74,12 @@ resource "aws_cloudfront_distribution" "bff" {
     response_headers_policy_id = aws_cloudfront_response_headers_policy.security[0].id
 
     viewer_protocol_policy = "redirect-to-https"
-    
+
     # Senior Engineer: Prevent index.html caching
     # This ensures new deploys are visible immediately
-    min_ttl                = 0
-    default_ttl            = 0
-    max_ttl                = 0
+    min_ttl     = 0
+    default_ttl = 0
+    max_ttl     = 0
   }
 
   # API Behavior
