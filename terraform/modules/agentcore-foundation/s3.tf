@@ -1,5 +1,9 @@
 # Centralized S3 Logging Bucket
 resource "aws_s3_bucket" "access_logs" {
+  # checkov:skip=CKV_AWS_18: This is the logging bucket itself
+  # checkov:skip=CKV_AWS_144: Single region design
+  # checkov:skip=CKV_AWS_145: Using AWS-managed SSE-S3
+  # checkov:skip=CKV_AWS_21: Versioning not required for access logs
   count  = var.enable_observability ? 1 : 0
   bucket = "${var.agent_name}-access-logs-${data.aws_caller_identity.current.account_id}"
 

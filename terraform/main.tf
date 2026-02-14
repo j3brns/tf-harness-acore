@@ -1,5 +1,7 @@
 # Root module - orchestrates all AgentCore components
 
+data "aws_caller_identity" "current" {}
+
 module "agentcore_foundation" {
   source = "./modules/agentcore-foundation"
 
@@ -63,6 +65,7 @@ module "agentcore_runtime" {
   agent_name     = var.agent_name
   region         = local.agentcore_region
   bedrock_region = local.bedrock_region
+  environment    = var.environment
   tags           = var.tags
 
   # Runtime configuration
@@ -144,10 +147,11 @@ module "agentcore_bff" {
   enable_bff       = var.enable_bff
   agent_name       = var.agent_name
   app_id           = local.app_id
-  region           = local.bff_region
-  agentcore_region = local.agentcore_region
-  environment      = var.environment
-  tags             = var.tags
+  region                     = local.bff_region
+  agentcore_region           = local.agentcore_region
+  environment                = var.environment
+  tags                       = var.tags
+  log_retention_days         = var.log_retention_days
 
   # Auth Configuration
   oidc_issuer            = var.oidc_issuer

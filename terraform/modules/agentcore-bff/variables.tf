@@ -80,6 +80,12 @@ variable "session_ttl_seconds" {
   default     = 3600 # 1 hour
 }
 
+variable "log_retention_days" {
+  description = "CloudWatch log retention in days"
+  type        = number
+  default     = 30
+}
+
 variable "reserved_concurrency" {
   description = "Reserved concurrent executions for the Lambda functions"
   type        = number

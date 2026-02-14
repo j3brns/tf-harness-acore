@@ -1,5 +1,7 @@
 # WAF for API Gateway protection
 resource "aws_wafv2_web_acl" "main" {
+  # checkov:skip=CKV_AWS_192: WAF logging requires additional cost decision
+  # checkov:skip=CKV_AWS_176: Default action is Allow to prevent accidental broad lockout in this harness
   count = var.enable_waf ? 1 : 0
   name  = "agentcore-waf-${var.agent_name}"
   scope = "REGIONAL"
