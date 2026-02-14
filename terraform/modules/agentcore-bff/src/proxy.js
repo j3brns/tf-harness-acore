@@ -2,12 +2,16 @@
 const { SignatureV4 } = require("@smithy/signature-v4");
 const { Sha256 } = require("@aws-crypto/sha256-js");
 const { defaultProvider } = require("@aws-sdk/credential-provider-node");
+const { STSClient, AssumeRoleCommand } = require("@aws-sdk/client-sts");
 const https = require("https");
 const { URL } = require("url");
 
 const AGENTCORE_RUNTIME_ARN = process.env.AGENTCORE_RUNTIME_ARN;
 const AGENTCORE_REGION = process.env.AGENTCORE_REGION || process.env.AWS_REGION;
+const AGENTCORE_RUNTIME_ROLE_ARN = process.env.AGENTCORE_RUNTIME_ROLE_ARN;
 const AGENTCORE_SERVICE = "bedrock-agentcore";
+
+const stsClient = new STSClient({ region: AGENTCORE_REGION });
 
 function writeError(responseStream, statusCode, message) {
   const s = awslambda.HttpResponseStream.from(responseStream, {
@@ -17,12 +21,12 @@ function writeError(responseStream, statusCode, message) {
   s.end(JSON.stringify({ error: message }));
 }
 
-async function signRequest(method, url, headers, body) {
+async function signRequest(method, url, headers, body, credentials) {
   const parsed = new URL(url);
   const signer = new SignatureV4({
     service: AGENTCORE_SERVICE,
     region: AGENTCORE_REGION,
-    credentials: defaultProvider(),
+    credentials: credentials || defaultProvider(),
     sha256: Sha256,
   });
 
@@ -172,7 +176,51 @@ exports.handler = awslambda.streamifyResponse(async (event, responseStream) => {
 
     const payload = JSON.stringify({ prompt });
 
-    const signed = await signRequest("POST", url.toString(), headers, payload);
+    let credentials;
+    if (AGENTCORE_RUNTIME_ROLE_ARN && tenantId && appId) {
+      try {
+        // Senior Move: Dynamic Session Policy (Physical Isolation)
+        const sessionPolicy = {
+          Version: "2012-10-17",
+          Statement: [
+            {
+              Effect: "Allow",
+              Action: ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
+              Resource: [
+                `arn:aws:s3:::*-deployment-*`,
+                `arn:aws:s3:::*-memory-*/${appId}/${tenantId}/*`,
+                `arn:aws:s3:::*-memory-*/${appId}/${tenantId}`
+              ]
+            },
+            {
+              Effect: "Allow",
+              Action: ["bedrock-agentcore:InvokeAgentRuntime"],
+              Resource: [AGENTCORE_RUNTIME_ARN]
+            }
+          ]
+        };
+
+        const assumeRoleCmd = new AssumeRoleCommand({
+          RoleArn: AGENTCORE_RUNTIME_ROLE_ARN,
+          RoleSessionName: `AgentCore-${appId}-${tenantId}`,
+          Policy: JSON.stringify(sessionPolicy),
+          DurationSeconds: 900
+        });
+
+        const assumed = await stsClient.send(assumeRoleCmd);
+        credentials = {
+          accessKeyId: assumed.Credentials.AccessKeyId,
+          secretAccessKey: assumed.Credentials.SecretAccessKey,
+          sessionToken: assumed.Credentials.SessionToken
+        };
+      } catch (err) {
+        console.error(`AssumeRole failed: ${err}`);
+        // Fallback to default if assumption fails, or throw if strict
+        throw new Error(`Identity isolation failed: ${err.message}`);
+      }
+    }
+
+    const signed = await signRequest("POST", url.toString(), headers, payload, credentials);
     await sendRequest(signed, payload, responseStream, sessionId);
   } catch (err) {
     writeError(responseStream, 500, String(err));

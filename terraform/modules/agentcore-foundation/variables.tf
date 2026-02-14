@@ -136,6 +136,12 @@ variable "alarm_sns_topic_arn" {
   default     = ""
 }
 
+variable "enable_waf" {
+  description = "Enable WAF protection for API Gateway"
+  type        = bool
+  default     = false
+}
+
 variable "xray_sampling_rate" {
   description = "X-Ray sampling rate (0.0 to 1.0)"
   type        = number

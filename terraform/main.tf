@@ -25,6 +25,7 @@ module "agentcore_foundation" {
   log_retention_days   = var.log_retention_days
   enable_xray          = var.enable_xray
   alarm_sns_topic_arn  = var.alarm_sns_topic_arn
+  enable_waf           = var.enable_waf
 
   # Encryption
   enable_kms  = var.enable_kms
@@ -87,11 +88,13 @@ module "agentcore_runtime" {
   deployment_bucket_name = var.deployment_bucket_name
   enable_s3_encryption   = var.enable_s3_encryption
   logging_bucket_id      = module.agentcore_foundation.access_logs_bucket_id
+  proxy_role_arn         = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/agentcore-bff-proxy-${var.agent_name}-${var.environment}"
 
   # Packaging
-  enable_packaging    = var.enable_packaging
-  python_version      = var.python_version
-  lambda_architecture = var.lambda_architecture
+  enable_packaging     = var.enable_packaging
+  python_version       = var.python_version
+  lambda_architecture  = var.lambda_architecture
+  reserved_concurrency = var.runtime_reserved_concurrency
 
   depends_on = [
     module.agentcore_foundation
@@ -150,7 +153,10 @@ module "agentcore_bff" {
   oidc_issuer            = var.oidc_issuer
   oidc_client_id         = var.oidc_client_id
   oidc_client_secret_arn = var.oidc_client_secret_arn
-  logging_bucket_id      = module.agentcore_foundation.access_logs_bucket_id
+  logging_bucket_id          = module.agentcore_foundation.access_logs_bucket_id
+  reserved_concurrency       = var.proxy_reserved_concurrency
+  waf_acl_arn                = module.agentcore_foundation.waf_acl_arn
+  agentcore_runtime_role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.agent_name}-runtime-role-${var.environment}"
 
   # Integration
   agentcore_runtime_arn = var.bff_agentcore_runtime_arn != "" ? var.bff_agentcore_runtime_arn : module.agentcore_runtime.runtime_arn

@@ -9,6 +9,7 @@ This document outlines planned features and improvements for the Bedrock AgentCo
 - [x] **OIDC PKCE Support**: Hardened authorization code flow to prevent interception.
 - [x] **Native 15-Minute Streaming**: Upgraded to AWS Provider v6.x to bypass the 29s REST API timeout.
 - [x] **Multi-Tenant Session Partitioning**: Refactored DynamoDB to use composite keys (app_id + session_id).
+- [x] **Full Tenant Isolation (Rule 14)**: Implemented cross-tenant isolation in BFF Proxy and automated isolation tests.
 
 ## 🚀 High Priority (Reliability & Security)
 

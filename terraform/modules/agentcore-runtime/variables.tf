@@ -162,6 +162,18 @@ variable "runtime_inline_policies" {
   default     = {}
 }
 
+variable "proxy_role_arn" {
+  description = "IAM role ARN of the BFF proxy to allow role assumption"
+  type        = string
+  default     = ""
+}
+
+variable "reserved_concurrency" {
+  description = "Reserved concurrent executions for the agent runtime"
+  type        = number
+  default     = -1
+}
+
 # Packaging configuration
 variable "enable_packaging" {
   description = "Enable two-stage build process for dependencies"

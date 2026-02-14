@@ -116,22 +116,32 @@ resource "aws_iam_role_policy" "proxy" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Effect   = "Allow"
-        Action   = ["bedrock-agentcore:InvokeAgentRuntime"]
-        Resource = var.agentcore_runtime_arn
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Resource = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/*"
-      }
-    ]
+    Statement = concat(
+      [
+        {
+          Effect   = "Allow"
+          Action   = ["bedrock-agentcore:InvokeAgentRuntime"]
+          Resource = var.agentcore_runtime_arn
+        },
+        {
+          Effect = "Allow"
+          Action = [
+            "logs:CreateLogGroup",
+            "logs:CreateLogStream",
+            "logs:PutLogEvents"
+          ]
+          Resource = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/*"
+        }
+      ],
+      # Senior Move: Dynamic Session Policies
+      var.agentcore_runtime_role_arn != "" ? [
+        {
+          Effect   = "Allow"
+          Action   = ["sts:AssumeRole"]
+          Resource = var.agentcore_runtime_role_arn
+        }
+      ] : []
+    )
   })
 }
 

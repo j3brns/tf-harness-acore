@@ -80,4 +80,22 @@ variable "session_ttl_seconds" {
   default     = 3600 # 1 hour
 }
 
+variable "reserved_concurrency" {
+  description = "Reserved concurrent executions for the Lambda functions"
+  type        = number
+  default     = -1 # Unlimited by default
+}
+
+variable "waf_acl_arn" {
+  description = "ARN of the WAF Web ACL to associate with API Gateway"
+  type        = string
+  default     = ""
+}
+
+variable "agentcore_runtime_role_arn" {
+  description = "IAM role ARN of the agent runtime to assume"
+  type        = string
+  default     = ""
+}
+
 # --- Integration ---

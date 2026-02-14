@@ -144,6 +144,26 @@ variable "alarm_sns_topic_arn" {
   default     = ""
 }
 
+# ===== SECURITY BATCH 3 VARIABLES =====
+
+variable "enable_waf" {
+  description = "Enable WAF protection for API Gateway"
+  type        = bool
+  default     = false
+}
+
+variable "proxy_reserved_concurrency" {
+  description = "Reserved concurrent executions for the BFF proxy Lambda"
+  type        = number
+  default     = 10
+}
+
+variable "runtime_reserved_concurrency" {
+  description = "Reserved concurrent executions for the agent runtime Lambda"
+  type        = number
+  default     = 10
+}
+
 variable "enable_kms" {
   description = "Enable KMS encryption for logs and artifacts"
   type        = bool

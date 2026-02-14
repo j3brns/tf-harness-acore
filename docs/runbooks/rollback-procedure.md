@@ -86,6 +86,7 @@ aws bedrock-agentcore-control list-runtimes
 | MCP tool bug | Lambda alias | < 1 min |
 | Gateway config | Terraform | 5-10 min |
 | IAM permission | Terraform | 5-10 min |
+| Tenant Isolation Error | Hot-fix / Patch | 5-10 min |
 | Multiple components | Full env | 15-30 min |
 | State corruption | State recovery | 10-20 min |
 

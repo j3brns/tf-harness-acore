@@ -131,6 +131,21 @@ python_version   = "3.12"
 
 ### Governance Configuration
 
+#### Multi-Tenant Cedar Policies
+Always include tenant isolation in your policies to follow **Rule 14.3**.
+
+```cedar
+permit(
+    principal,
+    action == Action::"InvokeAgent",
+    resource
+)
+when {
+    principal.tenant_id == resource.tenant_id &&
+    principal.app_id == "prod-research"
+};
+```
+
 ```hcl
 # Policy Engine
 enable_policy_engine  = true
@@ -423,6 +438,6 @@ runtime_inline_policies = {
 
 ---
 
-**Last Updated**: 2025-02-08
-**Version**: 1.0.0
-**Status**: Production Ready ✅
+**Last Updated**: 2026-02-13
+**Version**: 1.1.0
+**Status**: Production Ready ✅ (Multi-Tenant Hardened)

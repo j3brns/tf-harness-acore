@@ -5,6 +5,13 @@ const mockStreamWrite = jest.fn();
 const mockStreamEnd = jest.fn();
 const mockHttpStream = { write: mockStreamWrite, end: mockStreamEnd };
 
+// --- Mock STS ---
+const mockStsSend = jest.fn();
+jest.mock("@aws-sdk/client-sts", () => ({
+  STSClient: jest.fn(() => ({ send: mockStsSend })),
+  AssumeRoleCommand: jest.fn((args) => args),
+}));
+
 function setupAwsLambdaGlobal() {
   global.awslambda = {
     HttpResponseStream: {
@@ -27,6 +34,7 @@ setupAwsLambdaGlobal();
 const { handler, _writeError } = require("./proxy");
 // Capture the SAME SignatureV4 mock that proxy.js uses (before resetModules corrupts cache)
 const { SignatureV4 } = require("@smithy/signature-v4");
+const { STSClient, AssumeRoleCommand } = require("@aws-sdk/client-sts");
 
 // --- Helpers ---
 function makeEvent(body, overrides = {}) {
@@ -81,6 +89,7 @@ describe("proxy.js", () => {
     mockStreamWrite.mockClear();
     mockStreamEnd.mockClear();
     mockHttpsRequest.mockClear();
+    mockStsSend.mockClear();
     setupAwsLambdaGlobal();
   });
 
@@ -293,24 +302,19 @@ describe("proxy.js", () => {
     });
 
     test("prevents cross-tenant session access (Rule 14.1)", async () => {
-      // Scenario: User from Tenant A tries to use a session ID from Tenant B
-      // Note: This requires the authorizer to have verified the session/tenant mapping
-      // and passed the 'authorized_session_id' in the context.
-      
       const stream = mockResponseStream();
       const event = makeEvent(
         { prompt: "hello", sessionId: "session-tenant-B" },
         { 
           authorizer: { 
             tenant_id: "tenant-A",
-            session_id: "session-tenant-A" // The ID actually associated with this auth token
+            session_id: "session-tenant-A"
           } 
         }
       );
 
       await handler(event, stream);
 
-      // Should return 403 Forbidden because of session/tenant mismatch
       expect(global.awslambda.HttpResponseStream.from).toHaveBeenCalledWith(stream, {
         statusCode: 403,
         headers: { "content-type": "application/json" },
@@ -318,6 +322,63 @@ describe("proxy.js", () => {
       expect(mockStreamEnd).toHaveBeenCalledWith(
         JSON.stringify({ error: "Session isolation violation: tenant mismatch" })
       );
+    });
+
+    test("performs physical isolation via AssumeRole (Rule 14.3)", async () => {
+      process.env.AGENTCORE_RUNTIME_ROLE_ARN = "arn:aws:iam::123456789012:role/runtime";
+      setupMockRequest(200, {}, ["ok"]);
+      
+      jest.resetModules();
+      setupAwsLambdaGlobal();
+      jest.mock("https", () => ({ request: mockHttpsRequest }));
+      jest.mock("@aws-sdk/client-sts", () => ({
+        STSClient: jest.fn(() => ({ send: mockStsSend })),
+        AssumeRoleCommand: jest.fn((args) => args),
+      }));
+      // Re-mock SignatureV4 for this isolated test
+      jest.mock("@smithy/signature-v4", () => ({
+        SignatureV4: jest.fn().mockImplementation(() => ({
+          sign: jest.fn().mockResolvedValue({
+            method: "POST", hostname: "host", path: "/", headers: {},
+          }),
+        })),
+      }));
+
+      const { handler: h } = require("./proxy");
+      const { SignatureV4: SigV4 } = require("@smithy/signature-v4");
+
+      mockStsSend.mockResolvedValue({
+        Credentials: {
+          AccessKeyId: "ak-assumed",
+          SecretAccessKey: "sk-assumed",
+          SessionToken: "tok-assumed",
+        }
+      });
+
+      const stream = mockResponseStream();
+      await h(
+        makeEvent(
+          { prompt: "hello" },
+          { authorizer: { tenant_id: "tenant-A", app_id: "app-A", session_id: "default-session" } }
+        ),
+        stream
+      );
+
+      expect(mockStsSend).toHaveBeenCalled();
+      const assumeCall = mockStsSend.mock.calls[0][0];
+      expect(assumeCall.RoleArn).toBe("arn:aws:iam::123456789012:role/runtime");
+      expect(assumeCall.RoleSessionName).toBe("AgentCore-app-A-tenant-A");
+      
+      const policy = JSON.parse(assumeCall.Policy);
+      const s3Statement = policy.Statement.find(s => s.Action.includes("s3:GetObject"));
+      expect(s3Statement.Resource).toContain("arn:aws:s3:::*-memory-*/app-A/tenant-A/*");
+
+      // Verify credentials were used for signing
+      const sigV4Instance = SigV4.mock.results[SigV4.mock.results.length - 1].value;
+      const credentialsUsed = SigV4.mock.calls[SigV4.mock.calls.length - 1][0].credentials;
+      expect(credentialsUsed.accessKeyId).toBe("ak-assumed");
+      
+      delete process.env.AGENTCORE_RUNTIME_ROLE_ARN;
     });
   });
 

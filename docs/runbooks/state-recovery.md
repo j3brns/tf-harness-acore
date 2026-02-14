@@ -39,7 +39,7 @@ terraform init
 terraform plan
 ```
 
-### 2. State Lock Stuck
+### 2. State Lock Stuck (Native S3)
 
 **Symptoms:**
 - Error: "Error acquiring the state lock"
@@ -47,19 +47,17 @@ terraform plan
 
 **Recovery Steps:**
 
+Terraform 1.10+ uses **Native S3 locking**. A lock file is created at `agentcore/${ENV}/terraform.tfstate.tflock`.
+
 ```bash
-# 1. Check lock status
-aws dynamodb get-item \
-  --table-name terraform-state-lock-${ENV} \
-  --key '{"LockID": {"S": "terraform-state-${ENV}/agentcore/terraform.tfstate"}}'
+# 1. Identify the lock ID from the error message
+# Example: "ID: 12345678-abcd-..."
 
 # 2. Force unlock (DANGEROUS - ensure no other operations running)
 terraform force-unlock <LOCK_ID>
 
-# 3. If DynamoDB issue, manually delete lock
-aws dynamodb delete-item \
-  --table-name terraform-state-lock-${ENV} \
-  --key '{"LockID": {"S": "terraform-state-${ENV}/agentcore/terraform.tfstate"}}'
+# 3. If S3 object remains, manually delete the .tflock file
+aws s3 rm s3://terraform-state-${ENV}-${PROJECT_ID}/agentcore/${ENV}/terraform.tfstate.tflock
 ```
 
 ### 3. State Drift Detection
@@ -87,11 +85,11 @@ terraform apply -target=<RESOURCE>
 
 ## Prevention
 
-1. **Enable S3 versioning** on state bucket
-2. **Use DynamoDB locking** to prevent concurrent modifications
-3. **Never modify state manually** - use `terraform state` commands
-4. **Run weekly drift detection** in CI/CD pipeline
-5. **Test state recovery monthly** in dev environment
+1. **Enable S3 versioning** on state bucket.
+2. **Use native S3 locking** (`use_lockfile = true`) to prevent concurrent modifications.
+3. **Never modify state manually** - use `terraform state` commands.
+4. **Run weekly drift detection** in CI/CD pipeline.
+5. **Test state recovery monthly** in dev environment.
 
 ## Escalation
 

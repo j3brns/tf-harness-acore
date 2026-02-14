@@ -41,10 +41,22 @@ terraform fmt -check
 checkov -d . --framework terraform --compact --config-file .checkov.yaml
 
 # 5. Test with example
-terraform plan -var-file=../examples/1-hello-world/terraform.tfvars
+terraform plan \
+  -var-file=../examples/1-hello-world/terraform.tfvars \
+  -var="app_id=dev-sandbox" \
+  -var="lambda_architecture=arm64"
 ```
 
 If all commands succeed, you're ready to develop!
+
+## Core Variables
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `agent_name` | Physical name of the agent resource. | - |
+| `app_id` | Logical application boundary (North Anchor). | `${agent_name}` |
+| `lambda_architecture` | Compute architecture (`x86_64` or `arm64`). | `x86_64` |
+| `environment` | Deployment stage (`dev`, `staging`, `prod`). | `dev` |
 
 ## Development Workflow
 
@@ -100,6 +112,23 @@ tflint --recursive
 Terraform pre-commit hooks run via bash. On Windows:
 - For full checks, run `pre-commit` from **Git Bash or WSL**.
 - For a Windows-native minimal check, use `validate_windows.bat` (runs `terraform fmt` + `pre-commit` with Terraform hooks skipped).
+
+## Core Engineering Patterns
+
+### OCDS (Optimized Code/Dependency Separation)
+
+AgentCore uses a two-stage build process to ensure instant deployments:
+1.  **Stage 1 (Deps)**: Layers `pyproject.toml` into a dependency cache.
+2.  **Stage 2 (Code)**: Packages your agent logic.
+
+**Architecture Support**:
+You can target AWS Graviton (ARM64) for lower latency and cost by setting `lambda_architecture = "arm64"`. The OCDS engine will automatically fetch the correct Linux binaries.
+
+### Multi-Tenancy (North-South Join)
+Every interaction is anchored by the North-South join hierarchy:
+- **North (AppID)**: The logical boundary. In development, use unique values to isolate your work.
+- **Middle (TenantID)**: The unit of data ownership, extracted from the OIDC token.
+- **South (AgentName)**: The physical compute resource.
 
 ## Project Structure
 

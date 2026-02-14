@@ -5,23 +5,33 @@ locals {
 # IAM Role for Agent Runtime
 resource "aws_iam_role" "runtime" {
   count = var.enable_runtime && var.runtime_role_arn == "" ? 1 : 0
-  name  = "${var.agent_name}-runtime-role"
+  name  = "${var.agent_name}-runtime-role-${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
-      Principal = {
-        Service = "bedrock-agentcore.amazonaws.com"
-      }
-      # Rule 7.1: ABAC Scoping
-      Condition = {
-        StringEquals = {
-          "aws:PrincipalTag/Project" = local.project_tag
+    Statement = concat(
+      [{
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "bedrock-agentcore.amazonaws.com"
         }
-      }
-    }]
+        # Rule 7.1: ABAC Scoping
+        Condition = {
+          StringEquals = {
+            "aws:PrincipalTag/Project" = local.project_tag
+          }
+        }
+      }],
+      # Senior Move: Allow Proxy to assume this role with session policies
+      var.proxy_role_arn != "" ? [{
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          AWS = var.proxy_role_arn
+        }
+      }] : []
+    )
   })
 
   tags = var.tags

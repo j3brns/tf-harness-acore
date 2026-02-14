@@ -81,17 +81,19 @@ resource "aws_lambda_function" "proxy" {
 
 
 
-  function_name    = "agentcore-bff-proxy-${var.agent_name}"
-  role             = aws_iam_role.proxy[0].arn
-  handler          = "proxy.handler"
-  runtime          = "nodejs20.x"
-  filename         = data.archive_file.proxy[0].output_path
-  source_code_hash = data.archive_file.proxy[0].output_base64sha256
+  function_name                  = "agentcore-bff-proxy-${var.agent_name}"
+  role                           = aws_iam_role.proxy[0].arn
+  handler                        = "proxy.handler"
+  runtime                        = "nodejs20.x"
+  filename                       = data.archive_file.proxy[0].output_path
+  source_code_hash               = data.archive_file.proxy[0].output_base64sha256
+  reserved_concurrent_executions = var.reserved_concurrency > 0 ? var.reserved_concurrency : null
 
   environment {
     variables = {
-      AGENTCORE_RUNTIME_ARN = var.agentcore_runtime_arn
-      AGENTCORE_REGION      = local.agentcore_region
+      AGENTCORE_RUNTIME_ARN      = var.agentcore_runtime_arn
+      AGENTCORE_REGION           = local.agentcore_region
+      AGENTCORE_RUNTIME_ROLE_ARN = var.agentcore_runtime_role_arn
     }
   }
 }

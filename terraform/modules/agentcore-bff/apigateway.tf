@@ -71,6 +71,12 @@ resource "aws_api_gateway_stage" "bff" {
   }
 }
 
+resource "aws_wafv2_web_acl_association" "bff" {
+  count        = var.enable_bff && var.waf_acl_arn != "" ? 1 : 0
+  resource_arn = aws_api_gateway_stage.bff[0].execution_arn
+  web_acl_arn  = var.waf_acl_arn
+}
+
 resource "aws_api_gateway_method_settings" "bff" {
   count = var.enable_bff ? 1 : 0
 

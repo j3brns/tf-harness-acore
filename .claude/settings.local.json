@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(aws s3 ls:*)",
+      "Bash(npm install:*)",
+      "Bash(npx jest --verbose)",
+      "Bash(npx jest:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfix\\(bff\\): capture SignatureV4 mock at file scope to survive resetModules\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(glab ci:*)",
+      "Bash(glab ci list:*)",
+      "Bash(terraform -chdir=terraform fmt:*)",
+      "Bash(git commit:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "awslabs.aws-documentation-mcp-server",
+    "awslabs.terraform-mcp-server",
+    "awsdocs",
+    "aws-terraform"
+  ]
+}

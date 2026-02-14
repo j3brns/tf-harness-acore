@@ -10,7 +10,10 @@ Bedrock AgentCore is a comprehensive framework designed for teams deploying AI A
 We utilize a stateful "Bridge" pattern to manage the lifecycle of newer Bedrock features. By wrapping the AWS CLI in `null_resource` provisioners and using **SSM Parameter Store** to persist resource IDs, we provide Day 0 access to new models, inference profiles, and guardrails with production-grade lifecycle safety.
 
 ### 2. OCDS: Optimized Packaging
-**Optimized Code/Dependency Separation (OCDS)** is our specialized build protocol. By hashing `pyproject.toml` independently of code files, we ensure that heavy dependency layers are only rebuilt when necessary, enabling near-instant updates for agent logic changes.
+**Optimized Code/Dependency Separation (OCDS)** is our specialized build protocol. 
+*   **Architecture Aware**: Automatically detects and builds for **x86_64** or **ARM64 (Graviton)** via the `lambda_architecture` variable, optimizing for price-performance.
+*   **Layered Hashing**: By hashing `pyproject.toml` independently of code files, we ensure that heavy dependency layers are only rebuilt when necessary.
+*   **Hardened Security**: The packaging engine strictly excludes local sensitive files (`.env`, `.tfvars`) and development artifacts (`tests/`, `venv/`) from production archives.
 
 ### 3. Modular Regional Topology
 The framework supports granular regional splitting out of the box. You can deploy the **Control Plane**, **BFF**, and **Models** in different regions (e.g., for data residency or availability constraints) while maintaining seamless integration through automated wiring.
@@ -27,6 +30,8 @@ Our security model assumes the frontend may be compromised:
 *   ⚡ **Fast OCDS Builds**: Instant updates for agent logic without full dependency reinstalls.
 *   🖥️ **Interactive CLI Terminal**: A dedicated terminal interface for real-time observability, log tailing, and remote management.
 *   🛡️ **ABAC & Cedar Support**: Zero-trust security using Attribute-Based Access Control and Cedar policy enforcement.
+*   🔐 **Credential-Level Isolation**: Dynamic IAM Session Policies physically restrict agent access per-tenant at the credential layer.
+*   🚦 **Resilience Toggles**: Pre-configured Lambda concurrency limits and WAF IP-rate limiting to protect against account-wide DOS.
 *   🚀 **Enterprise Templates**: Scaffold fully compliant, production-ready agents using `copier`.
 
 ## Architecture
@@ -49,29 +54,32 @@ graph TD
 ### Physical Infrastructure
 ```mermaid
 flowchart TD
-    subgraph Frontend[BFF Layer]
+    subgraph North[Entry Point: AppID]
         APIGW[API Gateway]
-        LProxy[Proxy Lambda]
-        DDB[(DynamoDB)]
     end
 
-    subgraph Core[AgentCore]
+    subgraph Middle[Identity Layer: TenantID]
+        LAuthorizer[Lambda Authorizer]
+        DDB[(DynamoDB Sessions<br/>PK: APP#AppID#TENANT#TenantID)]
+    end
+
+    subgraph South[Compute Layer: AgentName]
+        LProxy[Proxy Lambda]
         BGateway[Bedrock Gateway]
         BRuntime[Bedrock Runtime]
+        BSandbox[Code Interpreter<br/>x86_64 / arm64]
     end
 
-    subgraph Storage[Storage]
-        S3SPA[S3 SPA]
+    subgraph Storage[Partitioned Persistence]
+        S3Memory[S3 Memory<br/>/AppID/TenantID/AgentName/]
         S3Deploy[S3 Deploy]
-        S3Memory[S3 Memory]
     end
 
-    Browser[Browser] --> CF[CloudFront]
-    CF --> S3SPA
-    Browser --> APIGW
-    APIGW --> LProxy
-    LProxy <--> DDB
-    LProxy --> BGateway
+    Browser[Browser] -- "AppID Context" --> North
+    North --> LAuthorizer
+    LAuthorizer <--> DDB
+    North -- "Validated Identity" --> LProxy
+    LProxy -- "x-tenant-id / x-app-id" --> BGateway
     BGateway --> BRuntime
     BRuntime <--> S3Memory
     BRuntime <--> S3Deploy

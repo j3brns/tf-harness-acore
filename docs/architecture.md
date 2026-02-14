@@ -4,9 +4,9 @@
 
 | Aspect | Status |
 |--------|--------|
-| **Last Updated** | Phase 0 implementation complete |
-| **Code Version** | Post-security fixes |
-| **Sync Status** | Matches current code state |
+| **Last Updated** | 2026-02-13 |
+| **Code Version** | v1.1.0 (North-South Join) |
+| **Sync Status** | Fully Refactored for Multi-Tenancy |
 
 ---
 
@@ -20,34 +20,28 @@ flowchart TD
         Browser[SPA Web Terminal]
     end
 
-    subgraph Edge[AWS Edge]
+    subgraph North[Entry Point: AppID]
         CF[CloudFront CDN]
+        APIGW[API Gateway REST]
     end
 
-    subgraph BFF[Serverless BFF - Zero Trust Layer]
-        APIGW[API Gateway REST]
+    subgraph Middle[Identity Layer: TenantID]
         LAuth[OIDC Handler Lambda]
         LAuthorizer[Lambda Authorizer]
-        LProxy[Agent Proxy Lambda]
-        DDB[(DynamoDB Sessions)]
+        DDB[(DynamoDB Sessions<br/>APP#AppID#TENANT#TenantID)]
     end
 
-    subgraph AgentCore[Bedrock AgentCore Service]
+    subgraph South[Compute Layer: AgentName]
+        LProxy[Agent Proxy Lambda]
         BGateway[Bedrock Agent / Gateway]
         BRuntime[Bedrock Runtime Engine]
-        BPolicies[Cedar Policy Engine]
+        BSandbox[Code Interpreter Sandbox<br/>x86_64 / arm64]
     end
 
-    subgraph Compute[Compute & Sandbox Layer]
-        LMCP[Lambda MCP Tools]
-        LRuntime[Agent Runtime Lambda]
-        BSandbox[Code Interpreter Sandbox]
-    end
-
-    subgraph Storage[Persistence & Observability]
-        S3SPA[S3: SPA Static Assets]
-        S3Deploy[S3: Deployment Artifacts]
-        S3Memory[S3: Long-term Memory]
+    subgraph Storage[Partitioned Persistence]
+        S3SPA[S3: SPA Assets]
+        S3Deploy[S3: Artifacts]
+        S3Memory[S3: Long-term Memory<br/>/AppID/TenantID/AgentName/]
         CW[CloudWatch Logs & Metrics]
     end
 
@@ -55,7 +49,7 @@ flowchart TD
     Browser <--> CF
     CF <--> S3SPA
 
-    Browser -- "Opaque Session Cookie" --> APIGW
+    Browser -- "AppID Context" --> APIGW
     APIGW --> LAuthorizer
     LAuthorizer <--> DDB
 
@@ -64,21 +58,14 @@ flowchart TD
 
     APIGW -- "Validated Request" --> LProxy
 
-    LProxy -- "bedrock:InvokeAgent" --> BGateway
-    BGateway <--> BPolicies
-    BGateway <--> LMCP
-    BGateway <--> BSandbox
-    BGateway <--> LRuntime
-
-    LRuntime <--> S3Memory
+    LProxy -- "x-tenant-id / x-app-id" --> BGateway
+    BGateway --> BRuntime
+    BRuntime <--> S3Memory
 
     %% Monitoring Flows
-    Compute -.-> CW
-    BFF -.-> CW
-    AgentCore -.-> CW
-
-    %% Deployment Flow
-    LRuntime -- "Code Sync" --> S3Deploy
+    South -.-> CW
+    North -.-> CW
+    Middle -.-> CW
 ```
 
 ## System Overview
@@ -310,6 +297,12 @@ For multi-agent collaboration (Strands), we use **Workload Identity Propagation*
 2.  Calls `GetWorkloadAccessTokenForJWT` to exchange User JWT for **Workload Token**.
 3.  Invokes **Target Agent** with `Authorization: Bearer <WorkloadToken>`.
 4.  **Target Agent** validates token via its Inbound Authorizer.
+
+#### Dynamic Session Policies (Physical Isolation)
+To prevent cross-tenant data leakage even in the event of agent compromise:
+1.  **Proxy** assumes the **Agent Runtime Role** for every request.
+2.  Passes a **Session Policy** scoped to the specific `AppID` and `TenantID` S3 prefixes.
+3.  **Runtime** operates using these restricted temporary credentials.
 
 ### Encryption Strategy (ADR 0008)
 

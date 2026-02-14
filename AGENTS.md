@@ -80,13 +80,17 @@ The following resources MUST use the `null_resource` + AWS CLI pattern:
 
 ## RULE 5: SSM State Persistence (Zero Local IDs)
 
-### Rule 5.1: No Ephemeral IDs
-- **Problem**: Local JSON files in `.terraform/` are lost in CI/CD.
-- **Requirement**: ALL resource IDs created via CLI MUST be persisted to **AWS SSM Parameter Store**.
+### Rule 5.1: No Ephemeral Metadata
+- **Problem**: Local JSON files in `.terraform/` are lost in CI/CD, breaking state recovery and downstream data sources.
+- **Requirement**: ALL resource IDs, ARNs, and Endpoints created via CLI MUST be persisted to **AWS SSM Parameter Store**.
 - **Pattern**:
-  1. CLI creates resource and captures ID.
-  2. CLI calls `aws ssm put-parameter --name "/agentcore/${var.agent_name}/<resource_type>/id" --value "$ID"`.
-  3. Subsequent resources use `data "aws_ssm_parameter"` to retrieve the ID.
+  1. CLI creates resource and captures metadata (ID, ARN, Endpoint).
+  2. CLI calls `aws ssm put-parameter` for EACH metadata field using predictable paths.
+  3. Subsequent resources and outputs use `data "aws_ssm_parameter"` to retrieve the values.
+- **Paths**:
+  - `/agentcore/${agent_name}/${type}/id`
+  - `/agentcore/${agent_name}/${type}/arn`
+  - `/agentcore/${agent_name}/${type}/endpoint`
 
 ---
 
