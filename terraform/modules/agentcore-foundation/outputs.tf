@@ -31,16 +31,6 @@ output "workload_identity_arn" {
   sensitive   = true
 }
 
-output "log_group_name" {
-  description = "Name of the CloudWatch log group"
-  value       = var.enable_observability ? aws_cloudwatch_log_group.agentcore[0].name : null
-}
-
-output "log_group_arn" {
-  description = "ARN of the CloudWatch log group"
-  value       = var.enable_observability ? aws_cloudwatch_log_group.agentcore[0].arn : null
-}
-
 output "access_logs_bucket_id" {
   description = "Name of the S3 bucket for access logs"
   value       = var.enable_observability ? aws_s3_bucket.access_logs[0].id : null
