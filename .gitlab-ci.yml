@@ -354,7 +354,7 @@ plan:dev:
     AWS_ROLE_ARN: ${CI_ENVIRONMENT_ROLE_ARN_DEV}
     TF_STATE_BUCKET: ${TF_STATE_BUCKET_DEV}
     TF_VAR_environment: "dev"
-    TF_VAR_app_id: "agentcore-dev-${CI_COMMIT_SHORT_SHA}"
+    TF_VAR_app_id: "agentcore-dev"
     TF_VAR_lambda_architecture: "arm64"
   script:
     - cd $TF_ROOT
@@ -387,7 +387,7 @@ deploy:dev:
     AWS_ROLE_ARN: ${CI_ENVIRONMENT_ROLE_ARN_DEV}
     TF_STATE_BUCKET: ${TF_STATE_BUCKET_DEV}
     TF_VAR_environment: "dev"
-    TF_VAR_app_id: "agentcore-dev-${CI_COMMIT_SHORT_SHA}"
+    TF_VAR_app_id: "agentcore-dev"
     TF_VAR_lambda_architecture: "arm64"
   needs: [plan:dev]
   resource_group: terraform-dev

@@ -51,13 +51,14 @@ resource "null_resource" "package_dependencies" {
           PLATFORM="manylinux2014_aarch64"
         fi
         
-        pip install --platform "$PLATFORM" \
+        # Use pip to install from pyproject.toml/setup.py correctly
+        pip install "${local.source_path}" \
+          --platform "$PLATFORM" \
           --target "${local.deps_dir}" \
           --implementation cp \
           --python ${var.python_version} \
           --only-binary=:all: \
-          --upgrade \
-          -r <(grep -E "^[a-zA-Z]" "${local.dependencies_file}")
+          --upgrade
       fi
 
       # Generate metadata
