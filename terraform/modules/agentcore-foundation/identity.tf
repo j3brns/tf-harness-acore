@@ -26,15 +26,12 @@ resource "null_resource" "workload_identity" {
       fi
 
       IDENTITY_ID=$(jq -r '.workloadIdentityId' < "${path.module}/.terraform/identity_output.json")
+      IDENTITY_ARN=$(jq -r '.workloadIdentityArn' < "${path.module}/.terraform/identity_output.json")
 
       # Rule 5.1: SSM Persistence Pattern
-      echo "Persisting Workload Identity ID to SSM..."
-      aws ssm put-parameter \
-        --name "/agentcore/${self.triggers.agent_name}/identity/id" \
-        --value "$IDENTITY_ID" \
-        --type "String" \
-        --overwrite \
-        --region ${self.triggers.region}
+      echo "Persisting Workload Identity metadata to SSM..."
+      aws ssm put-parameter --name "/agentcore/${self.triggers.agent_name}/identity/id" --value "$IDENTITY_ID" --type "String" --overwrite --region ${self.triggers.region}
+      aws ssm put-parameter --name "/agentcore/${self.triggers.agent_name}/identity/arn" --value "$IDENTITY_ARN" --type "String" --overwrite --region ${self.triggers.region}
     EOT
 
     interpreter = ["bash", "-c"]
@@ -51,6 +48,7 @@ resource "null_resource" "workload_identity" {
         echo "Deleting Workload Identity $IDENTITY_ID..."
         aws bedrock-agentcore-control delete-workload-identity --workload-identity-identifier "$IDENTITY_ID" --region ${self.triggers.region}
         aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/identity/id" --region ${self.triggers.region}
+        aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/identity/arn" --region ${self.triggers.region}
       fi
     EOT
 
@@ -58,9 +56,17 @@ resource "null_resource" "workload_identity" {
   }
 }
 
-data "external" "identity_output" {
-  count      = var.enable_identity ? 1 : 0
-  program    = ["cat", "${path.module}/.terraform/identity_output.json"]
+data "aws_ssm_parameter" "workload_identity_id" {
+  count = var.enable_identity ? 1 : 0
+  name  = "/agentcore/${var.agent_name}/identity/id"
+
+  depends_on = [null_resource.workload_identity]
+}
+
+data "aws_ssm_parameter" "workload_identity_arn" {
+  count = var.enable_identity ? 1 : 0
+  name  = "/agentcore/${var.agent_name}/identity/arn"
+
   depends_on = [null_resource.workload_identity]
 }
 

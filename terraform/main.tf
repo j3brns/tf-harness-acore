@@ -33,9 +33,10 @@ module "agentcore_foundation" {
 module "agentcore_tools" {
   source = "./modules/agentcore-tools"
 
-  agent_name = var.agent_name
-  region     = local.agentcore_region
-  tags       = var.tags
+  agent_name         = var.agent_name
+  region             = local.agentcore_region
+  tags               = var.tags
+  log_retention_days = var.log_retention_days
 
   # Code interpreter
   enable_code_interpreter       = var.enable_code_interpreter
@@ -86,8 +87,9 @@ module "agentcore_runtime" {
   enable_s3_encryption   = var.enable_s3_encryption
 
   # Packaging
-  enable_packaging = var.enable_packaging
-  python_version   = var.python_version
+  enable_packaging    = var.enable_packaging
+  python_version      = var.python_version
+  lambda_architecture = var.lambda_architecture
 
   depends_on = [
     module.agentcore_foundation

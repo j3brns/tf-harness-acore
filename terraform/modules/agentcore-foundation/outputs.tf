@@ -1,17 +1,17 @@
 output "gateway_id" {
   description = "ID of the MCP gateway"
-  value       = var.enable_gateway ? data.external.gateway_output[0].result.gatewayId : null
+  value       = var.enable_gateway ? data.aws_ssm_parameter.gateway_id[0].value : null
 }
 
 output "gateway_arn" {
   description = "ARN of the MCP gateway"
-  value       = var.enable_gateway ? data.external.gateway_output[0].result.gatewayArn : null
+  value       = var.enable_gateway ? data.aws_ssm_parameter.gateway_arn[0].value : null
   sensitive   = true
 }
 
 output "gateway_endpoint" {
   description = "Endpoint URL of the MCP gateway"
-  value       = var.enable_gateway ? data.external.gateway_output[0].result.gatewayEndpoint : null
+  value       = var.enable_gateway ? data.aws_ssm_parameter.gateway_endpoint[0].value : null
 }
 
 output "gateway_role_arn" {
@@ -22,12 +22,12 @@ output "gateway_role_arn" {
 
 output "workload_identity_id" {
   description = "ID of the workload identity"
-  value       = var.enable_identity ? data.external.identity_output[0].result.workloadIdentityId : null
+  value       = var.enable_identity ? data.aws_ssm_parameter.workload_identity_id[0].value : null
 }
 
 output "workload_identity_arn" {
   description = "ARN of the workload identity"
-  value       = var.enable_identity ? data.external.identity_output[0].result.workloadIdentityArn : null
+  value       = var.enable_identity ? data.aws_ssm_parameter.workload_identity_arn[0].value : null
   sensitive   = true
 }
 

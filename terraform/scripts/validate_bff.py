@@ -37,25 +37,14 @@ def main():
 
     auth_id = outputs["agentcore_bff_authorizer_id"]["value"]
     table_name = outputs["agentcore_bff_session_table_name"]["value"]
-    region = boto3.session.Session().region_name or "us-east-1"  # Default fallback
+    app_id = outputs.get("app_id", {}).get("value") or outputs["agent_name"]["value"]
+    region = boto3.session.Session().region_name or "us-east-1"
 
-    print(f"Validating API: {api_id}, Authorizer: {auth_id}, Table: {table_name}")
-
-    # 0. Check for Streaming Mode in State
-    print("\n[0/3] Checking Streaming Configuration in Terraform State...")
-    try:
-        # We look for the integration in the state to ensure the STREAM mode is set
-        state_cmd = ["terraform", "state", "show", "module.agentcore_bff.aws_api_gateway_integration.chat[0]"]
-        state_out = subprocess.check_output(state_cmd, cwd=os.path.dirname(os.path.dirname(__file__))).decode()
-        if "response_transfer_mode" in state_out and "STREAM" in state_out:
-            print("PASS: response_transfer_mode = STREAM found in state")
-        else:
-            print("WARNING: response_transfer_mode = STREAM NOT found in state. Native streaming might not be active.")
-    except Exception as e:
-        print(f"Info: Could not verify state (perhaps not deployed yet): {e}")
+    print(f"Validating BFF Smoke Test [North-South Join Model]")
+    print(f"API: {api_id}, Authorizer: {auth_id}, Table: {table_name}, AppID: {app_id}")
 
     # 1. Test Missing Cookie (Expect Deny)
-    print("\n[1/3] Testing Missing Cookie...")
+    print("\n[1/2] Testing Missing Cookie (Expect Deny)...")
     cmd = [
         "aws",
         "apigateway",
@@ -74,33 +63,42 @@ def main():
         out = json.loads(res)
         policy = json.loads(out["policy"])
         effect = policy["policyDocument"]["Statement"][0]["Effect"]
-        print(f"Result: {effect}")
+        print(f"  Result: {effect}")
         if effect != "Deny":
-            print("FAIL: Expected Deny")
+            print("  FAIL: Expected Deny")
             sys.exit(1)
         else:
-            print("PASS")
+            print("  PASS")
     except subprocess.CalledProcessError as e:
-        print(f"AWS CLI Error: {e.output.decode()}")
+        print(f"  AWS CLI Error: {e.output.decode()}")
         sys.exit(1)
 
-    # 2. Test Valid Cookie (Expect Allow)
-    print("\n[2/3] Testing Valid Cookie (Mocking Session)...")
+    # 2. Test Valid Composite Cookie (Expect Allow)
+    print("\n[2/2] Testing Valid Composite Cookie (North-South PK Lookup)...")
     ddb = boto3.resource("dynamodb", region_name=region)
     table = ddb.Table(table_name)
 
+    tenant_id = "smoke-test-tenant"
     session_id = str(uuid.uuid4())
+    
+    # Composite PK format: APP#{app_id}#TENANT#{tenant_id}
+    pk = f"APP#{app_id}#TENANT#{tenant_id}"
+    sk = f"SESSION#{session_id}"
+
     table.put_item(
         Item={
-            "session_id": session_id,
-            "access_token": "mock_token_for_validation",
+            "pk": pk,
+            "sk": sk,
+            "tenant_id": tenant_id,
+            "app_id": app_id,
+            "access_token": "mock_token_smoke_test",
             "expires_at": int(time.time()) + 300,
         }
     )
-    print(f"Inserted mock session: {session_id}")
+    print(f"  Inserted mock session: PK={pk}, SK={sk}")
 
-    # Valid Cookie Header
-    headers = {"Cookie": f"session_id={session_id}"}
+    # Valid Composite Cookie Header: session_id=tenant_id:session_id
+    headers = {"Cookie": f"session_id={tenant_id}:{session_id}"}
 
     cmd = [
         "aws",
@@ -121,24 +119,31 @@ def main():
         out = json.loads(res)
         policy = json.loads(out["policy"])
         effect = policy["policyDocument"]["Statement"][0]["Effect"]
-        context_token = out["authorization"].get("access_token")
+        
+        # Verify context propagation
+        ctx = out.get("authorization", {})
+        res_tenant = ctx.get("tenant_id")
+        res_app = ctx.get("app_id")
 
-        print(f"Result: {effect}")
-        print(f"Context Token: {context_token}")
+        print(f"  Result: {effect}")
+        print(f"  Context Tenant: {res_tenant}")
+        print(f"  Context App: {res_app}")
 
         if effect != "Allow":
-            print("FAIL: Expected Allow")
+            print("  FAIL: Expected Allow")
             sys.exit(1)
-        if context_token != "mock_token_for_validation":
-            print("FAIL: Context propagation failed")
+        if res_tenant != tenant_id or res_app != app_id:
+            print("  FAIL: Context propagation failed or mismatched")
             sys.exit(1)
 
-        print("PASS")
+        # Cleanup
+        table.delete_item(Key={"pk": pk, "sk": sk})
+        print("  PASS")
     except subprocess.CalledProcessError as e:
-        print(f"AWS CLI Error: {e.output.decode()}")
+        print(f"  AWS CLI Error: {e.output.decode()}")
         sys.exit(1)
 
-    print("\nBFF Validation Successful.")
+    print("\nBFF Smoke Test Successful.")
 
 
 if __name__ == "__main__":

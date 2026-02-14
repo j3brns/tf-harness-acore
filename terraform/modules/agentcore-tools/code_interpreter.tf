@@ -26,15 +26,12 @@ resource "null_resource" "code_interpreter" {
       fi
 
       INTERPRETER_ID=$(jq -r '.interpreterId' < "${path.module}/.terraform/interpreter_output.json")
+      INTERPRETER_ARN=$(jq -r '.interpreterArn' < "${path.module}/.terraform/interpreter_output.json")
 
       # Rule 5.1: SSM Persistence
-      echo "Persisting Interpreter ID to SSM..."
-      aws ssm put-parameter \
-        --name "/agentcore/${self.triggers.agent_name}/interpreter/id" \
-        --value "$INTERPRETER_ID" \
-        --type "String" \
-        --overwrite \
-        --region ${self.triggers.region}
+      echo "Persisting Interpreter metadata to SSM..."
+      aws ssm put-parameter --name "/agentcore/${self.triggers.agent_name}/interpreter/id" --value "$INTERPRETER_ID" --type "String" --overwrite --region ${self.triggers.region}
+      aws ssm put-parameter --name "/agentcore/${self.triggers.agent_name}/interpreter/arn" --value "$INTERPRETER_ARN" --type "String" --overwrite --region ${self.triggers.region}
     EOT
 
     interpreter = ["bash", "-c"]
@@ -60,9 +57,17 @@ resource "null_resource" "code_interpreter" {
   depends_on = [aws_iam_role.code_interpreter]
 }
 
-data "external" "interpreter_output" {
-  count      = var.enable_code_interpreter ? 1 : 0
-  program    = ["cat", "${path.module}/.terraform/interpreter_output.json"]
+data "aws_ssm_parameter" "interpreter_id" {
+  count = var.enable_code_interpreter ? 1 : 0
+  name  = "/agentcore/${var.agent_name}/interpreter/id"
+
+  depends_on = [null_resource.code_interpreter]
+}
+
+data "aws_ssm_parameter" "interpreter_arn" {
+  count = var.enable_code_interpreter ? 1 : 0
+  name  = "/agentcore/${var.agent_name}/interpreter/arn"
+
   depends_on = [null_resource.code_interpreter]
 }
 
@@ -71,7 +76,7 @@ resource "aws_cloudwatch_log_group" "code_interpreter" {
   count = var.enable_code_interpreter ? 1 : 0
 
   name              = "/aws/bedrock/agentcore/code-interpreter/${var.agent_name}"
-  retention_in_days = 30
+  retention_in_days = var.log_retention_days
 
   tags = var.tags
 }

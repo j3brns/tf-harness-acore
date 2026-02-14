@@ -31,6 +31,10 @@ resource "aws_dynamodb_table" "sessions" {
     enabled = true
   }
 
+  lifecycle {
+    prevent_destroy = true
+  }
+
   tags = var.tags
 }
 

@@ -26,15 +26,12 @@ resource "null_resource" "browser" {
       fi
 
       BROWSER_ID=$(jq -r '.browserId' < "${path.module}/.terraform/browser_output.json")
+      BROWSER_ARN=$(jq -r '.browserArn' < "${path.module}/.terraform/browser_output.json")
 
       # Rule 5.1: SSM Persistence
-      echo "Persisting Browser ID to SSM..."
-      aws ssm put-parameter \
-        --name "/agentcore/${self.triggers.agent_name}/browser/id" \
-        --value "$BROWSER_ID" \
-        --type "String" \
-        --overwrite \
-        --region ${self.triggers.region}
+      echo "Persisting Browser metadata to SSM..."
+      aws ssm put-parameter --name "/agentcore/${self.triggers.agent_name}/browser/id" --value "$BROWSER_ID" --type "String" --overwrite --region ${self.triggers.region}
+      aws ssm put-parameter --name "/agentcore/${self.triggers.agent_name}/browser/arn" --value "$BROWSER_ARN" --type "String" --overwrite --region ${self.triggers.region}
     EOT
 
     interpreter = ["bash", "-c"]
@@ -60,9 +57,17 @@ resource "null_resource" "browser" {
   depends_on = [aws_iam_role.browser]
 }
 
-data "external" "browser_output" {
-  count      = var.enable_browser ? 1 : 0
-  program    = ["cat", "${path.module}/.terraform/browser_output.json"]
+data "aws_ssm_parameter" "browser_id" {
+  count = var.enable_browser ? 1 : 0
+  name  = "/agentcore/${var.agent_name}/browser/id"
+
+  depends_on = [null_resource.browser]
+}
+
+data "aws_ssm_parameter" "browser_arn" {
+  count = var.enable_browser ? 1 : 0
+  name  = "/agentcore/${var.agent_name}/browser/arn"
+
   depends_on = [null_resource.browser]
 }
 
@@ -71,7 +76,7 @@ resource "aws_cloudwatch_log_group" "browser" {
   count = var.enable_browser ? 1 : 0
 
   name              = "/aws/bedrock/agentcore/browser/${var.agent_name}"
-  retention_in_days = 30
+  retention_in_days = var.log_retention_days
 
   tags = var.tags
 }

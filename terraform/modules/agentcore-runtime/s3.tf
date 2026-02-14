@@ -40,6 +40,25 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "deployment" {
   }
 }
 
+# S3 Lifecycle Rule - Expire old artifacts after 90 days
+resource "aws_s3_bucket_lifecycle_configuration" "deployment" {
+  count  = var.deployment_bucket_name == "" ? 1 : 0
+  bucket = aws_s3_bucket.deployment[0].id
+
+  rule {
+    id     = "expire-old-artifacts"
+    status = "Enabled"
+
+    expiration {
+      days = 90
+    }
+
+    noncurrent_version_expiration {
+      noncurrent_days = 30
+    }
+  }
+}
+
 # CloudWatch log group for packaging
 resource "aws_cloudwatch_log_group" "packaging" {
   count = var.enable_packaging ? 1 : 0

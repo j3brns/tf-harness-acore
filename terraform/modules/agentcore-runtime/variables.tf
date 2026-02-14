@@ -168,3 +168,14 @@ variable "python_version" {
   type        = string
   default     = "3.12"
 }
+
+variable "lambda_architecture" {
+  description = "Architecture for agent runtime Lambda (x86_64, arm64)"
+  type        = string
+  default     = "x86_64"
+
+  validation {
+    condition     = contains(["x86_64", "arm64"], var.lambda_architecture)
+    error_message = "Architecture must be x86_64 or arm64."
+  }
+}

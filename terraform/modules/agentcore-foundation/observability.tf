@@ -65,7 +65,7 @@ resource "aws_cloudwatch_metric_alarm" "gateway_errors" {
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    GatewayId = var.enable_gateway ? data.external.gateway_output[0].result.gatewayId : ""
+    GatewayId = var.enable_gateway ? data.aws_ssm_parameter.gateway_id[0].value : ""
   }
 
   tags = var.tags
@@ -87,7 +87,7 @@ resource "aws_cloudwatch_metric_alarm" "target_duration" {
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    GatewayId = var.enable_gateway ? data.external.gateway_output[0].result.gatewayId : ""
+    GatewayId = var.enable_gateway ? data.aws_ssm_parameter.gateway_id[0].value : ""
   }
 
   tags = var.tags

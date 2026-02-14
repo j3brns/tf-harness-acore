@@ -35,17 +35,16 @@ resource "null_resource" "gateway" {
         exit 1
       fi
 
-      # Capture ID
+      # Capture metadata
       GATEWAY_ID=$(jq -r '.gatewayId' < "${path.module}/.terraform/gateway_output.json")
+      GATEWAY_ARN=$(jq -r '.gatewayArn' < "${path.module}/.terraform/gateway_output.json")
+      GATEWAY_ENDPOINT=$(jq -r '.gatewayEndpoint' < "${path.module}/.terraform/gateway_output.json")
 
       # Rule 5.1: SSM Persistence Pattern
-      echo "Persisting Gateway ID to SSM..."
-      aws ssm put-parameter \
-        --name "/agentcore/${self.triggers.agent_name}/gateway/id" \
-        --value "$GATEWAY_ID" \
-        --type "String" \
-        --overwrite \
-        --region ${self.triggers.region}
+      echo "Persisting Gateway metadata to SSM..."
+      aws ssm put-parameter --name "/agentcore/${self.triggers.agent_name}/gateway/id" --value "$GATEWAY_ID" --type "String" --overwrite --region ${self.triggers.region}
+      aws ssm put-parameter --name "/agentcore/${self.triggers.agent_name}/gateway/arn" --value "$GATEWAY_ARN" --type "String" --overwrite --region ${self.triggers.region}
+      aws ssm put-parameter --name "/agentcore/${self.triggers.agent_name}/gateway/endpoint" --value "$GATEWAY_ENDPOINT" --type "String" --overwrite --region ${self.triggers.region}
 
       # Temporary local storage for immediate data source consumption in same plan
       echo "$GATEWAY_ID" > "${path.module}/.terraform/gateway_id.txt"
@@ -86,6 +85,20 @@ resource "null_resource" "gateway" {
 data "aws_ssm_parameter" "gateway_id" {
   count = var.enable_gateway ? 1 : 0
   name  = "/agentcore/${var.agent_name}/gateway/id"
+
+  depends_on = [null_resource.gateway]
+}
+
+data "aws_ssm_parameter" "gateway_arn" {
+  count = var.enable_gateway ? 1 : 0
+  name  = "/agentcore/${var.agent_name}/gateway/arn"
+
+  depends_on = [null_resource.gateway]
+}
+
+data "aws_ssm_parameter" "gateway_endpoint" {
+  count = var.enable_gateway ? 1 : 0
+  name  = "/agentcore/${var.agent_name}/gateway/endpoint"
 
   depends_on = [null_resource.gateway]
 }
@@ -151,13 +164,6 @@ resource "null_resource" "gateway_target" {
     interpreter = ["bash", "-c"]
   }
 
-  depends_on = [null_resource.gateway]
-}
-
-# Data sources for IDs
-data "external" "gateway_output" {
-  count      = var.enable_gateway ? 1 : 0
-  program    = ["cat", "${path.module}/.terraform/gateway_output.json"]
   depends_on = [null_resource.gateway]
 }
 

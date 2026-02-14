@@ -46,7 +46,12 @@ resource "null_resource" "package_dependencies" {
 
       # Install dependencies
       if [ -f "${local.dependencies_file}" ]; then
-        pip install --platform manylinux2014_x86_64 \
+        PLATFORM="manylinux2014_x86_64"
+        if [ "${var.lambda_architecture}" == "arm64" ]; then
+          PLATFORM="manylinux2014_aarch64"
+        fi
+        
+        pip install --platform "$PLATFORM" \
           --target "${local.deps_dir}" \
           --implementation cp \
           --python ${var.python_version} \
@@ -115,7 +120,12 @@ resource "null_resource" "package_code" {
       # Create archive
       cd "$BUILD_DIR"
       ARCHIVE_NAME="${var.agent_name}-${self.triggers.source_hash}.zip"
-      zip -r "$ARCHIVE_NAME" deps/ code/ -x "*.git*" "__pycache__/*" "*.pyc" ".pytest_cache/*"
+      
+      # Hardened exclusions (Rule 13 & Security)
+      zip -r "$ARCHIVE_NAME" deps/ code/ \
+        -x "*.git*" "__pycache__/*" "*.pyc" ".pytest_cache/*" \
+        -x "*.env*" "*.tfvars*" ".terraform/*" ".venv/*" "venv/*" \
+        -x "tests/*" "test/*" "*.log" ".DS_Store" "node_modules/*"
 
       # Verify archive was created
       if [ ! -f "$ARCHIVE_NAME" ]; then

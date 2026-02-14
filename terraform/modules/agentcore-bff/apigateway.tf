@@ -63,6 +63,10 @@ resource "aws_api_gateway_method_settings" "bff" {
   settings {
     metrics_enabled = true
     logging_level   = "INFO"
+    
+    # Senior Engineer: Global Throttling
+    throttling_burst_limit = 100
+    throttling_rate_limit  = 50
   }
 }
 

@@ -106,6 +106,12 @@ variable "browser_recording_s3_prefix" {
   default     = "browser-sessions/"
 }
 
+variable "log_retention_days" {
+  description = "CloudWatch log retention in days"
+  type        = number
+  default     = 30
+}
+
 # Encryption configuration
 # Note: Customer-managed KMS is deprecated in favor of AWS-managed encryption.
 variable "enable_kms" {
