@@ -70,8 +70,8 @@ validate_example() {
 # Find all .tfvars and .tfvars.example files in subdirectories
 echo "Scanning for configuration files in $EXAMPLES_DIR subdirectories..."
 if [ -d "$EXAMPLES_DIR" ]; then
-    # Use a robust find command targeting subdirectories only
-    FILES=$(find "$EXAMPLES_DIR" -mindepth 2 -maxdepth 3 -name "*.tfvars" -o -name "*.tfvars.example")
+    # Use a robust find command with escaped parentheses
+    FILES=$(find "$EXAMPLES_DIR" -mindepth 2 -maxdepth 3 \( -name "*.tfvars" -o -name "*.tfvars.example" \))
 
     if [ -z "$FILES" ]; then
         echo "WARN: No .tfvars or .tfvars.example files found in $EXAMPLES_DIR"
@@ -80,7 +80,8 @@ if [ -d "$EXAMPLES_DIR" ]; then
         echo "$FILES"
         for example_file in $FILES; do
             ((EXAMPLE_COUNT++))
-            validate_example "$example_file"
+            # Don't let a single failure stop the script, so we can see the summary
+            validate_example "$example_file" || true
         done
     fi
 else
