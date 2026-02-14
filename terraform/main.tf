@@ -144,19 +144,19 @@ module "agentcore_governance" {
 module "agentcore_bff" {
   source = "./modules/agentcore-bff"
 
-  enable_bff       = var.enable_bff
-  agent_name       = var.agent_name
-  app_id           = local.app_id
-  region                     = local.bff_region
-  agentcore_region           = local.agentcore_region
-  environment                = var.environment
-  tags                       = var.tags
-  log_retention_days         = var.log_retention_days
+  enable_bff         = var.enable_bff
+  agent_name         = var.agent_name
+  app_id             = local.app_id
+  region             = local.bff_region
+  agentcore_region   = local.agentcore_region
+  environment        = var.environment
+  tags               = var.tags
+  log_retention_days = var.log_retention_days
 
   # Auth Configuration
-  oidc_issuer            = var.oidc_issuer
-  oidc_client_id         = var.oidc_client_id
-  oidc_client_secret_arn = var.oidc_client_secret_arn
+  oidc_issuer                = var.oidc_issuer
+  oidc_client_id             = var.oidc_client_id
+  oidc_client_secret_arn     = var.oidc_client_secret_arn
   logging_bucket_id          = module.agentcore_foundation.access_logs_bucket_id
   reserved_concurrency       = var.proxy_reserved_concurrency
   waf_acl_arn                = module.agentcore_foundation.waf_acl_arn
