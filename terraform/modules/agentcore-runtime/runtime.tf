@@ -13,7 +13,7 @@ resource "null_resource" "agent_runtime" {
   }
 
   provisioner "local-exec" {
-    command = <<-EOT
+    command = replace(<<-EOT
       set -e
 
       echo "Creating agent runtime for ${self.triggers.agent_name}..."
@@ -79,6 +79,7 @@ resource "null_resource" "agent_runtime" {
       echo "$RUNTIME_ARN" > "${path.module}/.terraform/runtime_arn.txt"
       echo "Agent runtime created successfully"
     EOT
+    , "\r", "")
 
     interpreter = ["bash", "-c"]
   }
@@ -86,7 +87,7 @@ resource "null_resource" "agent_runtime" {
   # Rule 6.1: Cleanup Hooks
   provisioner "local-exec" {
     when    = destroy
-    command = <<-EOT
+    command = replace(<<-EOT
       set +e
       RUNTIME_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/runtime/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
 
@@ -97,6 +98,7 @@ resource "null_resource" "agent_runtime" {
         aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/runtime/arn" --region ${self.triggers.region}
       fi
     EOT
+    , "\r", "")
 
     interpreter = ["bash", "-c"]
   }
@@ -120,7 +122,7 @@ resource "null_resource" "agent_memory" {
   }
 
   provisioner "local-exec" {
-    command = <<-EOT
+    command = replace(<<-EOT
       set -e
 
       echo "Setting up agent memory for ${self.triggers.agent_name}..."
@@ -176,13 +178,14 @@ resource "null_resource" "agent_memory" {
 
       echo "Agent memory setup complete"
     EOT
+    , "\r", "")
 
     interpreter = ["bash", "-c"]
   }
 
   provisioner "local-exec" {
     when    = destroy
-    command = <<-EOT
+    command = replace(<<-EOT
       set +e
       # Short-term memory cleanup
       ST_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/memory/short-term/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
@@ -200,6 +203,7 @@ resource "null_resource" "agent_memory" {
         aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/memory/long-term/id" --region ${self.triggers.region}
       fi
     EOT
+    , "\r", "")
 
     interpreter = ["bash", "-c"]
   }

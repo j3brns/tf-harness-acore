@@ -34,7 +34,7 @@ resource "null_resource" "package_dependencies" {
   }
 
   provisioner "local-exec" {
-    command = <<-EOT
+    command = replace(<<-EOT
       set -e
 
       echo "Stage 1: Packaging dependencies for ${var.agent_name}..."
@@ -66,6 +66,7 @@ resource "null_resource" "package_dependencies" {
 
       echo "Dependencies packaged successfully"
     EOT
+    , "\r", "")
 
     interpreter = ["bash", "-c"]
   }
@@ -86,7 +87,7 @@ resource "null_resource" "package_code" {
   }
 
   provisioner "local-exec" {
-    command = <<-EOT
+    command = replace(<<-EOT
       set -e
 
       echo "Stage 2: Packaging agent code for ${var.agent_name}..."
@@ -143,6 +144,7 @@ resource "null_resource" "package_code" {
 
       echo "Code packaged successfully"
     EOT
+    , "\r", "")
 
     interpreter = ["bash", "-c"]
   }
