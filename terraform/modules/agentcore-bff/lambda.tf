@@ -33,12 +33,13 @@ resource "aws_lambda_function" "auth_handler" {
 
 
 
-  function_name    = "agentcore-bff-auth-${var.agent_name}"
-  role             = aws_iam_role.auth_handler[0].arn
-  handler          = "auth_handler.lambda_handler"
-  runtime          = "python3.12"
-  filename         = data.archive_file.auth_handler[0].output_path
-  source_code_hash = data.archive_file.auth_handler[0].output_base64sha256
+  function_name                  = "agentcore-bff-auth-${var.agent_name}"
+  role                           = aws_iam_role.auth_handler[0].arn
+  handler                        = "auth_handler.lambda_handler"
+  runtime                        = "python3.12"
+  filename                       = data.archive_file.auth_handler[0].output_path
+  source_code_hash               = data.archive_file.auth_handler[0].output_base64sha256
+  reserved_concurrent_executions = var.reserved_concurrency > 0 ? var.reserved_concurrency : null
 
   environment {
     variables = {
@@ -64,12 +65,13 @@ resource "aws_lambda_function" "authorizer" {
 
 
 
-  function_name    = "agentcore-bff-authz-${var.agent_name}"
-  role             = aws_iam_role.authorizer[0].arn
-  handler          = "authorizer.lambda_handler"
-  runtime          = "python3.12"
-  filename         = data.archive_file.authorizer[0].output_path
-  source_code_hash = data.archive_file.authorizer[0].output_base64sha256
+  function_name                  = "agentcore-bff-authz-${var.agent_name}"
+  role                           = aws_iam_role.authorizer[0].arn
+  handler                        = "authorizer.lambda_handler"
+  runtime                        = "python3.12"
+  filename                       = data.archive_file.authorizer[0].output_path
+  source_code_hash               = data.archive_file.authorizer[0].output_base64sha256
+  reserved_concurrent_executions = var.reserved_concurrency > 0 ? var.reserved_concurrency : null
 
   environment {
     variables = {
