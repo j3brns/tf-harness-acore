@@ -56,7 +56,6 @@ resource "null_resource" "package_dependencies" {
           --platform "$PLATFORM" \
           --target "${local.deps_dir}" \
           --implementation cp \
-          --python 3.12 \
           --only-binary=:all: \
           --upgrade
       fi
