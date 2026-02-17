@@ -193,6 +193,54 @@ terraform apply -var-file=../examples/1-hello-world/terraform.tfvars
 
 ---
 
+## Developer Experience
+
+### The Inner Loop
+
+The distance between saving a file and seeing it execute in AWS is measured in seconds, not minutes. The OCDS build protocol described above is what makes this possible, but `hot_reload.py` is what makes it automatic. Run the watcher against your agent source directory and it monitors every `.py` file via `watchdog`. When you save, it fires a targeted `terraform apply -target=module.agentcore_runtime` that triggers only OCDS Stage 2 -- your code is repackaged, the dependency layer is untouched, and the new artifact lands in S3 within a few seconds. The Lambda picks up the new code on its next invocation. No container builds, no CI round-trips, no manual zipping.
+
+```bash
+# Terminal 1: start the hot-reload watcher
+python terraform/scripts/hot_reload.py examples/3-deepresearch/agent-code
+
+# Terminal 2: observe what happens
+python terraform/scripts/acore_debug.py
+```
+
+The debug TUI (`acore_debug.py`) auto-discovers your deployed infrastructure from `terraform output -json`, then streams CloudWatch logs into a live terminal panel alongside a latency trace that breaks down each request into Gateway, Authorizer, Router, Lambda, and Bedrock segments. Press `r` to trigger a manual reload without leaving the debugger. The tool speaks the OCDS protocol -- when it reloads, it runs an identical targeted apply that respects the two-stage hash boundaries.
+
+### Local MCP Development
+
+The `examples/mcp-servers/local-dev/` directory provides a Flask-based MCP server that implements the same protocol your Lambda handlers speak, without requiring an AWS account. Start it with `make dev` from the `examples/mcp-servers/` directory and it binds to `localhost:8080`, serving tool definitions and handling invocations against local data. The development cycle is bidirectional: build and test locally, promote to Lambda when the logic is stable, diagnose production issues locally by pulling real payloads down and replaying them against the Flask server.
+
+```bash
+cd examples/mcp-servers
+make setup   # one-time dependency install
+make dev     # Flask MCP server on localhost:8080
+make test    # run handler tests locally
+make watch   # auto-restart on file changes (inotifywait)
+```
+
+### The Makefile
+
+The root Makefile exposes the full development surface through forty-odd targets. `make quickstart` gets a new team member from clone to validated in under a minute. `make plan-dev` through `make plan-research` let you plan against any example configuration without remembering tfvars paths. `make test-all` runs every Terraform and Python validation in sequence. `make security-scan` runs Checkov. `make logs-gateway` through `make logs-evaluator` tail CloudWatch logs per component. `make docs` regenerates terraform-docs. `make debug` runs a plan with `TF_LOG=DEBUG` for when things go sideways.
+
+No target requires AWS credentials except those that explicitly deploy or read live infrastructure. Formatting, validation, security scanning, linting, and Python unit tests all run locally and offline.
+
+### Pre-commit Enforcement
+
+Every commit passes through a hook chain that catches problems before they reach CI. Terraform formatting, validation, and docs generation run automatically. TFLint applies the AWS ruleset. Checkov scans for security misconfigurations. Black and Flake8 enforce Python style at line-length 120. Three custom local hooks round out the chain: `docs-sync-check` blocks Terraform changes that lack documentation updates, `tests-sync-check` blocks Terraform changes that lack test updates, and `no-placeholder-arns` catches hardcoded dummy account IDs before they can ship.
+
+### Windows Support
+
+Terraform pre-commit hooks require bash, which makes them hostile to native Windows development. `validate_windows.bat` provides an alternative: it locates your Terraform binary (checking PATH, then falling back to common install locations), runs `terraform fmt -check -recursive`, and then invokes pre-commit with the bash-dependent hooks skipped. Pass `--fix` to auto-format instead of just checking. The script finds pre-commit through multiple strategies -- `uv tool run`, standalone binary, `py -3.12 -m pre_commit` -- so it works regardless of how Python is installed.
+
+### Scaffolding New Agents
+
+The `templates/agent-project/` directory contains a Copier template that generates a complete agent project from interactive prompts. Provide an agent name, description, region, and toggle optional features (guardrails, code interpreter, knowledge base, BFF), and Copier produces a ready-to-deploy Terraform configuration with the correct module wiring, a starter Python agent, and a test suite. The CI pipeline validates that the template itself generates valid Terraform on every push, so the scaffolding never drifts from the framework's current structure.
+
+---
+
 ## Configuration Reference
 
 ### Core
