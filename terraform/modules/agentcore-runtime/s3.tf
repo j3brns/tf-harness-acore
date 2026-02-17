@@ -1,9 +1,14 @@
 # S3 bucket for deployment artifacts
 resource "aws_s3_bucket" "deployment" {
-  count  = var.deployment_bucket_name == "" ? 1 : 0
-  bucket = "${var.app_id}-${var.agent_name}-${data.aws_caller_identity.current.account_id}"
+  count         = var.deployment_bucket_name == "" ? 1 : 0
+  bucket        = "${var.app_id}-${var.agent_name}-${data.aws_caller_identity.current.account_id}"
+  force_destroy = true
 
   tags = var.tags
+
+  lifecycle {
+    ignore_changes = [bucket]
+  }
 }
 
 # S3 Access Logging

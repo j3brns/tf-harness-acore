@@ -246,14 +246,14 @@ pre-commit run --all-files
 ### Rule 14.2: Partitioned Storage
 - **Requirement**: All persistent state (S3 Memory, DynamoDB Sessions) MUST be partitioned by `app_id` and `tenant_id`.
 - **Pattern (S3)**: `s3://{bucket}/{app_id}/{tenant_id}/{agent_name}/memory/`.
-- **Pattern (DynamoDB)**: 
+- **Pattern (DynamoDB)**:
   - `PartitionKey (PK)`: `APP#{app_id}#TENANT#{tenant_id}`
   - `SortKey (SK)`: `SESSION#{session_id}`
 
 ### Rule 14.3: ABAC Enforcement
 - **Requirement**: Access to resources MUST be restricted using **Attribute-Based Access Control (ABAC)**.
 - **Implementation**: IAM and Cedar policies MUST use conditions comparing the `principal.tenant_id` with the `resource.tenant_id`.
-- **Example**: 
+- **Example**:
   ```hcl
   Condition = {
     StringEquals = { "s3:ExistingObjectTag/TenantID" = "${aws:PrincipalTag/TenantID}" }

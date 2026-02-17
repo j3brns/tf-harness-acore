@@ -43,13 +43,15 @@ resource "aws_lambda_function" "auth_handler" {
 
   environment {
     variables = {
-      APP_ID            = var.app_id
-      SESSION_TABLE     = aws_dynamodb_table.sessions[0].name
-      CLIENT_ID         = var.oidc_client_id
-      CLIENT_SECRET_ARN = var.oidc_client_secret_arn
-      ISSUER            = var.oidc_issuer
-      REDIRECT_URI      = "https://${aws_api_gateway_rest_api.bff[0].id}.execute-api.${var.region}.amazonaws.com/${var.environment}/auth/callback"
-      SESSION_TTL       = tostring(var.session_ttl_seconds)
+      APP_ID                 = var.app_id
+      SESSION_TABLE          = aws_dynamodb_table.sessions[0].name
+      CLIENT_ID              = var.oidc_client_id
+      CLIENT_SECRET_ARN      = var.oidc_client_secret_arn
+      ISSUER                 = var.oidc_issuer
+      AUTHORIZATION_ENDPOINT = var.oidc_authorization_endpoint
+      TOKEN_ENDPOINT         = var.oidc_token_endpoint
+      REDIRECT_URI           = "https://${aws_api_gateway_rest_api.bff[0].id}.execute-api.${var.region}.amazonaws.com/${var.environment}/auth/callback"
+      SESSION_TTL            = tostring(var.session_ttl_seconds)
     }
   }
 }
@@ -75,8 +77,12 @@ resource "aws_lambda_function" "authorizer" {
 
   environment {
     variables = {
-      APP_ID        = var.app_id
-      SESSION_TABLE = aws_dynamodb_table.sessions[0].name
+      APP_ID            = var.app_id
+      SESSION_TABLE     = aws_dynamodb_table.sessions[0].name
+      CLIENT_ID         = var.oidc_client_id
+      CLIENT_SECRET_ARN = var.oidc_client_secret_arn
+      ISSUER            = var.oidc_issuer
+      TOKEN_ENDPOINT    = var.oidc_token_endpoint
     }
   }
 }

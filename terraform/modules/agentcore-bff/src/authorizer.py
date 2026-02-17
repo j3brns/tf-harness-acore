@@ -1,11 +1,83 @@
 import os
 import boto3
 import time
+import json
+import urllib.parse
+import urllib.request
+import logging
+
+# Configure logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 DDB_TABLE = os.environ.get("SESSION_TABLE")
 APP_ID = os.environ.get("APP_ID")
+CLIENT_ID = os.environ.get("CLIENT_ID")
+CLIENT_SECRET_ARN = os.environ.get("CLIENT_SECRET_ARN")
+ISSUER = os.environ.get("ISSUER")
+TOKEN_ENDPOINT = os.environ.get("TOKEN_ENDPOINT")
+
 ddb = boto3.resource("dynamodb")
+secrets_client = boto3.client("secretsmanager")
 table = ddb.Table(DDB_TABLE)
+
+
+def get_secret(arn):
+    if not arn:
+        return None
+    try:
+        resp = secrets_client.get_secret_value(SecretId=arn)
+        return resp["SecretString"]
+    except Exception as e:
+        logger.error(f"Error fetching secret: {e}")
+        return None
+
+
+def get_token_url():
+    """Get the token endpoint URL using discovery or fallback to Entra ID."""
+    if TOKEN_ENDPOINT:
+        return TOKEN_ENDPOINT
+    # Fallback to Entra ID format if discovery is not available
+    return f"{ISSUER.rstrip('/')}/oauth2/v2.0/token"
+
+
+def refresh_session(tenant_id, session_id, refresh_token):
+    """Attempt to refresh the OIDC session using the refresh token."""
+    logger.info(f"Refreshing session for tenant {tenant_id}, session {session_id}")
+
+    secret = get_secret(CLIENT_SECRET_ARN)
+    exchange_data = {
+        "client_id": CLIENT_ID,
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token,
+    }
+    if secret:
+        exchange_data["client_secret"] = secret
+
+    data = urllib.parse.urlencode(exchange_data).encode()
+    token_url = get_token_url()
+    req = urllib.request.Request(token_url, data=data, method="POST")
+
+    try:
+        with urllib.request.urlopen(req) as resp:
+            token_resp = json.loads(resp.read().decode())
+
+        new_access_token = token_resp["access_token"]
+        new_refresh_token = token_resp.get("refresh_token", refresh_token)
+        expires_in = token_resp.get("expires_in", 3600)
+        new_expires_at = int(time.time()) + expires_in
+
+        # Update DynamoDB
+        table.update_item(
+            Key={"pk": f"APP#{APP_ID}#TENANT#{tenant_id}", "sk": f"SESSION#{session_id}"},
+            UpdateExpression="SET access_token = :at, refresh_token = :rt, expires_at = :ex",
+            ExpressionAttributeValues={":at": new_access_token, ":rt": new_refresh_token, ":ex": new_expires_at},
+        )
+
+        return new_access_token, new_expires_at
+    except Exception as e:
+        logger.error(f"Session refresh failed: {e}")
+        return None, None
 
 
 def generate_policy(principal_id, effect, resource, context=None):
@@ -39,19 +111,31 @@ def lambda_handler(event, context):
     # Split tenant_id and session_id from composite cookie
     if ":" not in raw_session:
         return generate_policy("user", "Deny", event["methodArn"])
-    
+
     tenant_id, session_id = raw_session.split(":", 1)
 
     # Lookup Session using North-South Join PK/SK
-    resp = table.get_item(
-        Key={
-            "pk": f"APP#{APP_ID}#TENANT#{tenant_id}",
-            "sk": f"SESSION#{session_id}"
-        }
-    )
+    resp = table.get_item(Key={"pk": f"APP#{APP_ID}#TENANT#{tenant_id}", "sk": f"SESSION#{session_id}"})
     item = resp.get("Item")
 
-    if not item or item["expires_at"] < time.time():
+    if not item:
+        return generate_policy("user", "Deny", event["methodArn"])
+
+    access_token = item["access_token"]
+    expires_at = item["expires_at"]
+    refresh_token = item.get("refresh_token")
+
+    # If expired or close to expiring (within 5 mins), try refresh
+    if expires_at < (time.time() + 300) and refresh_token:
+        new_token, new_expiry = refresh_session(tenant_id, session_id, refresh_token)
+        if new_token:
+            access_token = new_token
+            expires_at = new_expiry
+        elif expires_at < time.time():
+            # Refresh failed and already expired
+            return generate_policy("user", "Deny", event["methodArn"])
+    elif expires_at < time.time():
+        # Expired and no refresh token
         return generate_policy("user", "Deny", event["methodArn"])
 
     # Allow
@@ -60,7 +144,7 @@ def lambda_handler(event, context):
         effect="Allow",
         resource=event["methodArn"],
         context={
-            "access_token": item["access_token"],
+            "access_token": access_token,
             "session_id": session_id,
             "tenant_id": tenant_id,
             "app_id": APP_ID,

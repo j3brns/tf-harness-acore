@@ -12,6 +12,18 @@ variable "oidc_issuer" {
   default     = ""
 }
 
+variable "oidc_authorization_endpoint" {
+  description = "Override OIDC authorization endpoint (discovers if empty)"
+  type        = string
+  default     = ""
+}
+
+variable "oidc_token_endpoint" {
+  description = "Override OIDC token endpoint (discovers if empty)"
+  type        = string
+  default     = ""
+}
+
 variable "oidc_client_id" {
   description = "OIDC Client ID"
   type        = string

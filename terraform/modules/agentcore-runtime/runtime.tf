@@ -6,10 +6,12 @@ resource "null_resource" "agent_runtime" {
   count = var.enable_runtime ? 1 : 0
 
   triggers = {
-    agent_name      = var.agent_name
-    region          = var.region
-    deployment_hash = local.source_hash
-    config_hash     = sha256(jsonencode(var.runtime_config))
+    agent_name        = var.agent_name
+    region            = var.region
+    deployment_hash   = local.source_hash
+    config_hash       = sha256(jsonencode(var.runtime_config))
+    deployment_bucket = local.deployment_bucket
+    deployment_key    = local.deployment_key
   }
 
   provisioner "local-exec" {
@@ -217,7 +219,7 @@ resource "null_resource" "agent_memory" {
 data "external" "runtime_output" {
   count = var.enable_runtime ? 1 : 0
 
-  program = ["cat", "${path.module}/.terraform/runtime_output.json"]
+  program = ["bash", "-c", "if [ -f ${path.module}/.terraform/runtime_output.json ]; then cat ${path.module}/.terraform/runtime_output.json; else echo '{}'; fi"]
 
   depends_on = [null_resource.agent_runtime]
 }

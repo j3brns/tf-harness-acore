@@ -40,7 +40,7 @@ def main():
     app_id = outputs.get("app_id", {}).get("value") or outputs["agent_name"]["value"]
     region = boto3.session.Session().region_name or "us-east-1"
 
-    print(f"Validating BFF Smoke Test [North-South Join Model]")
+    print("Validating BFF Smoke Test [North-South Join Model]")
     print(f"API: {api_id}, Authorizer: {auth_id}, Table: {table_name}, AppID: {app_id}")
 
     # 1. Test Missing Cookie (Expect Deny)
@@ -80,7 +80,7 @@ def main():
 
     tenant_id = "smoke-test-tenant"
     session_id = str(uuid.uuid4())
-    
+
     # Composite PK format: APP#{app_id}#TENANT#{tenant_id}
     pk = f"APP#{app_id}#TENANT#{tenant_id}"
     sk = f"SESSION#{session_id}"
@@ -119,7 +119,7 @@ def main():
         out = json.loads(res)
         policy = json.loads(out["policy"])
         effect = policy["policyDocument"]["Statement"][0]["Effect"]
-        
+
         # Verify context propagation
         ctx = out.get("authorization", {})
         res_tenant = ctx.get("tenant_id")

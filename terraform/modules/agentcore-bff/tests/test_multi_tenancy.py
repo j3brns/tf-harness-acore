@@ -12,75 +12,69 @@ with patch("boto3.resource"), patch("boto3.client"):
     import auth_handler
     import authorizer
 
+
 def create_mock_jwt(claims):
     header = base64.urlsafe_b64encode(json.dumps({"alg": "HS256"}).encode()).decode().replace("=", "")
     payload = base64.urlsafe_b64encode(json.dumps(claims).encode()).decode().replace("=", "")
     signature = "mock_signature"
     return f"{header}.{payload}.{signature}"
 
+
 def test_tenant_extraction_in_callback():
     print("Testing Tenant ID extraction in callback (North-South Join)...")
-    
+
     # Mock JWT with tenant claim (tid for Entra ID)
     mock_id_token = create_mock_jwt({"tid": "tenant-123", "sub": "user-456", "email": "test@example.com"})
-    
+
     # Mock event
     event = {
         "queryStringParameters": {"code": "mock_code", "state": "mock_state"},
-        "headers": {"Cookie": "temp_session_id=temp-123"}
+        "headers": {"Cookie": "temp_session_id=temp-123"},
     }
-    
+
     # Mock dependencies
     auth_handler.table = MagicMock()
     # Return temp session for lookup
-    auth_handler.table.get_item.return_value = {
-        "Item": {"state": "mock_state", "code_verifier": "mock_verifier"}
-    }
-    
+    auth_handler.table.get_item.return_value = {"Item": {"state": "mock_state", "code_verifier": "mock_verifier"}}
+
     # Mock token exchange response
-    mock_token_resp = {
-        "access_token": "mock_access",
-        "id_token": mock_id_token,
-        "expires_in": 3600
-    }
-    
+    mock_token_resp = {"access_token": "mock_access", "id_token": mock_id_token, "expires_in": 3600}
+
     with (
         patch("urllib.request.urlopen") as mock_url_open,
         patch("auth_handler.get_secret", return_value="mock_secret"),
         patch("auth_handler.ISSUER", "https://issuer"),
-        patch("auth_handler.APP_ID", "test-app")
+        patch("auth_handler.APP_ID", "test-app"),
     ):
         # Mock the context manager for urlopen
         mock_response = MagicMock()
         mock_response.read.return_value = json.dumps(mock_token_resp).encode()
         mock_url_open.return_value.__enter__.return_value = mock_response
-        
+
         response = auth_handler.callback(event)
-        
+
         # Verify DDB storage includes tenant_id and composite PK/SK
         auth_handler.table.put_item.assert_called_once()
         item = auth_handler.table.put_item.call_args[1]["Item"]
-        
+
         assert item.get("tenant_id") == "tenant-123"
         assert item.get("pk") == "APP#test-app#TENANT#tenant-123"
         assert item.get("sk").startswith("SESSION#")
-        
+
         # Verify Cookie format includes tenant_id
         cookie = response["headers"]["Set-Cookie"]
         assert "session_id=tenant-123:" in cookie
-        
+
         print(f"  PASS: Composite PK: {item.get('pk')}")
-        print(f"  PASS: Cookie contains tenant_id prefix.")
+        print("  PASS: Cookie contains tenant_id prefix.")
+
 
 def test_tenant_propagation_in_authorizer():
     print("Testing Tenant ID propagation in authorizer (North-South Join)...")
-    
+
     # Mock event with composite cookie
-    event = {
-        "methodArn": "arn:aws:execute-api:...",
-        "headers": {"Cookie": "session_id=tenant-123:sess-123"}
-    }
-    
+    event = {"methodArn": "arn:aws:execute-api:...", "headers": {"Cookie": "session_id=tenant-123:sess-123"}}
+
     # Mock DynamoDB lookup
     authorizer.table = MagicMock()
     authorizer.table.get_item.return_value = {
@@ -90,25 +84,23 @@ def test_tenant_propagation_in_authorizer():
             "app_id": "test-app",
             "tenant_id": "tenant-123",
             "access_token": "mock_access",
-            "expires_at": 9999999999 # Far future
+            "expires_at": 9999999999,  # Far future
         }
     }
-    
+
     with patch("authorizer.APP_ID", "test-app"):
         policy = authorizer.lambda_handler(event, None)
-        
+
         # Verify lookup key
         authorizer.table.get_item.assert_called_with(
-            Key={
-                "pk": "APP#test-app#TENANT#tenant-123",
-                "sk": "SESSION#sess-123"
-            }
+            Key={"pk": "APP#test-app#TENANT#tenant-123", "sk": "SESSION#sess-123"}
         )
-        
+
         assert policy.get("context", {}).get("tenant_id") == "tenant-123"
         assert policy.get("context", {}).get("app_id") == "test-app"
         assert policy.get("context", {}).get("session_id") == "sess-123"
         print("  PASS: authorizer performed composite PK lookup and propagated full context.")
+
 
 if __name__ == "__main__":
     try:
@@ -118,5 +110,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\nUNIT TEST FAILED: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

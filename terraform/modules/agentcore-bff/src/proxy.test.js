@@ -305,11 +305,11 @@ describe("proxy.js", () => {
       const stream = mockResponseStream();
       const event = makeEvent(
         { prompt: "hello", sessionId: "session-tenant-B" },
-        { 
-          authorizer: { 
+        {
+          authorizer: {
             tenant_id: "tenant-A",
             session_id: "session-tenant-A"
-          } 
+          }
         }
       );
 
@@ -327,7 +327,7 @@ describe("proxy.js", () => {
     test("performs physical isolation via AssumeRole (Rule 14.3)", async () => {
       process.env.AGENTCORE_RUNTIME_ROLE_ARN = "arn:aws:iam::123456789012:role/runtime";
       setupMockRequest(200, {}, ["ok"]);
-      
+
       jest.resetModules();
       setupAwsLambdaGlobal();
       jest.mock("https", () => ({ request: mockHttpsRequest }));
@@ -368,7 +368,7 @@ describe("proxy.js", () => {
       const assumeCall = mockStsSend.mock.calls[0][0];
       expect(assumeCall.RoleArn).toBe("arn:aws:iam::123456789012:role/runtime");
       expect(assumeCall.RoleSessionName).toBe("AgentCore-app-A-tenant-A");
-      
+
       const policy = JSON.parse(assumeCall.Policy);
       const s3Statement = policy.Statement.find(s => s.Action.includes("s3:GetObject"));
       expect(s3Statement.Resource).toContain("arn:aws:s3:::*-memory-*/app-A/tenant-A/*");
@@ -377,7 +377,7 @@ describe("proxy.js", () => {
       const sigV4Instance = SigV4.mock.results[SigV4.mock.results.length - 1].value;
       const credentialsUsed = SigV4.mock.calls[SigV4.mock.calls.length - 1][0].credentials;
       expect(credentialsUsed.accessKeyId).toBe("ak-assumed");
-      
+
       delete process.env.AGENTCORE_RUNTIME_ROLE_ARN;
     });
   });

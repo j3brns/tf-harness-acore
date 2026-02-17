@@ -5,6 +5,10 @@ terraform {
       source  = "hashicorp/aws"
       version = ">= 6.0" # Required for native BFF response streaming
     }
+    http = {
+      source  = "hashicorp/http"
+      version = ">= 3.0"
+    }
   }
 }
 
@@ -16,6 +20,17 @@ provider "aws" {
       ManagedBy = "Terraform"
     }
   }
+}
+
+# OIDC Discovery (Build-time Discovery)
+data "http" "oidc_config" {
+  count = {{ enable_bff | lower }} ? 1 : 0
+  url   = "${trimsuffix(local.oidc_issuer, "/")}/.well-known/openid-configuration"
+}
+
+locals {
+  oidc_issuer = "https://login.microsoftonline.com/YOUR_TENANT_ID/v2.0"
+  oidc_discovery = try(jsondecode(data.http.oidc_config[0].response_body), {})
 }
 
 # Root module - orchestrates all AgentCore components
@@ -116,9 +131,11 @@ module "agentcore_bff" {
   agentcore_runtime_arn = module.agentcore_runtime.runtime_arn
 
   # Auth Configuration (Placeholders - MUST be updated)
-  oidc_issuer            = "https://login.microsoftonline.com/YOUR_TENANT_ID/v2.0"
-  oidc_client_id         = "YOUR_CLIENT_ID"
-  oidc_client_secret_arn = "arn:aws:secretsmanager:{{ region }}:YOUR_ACCOUNT:secret:YOUR_SECRET"
+  oidc_issuer                 = local.oidc_issuer
+  oidc_authorization_endpoint = try(local.oidc_discovery.authorization_endpoint, "")
+  oidc_token_endpoint         = try(local.oidc_discovery.token_endpoint, "")
+  oidc_client_id              = "YOUR_CLIENT_ID"
+  oidc_client_secret_arn      = "arn:aws:secretsmanager:{{ region }}:YOUR_ACCOUNT:secret:YOUR_SECRET"
 
   depends_on = [
     module.agentcore_foundation

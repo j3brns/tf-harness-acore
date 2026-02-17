@@ -10,18 +10,10 @@ This document outlines planned features and improvements for the Bedrock AgentCo
 - [x] **Native 15-Minute Streaming**: Upgraded to AWS Provider v6.x to bypass the 29s REST API timeout.
 - [x] **Multi-Tenant Session Partitioning**: Refactored DynamoDB to use composite keys (app_id + session_id).
 - [x] **Full Tenant Isolation (Rule 14)**: Implemented cross-tenant isolation in BFF Proxy and automated isolation tests.
+- [x] **OIDC Token Refresh Handler**: Implemented seamless session rotation in the Authorizer (Issue #13).
+- [x] **OIDC Discovery Integration**: Automated build-time endpoint discovery via `.well-known/openid-configuration` (Issue #15).
 
 ## 🚀 High Priority (Reliability & Security)
-
-- [ ] **OIDC Token Refresh Handler**
-  * **Problem:** Sessions currently expire after 60 minutes when the access token dies.
-  * **Solution:** Implement a refresh sidecar in the Authorizer or a dedicated endpoint to use the stored `refresh_token` to rotate sessions seamlessly.
-  * **Issue:** #13
-
-- [ ] **OIDC Discovery Integration**
-  * **Problem:** OIDC endpoints (authorize/token) are currently constructed manually.
-  * **Solution:** Implement auto-discovery by fetching `/.well-known/openid-configuration` from the ISSUER URL.
-  * **Issue:** #15
 
 ## 📈 Enterprise Features (Scale & Compliance)
 

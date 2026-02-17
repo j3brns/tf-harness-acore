@@ -253,7 +253,7 @@ resource "aws_cloudwatch_log_group" "policy_engine" {
 data "external" "policy_engine_output" {
   count = var.enable_policy_engine ? 1 : 0
 
-  program = ["cat", "${path.module}/.terraform/policy_engine.json"]
+  program = ["bash", "-c", "if [ -f ${path.module}/.terraform/policy_engine.json ]; then cat ${path.module}/.terraform/policy_engine.json; else echo '{}'; fi"]
 
   depends_on = [null_resource.policy_engine]
 }

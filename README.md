@@ -6,11 +6,11 @@ Deploy, secure, and scale production AI agents on AWS Bedrock with a **local-fir
 
 Bedrock AgentCore is a comprehensive framework designed for teams deploying AI Agents in production environments. It addresses several critical challenges in AI infrastructure engineering:
 
-### 1. The Bridge Pattern (AWS CLI Integration)
-We utilize a stateful "Bridge" pattern to manage the lifecycle of newer Bedrock features. By wrapping the AWS CLI in `null_resource` provisioners and using **SSM Parameter Store** to persist resource IDs, we provide Day 0 access to new models, inference profiles, and guardrails with production-grade lifecycle safety.
+### 1. The SSM Persistence Pattern (CLI Bridge)
+We utilize a stateful "Bridge" pattern to manage the lifecycle of Bedrock resources not yet natively supported by the Terraform provider. By wrapping the AWS CLI in `null_resource` provisioners and using **AWS Systems Manager (SSM) Parameter Store** to persist resource IDs, we solve the **Ephemeral State** problem. This ensures that resource IDs survive CI/CD runner destruction, preventing duplicate resource errors and enabling seamless "Ghost Resource" cleanup during destruction.
 
 ### 2. OCDS: Optimized Packaging
-**Optimized Code/Dependency Separation (OCDS)** is our specialized build protocol. 
+**Optimized Code/Dependency Separation (OCDS)** is our specialized build protocol.
 *   **Architecture Aware**: Automatically detects and builds for **x86_64** or **ARM64 (Graviton)** via the `lambda_architecture` variable, optimizing for price-performance.
 *   **Layered Hashing**: By hashing `pyproject.toml` independently of code files, we ensure that heavy dependency layers are only rebuilt when necessary.
 *   **Hardened Security**: The packaging engine strictly excludes local sensitive files (`.env`, `.tfvars`) and development artifacts (`tests/`, `venv/`) from production archives.
@@ -18,17 +18,19 @@ We utilize a stateful "Bridge" pattern to manage the lifecycle of newer Bedrock 
 ### 3. Modular Regional Topology
 The framework supports granular regional splitting out of the box. You can deploy the **Control Plane**, **BFF**, and **Models** in different regions (e.g., for data residency or availability constraints) while maintaining seamless integration through automated wiring.
 
-### 4. Zero-Trust Security
+### 4. Zero-Trust & Multi-Tenancy (North-South Join)
 Our security model assumes the frontend may be compromised:
-*   **Token Handler Pattern (ADR 0011):** The Serverless BFF (Backend-for-Frontend) ensures that OIDC tokens are exchanged server-side and never reach the browser, preventing XSS-based token theft.
-*   **Hardened Session Management:** Uses **Secure, HttpOnly, and SameSite=Strict** cookies for session identification.
-*   **Mandatory Server-Side Validation:** A Lambda Authorizer validates every API request against DynamoDB sessions before injecting identity context into the backend.
-*   **Audit Logging:** Implements detailed audit logging for all proxy interactions to maintain compliance standards.
+*   **Token Handler Pattern (ADR 0011):** The Serverless BFF (Backend-for-Frontend) ensures that OIDC tokens are exchanged server-side and never reach the browser.
+*   **Build-time Discovery:** Automatically fetches OIDC endpoints (`.well-known/openid-configuration`) during deployment, ensuring high performance and IdP flexibility without runtime latency.
+*   **Identity Exchange:** The Gateway exchanges the verified User JWT for a scoped **Workload Token**, ensuring that agents and tools operate under the minimum necessary permissions.
+*   **North-South Join Isolation:** Every request is anchored by a composite identity of `AppID` (North) and `TenantID` (Middle) against the `AgentName` (South), enforced via dynamic IAM session policies.
 
 ## Framework Features
 
 *   ⚡ **Fast OCDS Builds**: Instant updates for agent logic without full dependency reinstalls.
-*   🖥️ **Interactive CLI Terminal**: A dedicated terminal interface for real-time observability, log tailing, and remote management.
+*   🖥️ **Interactive CLI Terminal**: A dedicated terminal interface for real-time observability and remote management.
+*   🔍 **OIDC Auto-Discovery**: Automated build-time endpoint discovery for any OIDC-compliant provider.
+*   🔄 **Seamless Session Rotation**: Integrated OIDC Refresh Token handler to prevent session cut-offs.
 *   🛡️ **ABAC & Cedar Support**: Zero-trust security using Attribute-Based Access Control and Cedar policy enforcement.
 *   🔐 **Credential-Level Isolation**: Dynamic IAM Session Policies physically restrict agent access per-tenant at the credential layer.
 *   🚦 **Resilience Toggles**: Pre-configured Lambda concurrency limits and WAF IP-rate limiting to protect against account-wide DOS.

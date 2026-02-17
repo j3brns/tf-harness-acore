@@ -1,5 +1,5 @@
-import os
 import sys
+
 
 def test_s3_lifecycle():
     print("[Senior Test 1] Verifying S3 Lifecycle Configuration...")
@@ -14,6 +14,7 @@ def test_s3_lifecycle():
             raise Exception("FAILED: Versioning expiration missing")
     print("  PASS: S3 Lifecycle protection verified.")
 
+
 def test_api_throttling():
     print("[Senior Test 2] Verifying API Gateway Throttling...")
     apigw_tf_path = "terraform/modules/agentcore-bff/apigateway.tf"
@@ -24,6 +25,7 @@ def test_api_throttling():
         if "throttling_rate_limit  = 50" not in content:
             raise Exception("FAILED: API rate limit missing or incorrect")
     print("  PASS: API Throttling protection verified.")
+
 
 def test_spa_cache_headers():
     print("[Senior Test 3] Verifying SPA Caching Strategy...")
@@ -36,6 +38,7 @@ def test_spa_cache_headers():
             raise Exception("FAILED: Index.html caching is enabled (TTL > 0)")
     print("  PASS: SPA cache strategy (immediate refresh) verified.")
 
+
 def test_alarm_actions():
     print("[Senior Test 4] Verifying CloudWatch Alarm Actions...")
     obs_tf_path = "terraform/modules/agentcore-foundation/observability.tf"
@@ -44,6 +47,7 @@ def test_alarm_actions():
         if "alarm_actions       = var.alarm_sns_topic_arn" not in content:
             raise Exception("FAILED: Alarm actions not configured with SNS topic variable")
     print("  PASS: Alarm notification infrastructure verified.")
+
 
 def test_python_logging_hygiene():
     print("[Senior Test 5] Verifying Python Logging Hygiene...")
@@ -56,46 +60,49 @@ def test_python_logging_hygiene():
             raise Exception("FAILED: print() statements still exist in auth_handler.py")
     print("  PASS: Python structured logging verified.")
 
+
 def test_apigw_access_logs():
     print("[Senior Test 6] Verifying APIGW Access Logging...")
     apigw_tf_path = "terraform/modules/agentcore-bff/apigateway.tf"
     data_tf_path = "terraform/modules/agentcore-bff/data.tf"
-    
+
     with open(data_tf_path, "r") as f:
         if "aws_cloudwatch_log_group" not in f.read():
             raise Exception("FAILED: APIGW log group not found in data.tf")
-            
+
     with open(apigw_tf_path, "r") as f:
         content = f.read()
         if "access_log_settings {" not in content:
             raise Exception("FAILED: access_log_settings missing from API Gateway Stage")
         if "tenantId" not in content or "appId" not in content:
             raise Exception("FAILED: tenant/app dimensions missing from access log format")
-            
+
     print("  PASS: APIGW Access Logging verified.")
+
 
 def test_s3_access_logging():
     print("[Senior Test 7] Verifying Centralized S3 Access Logging...")
     foundation_s3_path = "terraform/modules/agentcore-foundation/s3.tf"
     runtime_s3_path = "terraform/modules/agentcore-runtime/s3.tf"
     bff_data_path = "terraform/modules/agentcore-bff/data.tf"
-    
+
     with open(foundation_s3_path, "r") as f:
         content = f.read()
         if 'resource "aws_s3_bucket" "access_logs"' not in content:
             raise Exception("FAILED: Centralized logging bucket missing from foundation")
         if '"logging.s3.amazonaws.com"' not in content:
             raise Exception("FAILED: S3 logging service principal missing from bucket policy")
-            
+
     with open(runtime_s3_path, "r") as f:
         if 'resource "aws_s3_bucket_logging" "deployment"' not in f.read():
             raise Exception("FAILED: Access logging missing from deployment bucket")
-            
+
     with open(bff_data_path, "r") as f:
         if 'resource "aws_s3_bucket_logging" "spa"' not in f.read():
             raise Exception("FAILED: Access logging missing from SPA bucket")
-            
+
     print("  PASS: Centralized S3 Access Logging verified.")
+
 
 if __name__ == "__main__":
     try:

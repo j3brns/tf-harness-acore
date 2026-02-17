@@ -138,7 +138,7 @@ resource "aws_cloudwatch_metric_alarm" "evaluation_latency" {
 data "external" "evaluator_output" {
   count = var.enable_evaluations ? 1 : 0
 
-  program = ["cat", "${path.module}/.terraform/evaluator.json"]
+  program = ["bash", "-c", "if [ -f ${path.module}/.terraform/evaluator.json ]; then cat ${path.module}/.terraform/evaluator.json; else echo '{}'; fi"]
 
   depends_on = [null_resource.custom_evaluator]
 }

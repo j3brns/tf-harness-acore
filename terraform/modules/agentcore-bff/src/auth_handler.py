@@ -20,10 +20,28 @@ CLIENT_ID = os.environ.get("CLIENT_ID")
 CLIENT_SECRET_ARN = os.environ.get("CLIENT_SECRET_ARN")
 REDIRECT_URI = os.environ.get("REDIRECT_URI")
 ISSUER = os.environ.get("ISSUER")
+AUTH_ENDPOINT = os.environ.get("AUTHORIZATION_ENDPOINT")
+TOKEN_ENDPOINT = os.environ.get("TOKEN_ENDPOINT")
 
 ddb = boto3.resource("dynamodb")
 secrets_client = boto3.client("secretsmanager")
 table = ddb.Table(DDB_TABLE)
+
+
+def get_auth_url(params):
+    """Get the authorization URL using discovery or fallback to Entra ID."""
+    if AUTH_ENDPOINT:
+        return f"{AUTH_ENDPOINT}?{urllib.parse.urlencode(params)}"
+    # Fallback to Entra ID format if discovery is not available
+    return f"{ISSUER.rstrip('/')}/oauth2/v2.0/authorize?{urllib.parse.urlencode(params)}"
+
+
+def get_token_url():
+    """Get the token endpoint URL using discovery or fallback to Entra ID."""
+    if TOKEN_ENDPOINT:
+        return TOKEN_ENDPOINT
+    # Fallback to Entra ID format if discovery is not available
+    return f"{ISSUER.rstrip('/')}/oauth2/v2.0/token"
 
 
 def get_secret(arn):
@@ -96,7 +114,7 @@ def login(event):
         "code_challenge_method": "S256",
     }
 
-    auth_url = f"{ISSUER.rstrip('/')}/oauth2/v2.0/authorize?{urllib.parse.urlencode(params)}"
+    auth_url = get_auth_url(params)
 
     # Temporary cookie to link callback back to verifier
     cookie = f"temp_session_id={temp_session_id}; Secure; HttpOnly; SameSite=Strict; Path=/; Max-Age=600"
@@ -156,7 +174,7 @@ def callback(event):
 
     data = urllib.parse.urlencode(exchange_data).encode()
 
-    token_url = f"{ISSUER.rstrip('/')}/oauth2/v2.0/token"
+    token_url = get_token_url()
     req = urllib.request.Request(token_url, data=data, method="POST")
 
     try:

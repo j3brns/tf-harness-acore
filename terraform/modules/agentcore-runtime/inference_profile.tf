@@ -93,7 +93,7 @@ resource "null_resource" "inference_profile" {
 data "external" "inference_profile_output" {
   count = var.enable_inference_profile ? 1 : 0
 
-  program = ["cat", "${path.module}/.terraform/inference_profile.json"]
+  program = ["bash", "-c", "if [ -f ${path.module}/.terraform/inference_profile.json ]; then cat ${path.module}/.terraform/inference_profile.json; else echo '{}'; fi"]
 
   depends_on = [null_resource.inference_profile]
 }

@@ -77,9 +77,17 @@ resource "aws_iam_role_policy" "authorizer" {
       {
         Effect = "Allow"
         Action = [
-          "dynamodb:GetItem"
+          "dynamodb:GetItem",
+          "dynamodb:UpdateItem"
         ]
         Resource = aws_dynamodb_table.sessions[0].arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = var.oidc_client_secret_arn
       },
       {
         Effect = "Allow"

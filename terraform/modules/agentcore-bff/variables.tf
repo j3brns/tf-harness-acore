@@ -62,6 +62,18 @@ variable "oidc_issuer" {
   default     = ""
 }
 
+variable "oidc_authorization_endpoint" {
+  description = "Discovered OIDC authorization endpoint"
+  type        = string
+  default     = ""
+}
+
+variable "oidc_token_endpoint" {
+  description = "Discovered OIDC token endpoint"
+  type        = string
+  default     = ""
+}
+
 variable "oidc_client_id" {
   description = "OIDC Client ID"
   type        = string

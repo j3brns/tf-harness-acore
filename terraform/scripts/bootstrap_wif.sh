@@ -29,7 +29,7 @@ echo "----------------------------------------------------------------"
 
 # 1. Get OIDC Thumbprint
 echo "[1/4] Retrieving GitLab OIDC thumbprint..."
-THUMBPRINT=$(openssl s_client -connect "${DOMAIN}:443" -servername "${DOMAIN}" 2>/dev/null 
+THUMBPRINT=$(openssl s_client -connect "${DOMAIN}:443" -servername "${DOMAIN}" 2>/dev/null
   | openssl x509 -fingerprint -sha1 -noout | cut -d= -f2 | tr -d ':')
 echo "Thumbprint: ${THUMBPRINT}"
 
@@ -38,10 +38,10 @@ echo "[2/4] Creating OIDC Provider in AWS..."
 if aws iam get-open-id-connect-provider --open-id-connect-provider-arn "arn:aws:iam::${ACCOUNT_ID}:oidc-provider/${DOMAIN}" --profile "$AWS_PROFILE" 2>/dev/null; then
   echo "OIDC Provider already exists."
 else
-  aws iam create-open-id-connect-provider 
-    --url "${GITLAB_URL}" 
-    --client-id-list "${GITLAB_URL}" 
-    --thumbprint-list "${THUMBPRINT}" 
+  aws iam create-open-id-connect-provider
+    --url "${GITLAB_URL}"
+    --client-id-list "${GITLAB_URL}"
+    --thumbprint-list "${THUMBPRINT}"
     --profile "$AWS_PROFILE"
 fi
 
@@ -119,17 +119,17 @@ if aws iam get-role --role-name "${ROLE_NAME}" --profile "$AWS_PROFILE" 2>/dev/n
   echo "Role ${ROLE_NAME} already exists. Updating trust policy..."
   aws iam update-assume-role-policy --role-name "${ROLE_NAME}" --policy-document file:///tmp/trust-policy.json --profile "$AWS_PROFILE"
 else
-  aws iam create-role 
-    --role-name "${ROLE_NAME}" 
-    --assume-role-policy-document file:///tmp/trust-policy.json 
+  aws iam create-role
+    --role-name "${ROLE_NAME}"
+    --assume-role-policy-document file:///tmp/trust-policy.json
     --profile "$AWS_PROFILE"
 fi
 
 # Attach Scoped Policy
-aws iam put-role-policy 
-  --role-name "${ROLE_NAME}" 
-  --policy-name "terraform-agentcore-policy" 
-  --policy-document file:///tmp/permissions-policy.json 
+aws iam put-role-policy
+  --role-name "${ROLE_NAME}"
+  --policy-name "terraform-agentcore-policy"
+  --policy-document file:///tmp/permissions-policy.json
   --profile "$AWS_PROFILE"
 
 # 4. Create S3 State Bucket
@@ -138,20 +138,20 @@ if aws s3api head-bucket --bucket "${BUCKET_NAME}" --profile "$AWS_PROFILE" 2>/d
   echo "Bucket already exists."
 else
   aws s3 mb "s3://${BUCKET_NAME}" --region "$AWS_REGION" --profile "$AWS_PROFILE"
-  
-  aws s3api put-bucket-versioning 
-    --bucket "${BUCKET_NAME}" 
-    --versioning-configuration Status=Enabled 
+
+  aws s3api put-bucket-versioning
+    --bucket "${BUCKET_NAME}"
+    --versioning-configuration Status=Enabled
     --profile "$AWS_PROFILE"
 
-  aws s3api put-bucket-encryption 
-    --bucket "${BUCKET_NAME}" 
-    --server-side-encryption-configuration '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}' 
+  aws s3api put-bucket-encryption
+    --bucket "${BUCKET_NAME}"
+    --server-side-encryption-configuration '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
     --profile "$AWS_PROFILE"
 
-  aws s3api put-public-access-block 
-    --bucket "${BUCKET_NAME}" 
-    --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true" 
+  aws s3api put-public-access-block
+    --bucket "${BUCKET_NAME}"
+    --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
     --profile "$AWS_PROFILE"
 fi
 

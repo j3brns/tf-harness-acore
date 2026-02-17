@@ -50,7 +50,7 @@ resource "null_resource" "package_dependencies" {
         if [ "${var.lambda_architecture}" == "arm64" ]; then
           PLATFORM="manylinux2014_aarch64"
         fi
-        
+
         # Use pip to install from pyproject.toml/setup.py correctly
         python3.12 -m pip install "${local.source_path}" \
           --platform "$PLATFORM" \
@@ -92,9 +92,10 @@ resource "null_resource" "package_code" {
 
       echo "Stage 2: Packaging agent code for ${var.agent_name}..."
 
-      # Create temporary directory for build artifacts
-      BUILD_DIR=$(mktemp -d)
-      trap "rm -rf $BUILD_DIR" EXIT
+      # Define build path
+      mkdir -p .build_tmp
+      BUILD_DIR=".build_tmp"
+      rm -rf "$BUILD_DIR"/*
 
       # Validate source path exists
       if [ ! -d "${local.source_path}" ]; then
@@ -121,7 +122,7 @@ resource "null_resource" "package_code" {
       # Create archive
       cd "$BUILD_DIR"
       ARCHIVE_NAME="${var.agent_name}-${self.triggers.source_hash}.zip"
-      
+
       # Hardened exclusions (Rule 13 & Security)
       zip -r "$ARCHIVE_NAME" deps/ code/ \
         -x "*.git*" "__pycache__/*" "*.pyc" ".pytest_cache/*" \
@@ -143,6 +144,9 @@ resource "null_resource" "package_code" {
       echo "{\"status\": \"success\", \"archive\": \"$ARCHIVE_NAME\", \"timestamp\": \"$(date -u +'%Y-%m-%dT%H:%M:%SZ')\"}" > "$BUILD_DIR/.terraform/code_metadata.json"
 
       echo "Code packaged successfully"
+
+      # Cleanup
+      rm -rf "$BUILD_DIR"
     EOT
     , "\r", "")
 

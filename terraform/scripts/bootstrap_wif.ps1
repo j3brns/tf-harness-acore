@@ -162,7 +162,7 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "Bucket already exists."
 } else {
     aws s3 mb "s3://$BucketName" --region $AwsRegion --profile $AwsProfile --no-cli-pager
-    
+
     aws s3api put-bucket-versioning `
         --bucket $BucketName `
         --versioning-configuration Status=Enabled `
@@ -172,7 +172,7 @@ if ($LASTEXITCODE -eq 0) {
     $EncPath = Join-Path $env:TEMP "encryption-config.json"
     [System.IO.File]::WriteAllText($EncPath, $EncryptionConfig)
     $EncPathUri = "file://" + $EncPath.Replace("\", "/")
-    
+
     aws s3api put-bucket-encryption `
         --bucket $BucketName `
         --server-side-encryption-configuration "$EncPathUri" `

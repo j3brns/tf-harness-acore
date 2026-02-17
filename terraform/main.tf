@@ -144,6 +144,20 @@ module "agentcore_governance" {
   ]
 }
 
+# OIDC Discovery (Build-time Discovery)
+data "http" "oidc_config" {
+  count = var.enable_bff && var.oidc_issuer != "" ? 1 : 0
+  url   = "${trimsuffix(var.oidc_issuer, "/")}/.well-known/openid-configuration"
+
+  request_headers = {
+    Accept = "application/json"
+  }
+}
+
+locals {
+  oidc_discovery = try(jsondecode(data.http.oidc_config[0].response_body), {})
+}
+
 module "agentcore_bff" {
   source = "./modules/agentcore-bff"
 
@@ -157,7 +171,13 @@ module "agentcore_bff" {
   log_retention_days = var.log_retention_days
 
   # Auth Configuration
-  oidc_issuer                = var.oidc_issuer
+
+  oidc_issuer = var.oidc_issuer
+
+  oidc_authorization_endpoint = var.oidc_authorization_endpoint != "" ? var.oidc_authorization_endpoint : try(local.oidc_discovery.authorization_endpoint, "")
+
+  oidc_token_endpoint = var.oidc_token_endpoint != "" ? var.oidc_token_endpoint : try(local.oidc_discovery.token_endpoint, "")
+
   oidc_client_id             = var.oidc_client_id
   oidc_client_secret_arn     = var.oidc_client_secret_arn
   logging_bucket_id          = module.agentcore_foundation.access_logs_bucket_id
