@@ -1,29 +1,63 @@
-# Bedrock AgentCore Terraform // Production-Ready AI Infrastructure
+# Bedrock AgentCore Terraform // AI Infrastructure at Kernel Precision
 
-Deploy, secure, and scale production AI agents on AWS Bedrock with a **local-first DX**, **Zero-Trust security**, and **Instant Hot-Reload**.
-
----
-
-## 🛠️ Framework Features
-
-*   ⚡ **Instant Hot-Reload**: Update agent logic without full dependency reinstalls using our **OCDS Layered Builds**.
-*   🛡️ **Zero-Trust BFF**: A secure Backend-for-Frontend using the **Token Handler Pattern**—OIDC tokens never reach the browser.
-*   🔐 **Hardened Multi-Tenancy**: Built-in **North-South Join Isolation** using dynamic ABAC policies to protect tenant data at the credential layer.
-*   🔍 **OIDC Auto-Discovery**: Seamless integration with Entra ID, Okta, and Auth0 via automated build-time endpoint discovery.
-*   🔄 **Seamless Session Rotation**: Integrated OIDC Refresh Token handler ensures long-running agents never lose connectivity.
-*   🖥️ **Interactive Terminal**: Real-time observability and remote management with the `acore_debug` CLI.
+Deploy, secure, and scale production AI agents on AWS Bedrock. Bedrock AgentCore is a hardened orchestration engine that bridges the gap between raw AI models and enterprise-ready security. 
 
 ---
 
-## 🏗️ Architecture
+## Technical Impact
 
-### Logic & Modules
+In modern AI deployments, the frontend is a liability. Stolen tokens and prompt-injection attacks are not edge cases—they are the default threat model. AgentCore treats AI infrastructure as a systems internals problem, providing defense-in-depth at the identity and compute layers.
+
+*   **Identity Translation Engine**: This engine automatically exchanges fragile User JWTs for scoped **Workload Tokens**. Your agents never handle master session tokens; instead, they receive a least-privilege identity anchored to a specific tenant.
+*   **OCDS Build Protocol**: The Optimized Code/Dependency Separation protocol implements a two-stage Lambda packaging system. It caches heavy system dependencies independently of agent logic, which enables **Instant Hot-Reloads** and deterministic deployments.
+*   **Stateful CLI Bridge**: This bridge solves the Terraform "Provider Gap" for Bedrock resources. It wraps AWS CLI control-plane operations in a stateful lifecycle manager and uses **SSM Parameter Store** as a persistent registry to ensure resource IDs survive CI/CD runner destruction.
+
+---
+
+## Architecture
+
+### The North-South Join (Physical)
+Every request is anchored by a hierarchical identity model. **North** defines the logical application boundary, **Middle** provides organizational isolation, and **South** manages the shared compute resources.
+
 ```mermaid
 graph TD
-    A[agentcore-foundation] --> B[agentcore-tools]
-    A --> C[agentcore-runtime]
-    C --> D[agentcore-governance]
-    A --> E[agentcore-bff]
+    subgraph North["North (Entry Point: AppID)"]
+        APIGW["API Gateway REST"]
+    end
+
+    subgraph Middle["Middle (Identity: TenantID)"]
+        LAuthorizer["Lambda Authorizer"]
+        DDB["DynamoDB Session Store"]
+    end
+
+    subgraph South["South (Compute: AgentName)"]
+        LProxy["Agent Proxy Lambda"]
+        BGateway["Bedrock Gateway"]
+        BRuntime["Bedrock Runtime Engine"]
+    end
+
+    subgraph Storage["Partitioned Data Layers"]
+        S3Memory["S3 Tenant Memory"]
+        S3Deploy["S3 Code Artifacts"]
+    end
+
+    Browser["Browser"] -- "AppID Context" --> APIGW
+    APIGW --> LAuthorizer
+    LAuthorizer --- DDB
+    APIGW -- "Validated Request" --> LProxy
+    LProxy --> BGateway
+    BGateway --> BRuntime
+    BRuntime --- S3Memory
+    BRuntime --- S3Deploy
+```
+
+### Logical Topology
+```mermaid
+graph TD
+    A["agentcore-foundation"] --> B["agentcore-tools"]
+    A --> C["agentcore-runtime"]
+    C --> D["agentcore-governance"]
+    A --> E["agentcore-bff"]
 
     style A fill:#e1f5fe
     style B fill:#f3e5f5
@@ -32,86 +66,43 @@ graph TD
     style E fill:#fff9c4
 ```
 
-### Physical Infrastructure (North-South Join)
-```mermaid
-graph TD
-    subgraph North[Entry Point: AppID]
-        APIGW[API Gateway]
-    end
+---
 
-    subgraph Middle[Identity: TenantID]
-        LAuthorizer[Lambda Authorizer]
-        DDB[DynamoDB Sessions]
-    end
+## Stakeholder Mapping
 
-    subgraph South[Compute: AgentName]
-        LProxy[Proxy Lambda]
-        BGateway[Bedrock Gateway]
-        BRuntime[Bedrock Runtime]
-        BSandbox[Code Interpreter]
-    end
-
-    subgraph Storage[Partitioned Data]
-        S3Memory[S3 Memory]
-        S3Deploy[S3 Deploy]
-    end
-
-    Browser[Browser] -- AppID --> North
-    North --> LAuthorizer
-    LAuthorizer --- DDB
-    North -- Validated Identity --> LProxy
-    LProxy --> BGateway
-    BGateway --> BRuntime
-    BRuntime --- S3Memory
-    BRuntime --- S3Deploy
-```
+| Role | Focus | Technical Outcome |
+| :--- | :--- | :--- |
+| **AI Engineer** | Logic and MCP tools | You build intelligent agents without managing AWS plumbing. |
+| **Platform Engineer** | Bootstrapping and CI/CD | You manage account readiness, regional splits, and deployment stability. |
+| **Security Lead** | Zero-Trust and Isolation | You enforce tenant boundaries, OIDC discovery, and audit trails. |
 
 ---
 
-## 🎯 Core Engineering Principles
+## The 3-Step Success Path
 
-Bedrock AgentCore is a comprehensive framework designed for teams deploying AI Agents in production environments.
-
-### 1. The SSM Persistence Pattern (CLI Bridge)
-We utilize a stateful "Bridge" pattern to manage the lifecycle of Bedrock resources not yet natively supported by the Terraform provider. By wrapping the AWS CLI in `null_resource` provisioners and using **AWS Systems Manager (SSM) Parameter Store** to persist resource IDs, we solve the **Ephemeral State** problem. This ensures that resource IDs survive CI/CD runner destruction, preventing duplicate resource errors and enabling seamless "Ghost Resource" cleanup during destruction.
-
-### 2. OCDS: Optimized Packaging
-**Optimized Code/Dependency Separation (OCDS)** is our specialized build protocol.
-*   **Architecture Aware**: Automatically detects and builds for **x86_64** or **ARM64 (Graviton)**, optimizing for price-performance.
-*   **Layered Hashing**: By hashing `pyproject.toml` independently of code files, we ensure that heavy dependency layers are only rebuilt when necessary.
-*   **Hardened Security**: The packaging engine strictly excludes local sensitive files (`.env`, `.tfvars`) and development artifacts from production archives.
-
-### 3. Modular Regional Topology
-The framework supports granular regional splitting out of the box. You can deploy the **Control Plane**, **BFF**, and **Models** in different regions (e.g., for data residency or availability constraints) while maintaining seamless integration through automated wiring.
-
-### 4. Zero-Trust & Multi-Tenancy (North-South Join)
-Our security model assumes the frontend may be compromised:
-*   **Token Handler Pattern (ADR 0011):** The Serverless BFF ensures that OIDC tokens are exchanged server-side and never reach the browser, preventing XSS-based token theft.
-*   **Build-time Discovery:** Automatically fetches OIDC endpoints during deployment, ensuring high performance and IdP flexibility without runtime latency.
-*   **Identity Exchange:** The Gateway exchanges the verified User JWT for a scoped **Workload Token**, ensuring agents operate under minimum necessary permissions.
-*   **North-South Join Isolation**: Every request is anchored by a composite identity of `AppID` (North) and `TenantID` (Middle) against the `AgentName` (South), enforced via dynamic IAM session policies.
-
----
-
-## 🚀 The 3-Step Success Path
-
-### 1. Bootstrap (Platform Readiness)
-Prepare your AWS account for enterprise-grade automation. This one-time setup handles the plumbing of OIDC trust and state management.
+### 1. Bootstrap (Prepare the Environment)
+Prepare your AWS account for modern automation. This one-time setup establishes the OIDC trust relationship between your CI/CD provider and AWS.
 ```bash
-# One-time setup for GitLab CI (WIF) and Secure S3 State
+# Prepare the account for GitLab CI (WIF) and Encrypted S3 State
 bash terraform/scripts/bootstrap_wif.sh
 ```
+*   **Action**: Creates the OIDC Provider, a scoped Deployment IAM Role, and an Encrypted S3 State Bucket.
+*   **Security**: Eliminates long-lived access keys from your CI/CD environment.
 
-### 2. Scaffold (Development Velocity)
-Developers start locally with a 100% compliant project structure.
+### 2. Scaffold (Accelerate Development)
+Start locally with a 100% compliant project structure.
 ```bash
-# Scaffold a fresh project using the enterprise template
+# Scaffold a fresh agent project
 pip install copier
 copier copy --trust templates/agent-project my-agent
+
+# Develop logic in pure Python
+cd my-agent/agent-code
+python runtime.py
 ```
 
-### 3. Orchestrate (Global Scale)
-Deploy your agent using the modular AgentCore topology.
+### 3. Orchestrate (Scale to Production)
+Deploy your agent using the modular topology and environment-specific backends.
 ```bash
 # Initialize and deploy to the dev environment
 cd terraform
@@ -121,51 +112,24 @@ terraform apply
 
 ---
 
-## 👤 Who is this for?
+## Framework Features
 
-| Role | Focus | Outcome |
-| :--- | :--- | :--- |
-| **AI/ML Engineer** | Python logic & MCP tools | Builds intelligent, tool-using agents without managing AWS plumbing. |
-| **DevOps / SRE** | Bootstrapping & CI/CD | Manages account readiness, regional splitting, and automated deployments. |
-| **Security Architect** | Zero-Trust & Compliance | Enforces tenant isolation, OIDC discovery, and audit logging. |
-
----
-
-## 📂 Project Structure
-
-```
-repo-root/
-├── terraform/
-│   ├── modules/
-│   │   ├── agentcore-foundation/   # Gateway, Identity, Observability
-│   │   ├── agentcore-tools/        # Code Interpreter, Browser
-│   │   ├── agentcore-runtime/      # Runtime, Memory, Packaging
-│   │   └── agentcore-governance/   # Policy Engine, Evaluations
-│   ├── main.tf                     # Root module
-│   ├── variables.tf                # Input variables
-├── examples/
-│   ├── 3-deepresearch/             # Full research agent
-│   ├── 5-integrated/               # Recommended module composition
-│   └── mcp-servers/                # Lambda-based MCP tools
-├── docs/
-│   ├── adr/                        # Architecture Decision Records
-│   ├── architecture.md             # System design
-├── AGENTS.md                       # Universal AI agent codex
-└── DEVELOPER_GUIDE.md              # Team onboarding
-```
+*   ⚡ **Instant Hot-Reload**: Update agent logic without reinstalling heavy dependencies.
+*   🔍 **OIDC Auto-Discovery**: Automatically discover endpoints for Entra ID, Okta, and Auth0.
+*   🛡️ **ABAC Physical Isolation**: Restrict agent credentials to tenant-specific S3 prefixes using dynamic session policies.
+*   🖥️ **Interactive Terminal**: Manage and observe your agents in real-time with the `acore_debug` CLI.
 
 ---
 
-## 📖 Documentation
+## Documentation
 
-- **[DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md)** - Team onboarding and common development tasks.
-- **[SETUP.md](./SETUP.md)** - Detailed, step-by-step account configuration.
-- **[AGENTS.md](./AGENTS.md)** - The Universal Codex for AI Agents (Rules, Security, Patterns).
-- **[docs/architecture.md](./docs/architecture.md)** - Deep dive into system design and data flows.
-- **[docs/WIF_SETUP.md](./docs/WIF_SETUP.md)** - Advanced GitLab OIDC configuration.
+- **[DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md)**: Team onboarding and common development tasks.
+- **[SETUP.md](./SETUP.md)**: Detailed, step-by-step account configuration.
+- **[AGENTS.md](./AGENTS.md)**: The Universal Codex for AI Agents (Rules and Patterns).
+- **[docs/architecture.md](./docs/architecture.md)**: Deep dive into system design and data flows.
 
 ---
 
-## ⚖️ License
+## License
 
-MIT - See LICENSE file for details.
+MIT - See the LICENSE file for details.
