@@ -1,6 +1,8 @@
 # Bedrock AgentCore Terraform
 
-A hardened Terraform framework for deploying enterprise AI agents on AWS Bedrock AgentCore. The gap between a raw foundation model and a production-grade agent is filled with identity propagation, tenant isolation, encrypted state management, and a deployment pipeline that refuses to cut corners. The `hashicorp/aws` provider does not yet support AgentCore resources -- verified through v5.100.0. This framework bridges that gap with a stateful CLI bridge pattern that wraps every AgentCore control-plane operation in a lifecycle manager backed by SSM Parameter Store, giving you full infrastructure-as-code semantics today and a clean `terraform import` migration path when native resources arrive.
+A hardened Terraform framework for deploying enterprise AI agents on AWS Bedrock AgentCore. The gap between a raw foundation model and a production-grade agent is filled with identity propagation, tenant isolation, encrypted state management, and a deployment pipeline that refuses to cut corners. The `hashicorp/aws` provider does not yet support AgentCore resources -- verified through v5.100.0. 
+
+This framework bridges that gap with a stateful CLI bridge pattern that wraps every AgentCore control-plane operation in a lifecycle manager backed by SSM Parameter Store, giving you full infrastructure-as-code semantics today and a clean `terraform import` migration path when native resources arrive.
 
 ---
 
@@ -8,19 +10,26 @@ A hardened Terraform framework for deploying enterprise AI agents on AWS Bedrock
 
 ### Identity Translation Engine
 
-Every agent interaction begins with a human. That human arrives carrying a JWT from their corporate identity provider -- Entra ID, Okta, Auth0 -- and the framework must translate that ephemeral, provider-specific token into a scoped AWS Workload Token before any compute touches it. Agents never see master session tokens. They receive a least-privilege identity anchored to the North-South Join hierarchy: **AppID** defines the application boundary, **TenantID** defines the ownership unit, and **AgentName** identifies the compute resource. Together, these three dimensions form a composite key that threads through every layer of the stack.
+Every agent interaction begins with a human. That human arrives carrying a JWT from their corporate identity provider -- Entra ID, Okta, Auth0 -- and the framework must translate that ephemeral, provider-specific token into a scoped AWS Workload Token before any compute touches it. Agents never see master session tokens. They receive a least-privilege identity anchored to the North-South Join hierarchy: 
+- **AppID** defines the application boundary
+- **TenantID** defines the ownership unit
+- **AgentName** identifies the compute resource. Together, these three dimensions form a composite key that threads through every layer of the stack.
 
 ABAC enforcement happens at runtime through dynamic IAM session policies. When a request arrives, the proxy Lambda assumes the agent's execution role with a session policy that physically restricts S3 access to the tenant-specific prefix `{app_id}/{tenant_id}/{agent_name}/`. The credentials themselves are scoped -- not just the application logic. A compromised agent cannot read another tenant's memory because the temporary credentials it holds lack the permission to do so.
 
 ### OCDS Build Protocol
 
-The Optimized Code/Dependency Separation protocol splits Lambda packaging into two deterministic stages. Stage 1 reads `pyproject.toml`, resolves dependencies against the target platform (`manylinux2014_x86_64` or `manylinux2014_aarch64` for Graviton), and caches them in an isolated layer. Stage 2 packages only your agent logic. The result is that a one-line change to your agent's reasoning loop produces a rebuild measured in seconds, not minutes, because the 200MB dependency layer is untouched.
+The Optimized Code/Dependency Separation protocol splits Lambda packaging into two deterministic stages. 
+Stage 1 reads `pyproject.toml`, resolves dependencies against the target platform (`manylinux2014_x86_64` or `manylinux2014_aarch64` for Graviton), and caches them in an isolated layer.
+Stage 2 packages only your agent logic. The result is that a one-line change to your agent's reasoning loop produces a rebuild measured in seconds, not minutes, because the 200MB dependency layer is untouched.
 
 Architecture-aware binary fetching means you can target ARM64/Graviton by flipping `lambda_architecture = "arm64"` and the build engine handles the rest. SHA256 content hashing on both stages ensures that identical inputs produce identical outputs, and that Terraform only triggers a rebuild when something actually changed. The deployment artifact lands in S3 encrypted with SSE-S3, versioned, and referenced by the runtime via a content-addressed key.
 
 ### Stateful CLI Bridge
 
-Ten distinct AgentCore resource types -- Gateway, Workload Identity, Browser, Code Interpreter, Runtime, Memory, Policy Engine, Cedar Policies, Evaluators, and OAuth2 Credential Providers -- have no Terraform provider representation. The framework wraps each in a `null_resource` with a `local-exec` provisioner that calls the `bedrock-agentcore-control` CLI, captures JSON output, and surfaces resource IDs through `data.external` sources. SHA256-based triggers on the resource configuration ensure idempotency: if the configuration has not changed, Terraform does not re-create the resource.
+> Ten distinct AgentCore resource types -- Gateway, Workload Identity, Browser, Code Interpreter, Runtime, Memory, Policy Engine, Cedar Policies, Evaluators, and OAuth2 Credential Providers -- have no Terraform provider representation. 
+
+The framework wraps each in a `null_resource` with a `local-exec` provisioner that calls the `bedrock-agentcore-control` CLI, captures JSON output, and surfaces resource IDs through `data.external` sources. SHA256-based triggers on the resource configuration ensure idempotency: if the configuration has not changed, Terraform does not re-create the resource.
 
 Resource IDs persist in SSM Parameter Store, which means they survive CI/CD runner destruction, local state corruption, and team member rotation. When HashiCorp ships `aws_bedrockagentcore_*` resources, migration is a single `terraform import` per resource followed by a swap from `null_resource` to the native type. The framework was designed for this transition from day one.
 
@@ -30,7 +39,13 @@ Resource IDs persist in SSM Parameter Store, which means they survive CI/CD runn
 
 ### The North-South Join
 
-The North-South Join is a hierarchical identity model that anchors every request to three coordinates. **North** is the entry point: the AppID, materialized as an API Gateway. **Middle** is the identity layer: the TenantID, extracted from the OIDC token and validated by a Lambda Authorizer against DynamoDB. **South** is the compute layer: the AgentName, where the Bedrock Runtime Engine executes agent logic. Data partitioning follows the same hierarchy -- DynamoDB composite keys use `APP#{app_id}#TENANT#{tenant_id}`, S3 paths use `{app_id}/{tenant_id}/{agent_name}/memory/`, and CloudWatch log groups nest under `/aws/bedrock/agentcore/{resource-type}/{agent-name}`.
+The North-South Join is a hierarchical identity model that anchors every request to three coordinates. 
+
+-**North** is the entry point: the AppID, materialized as an API Gateway.
+-**Middle** is the identity layer: the TenantID, extracted from the OIDC token and validated by a Lambda Authorizer against DynamoDB.
+-**South** is the compute layer: the AgentName, where the Bedrock Runtime Engine executes agent logic. 
+
+Data partitioning follows the same hierarchy -- DynamoDB composite keys use `APP#{app_id}#TENANT#{tenant_id}`, S3 paths use `{app_id}/{tenant_id}/{agent_name}/memory/`, and CloudWatch log groups nest under `/aws/bedrock/agentcore/{resource-type}/{agent-name}`.
 
 ```mermaid
 graph TD
@@ -113,7 +128,9 @@ graph TD
 
 Credentials never persist. The deployment pipeline authenticates via GitLab Web Identity Federation: the CI runner presents a JWT to AWS STS, receives temporary credentials scoped to a deployment role, and uses those credentials for exactly one pipeline execution. Terraform provisions resources under those temporary credentials. The agent runtime itself operates under a dedicated IAM role with least-privilege permissions -- it can invoke Bedrock, read its own S3 prefix, and write to its own log group. Nothing more.
 
-The MCP Gateway adds a second authentication layer. Inbound requests authenticate via Workload Identity, which validates the caller's OAuth2 token and issues a scoped session. Lambda MCP tools execute under their own IAM execution roles, isolated from the gateway's permissions. The full chain reads: **GitLab WIF -> AWS STS -> temporary credentials -> Terraform provisions -> Agent Runtime (scoped IAM) -> Gateway (Workload Identity OAuth2) -> MCP Tools (Lambda execution roles)**.
+The MCP Gateway adds a second authentication layer. Inbound requests authenticate via Workload Identity, which validates the caller's OAuth2 token and issues a scoped session. Lambda MCP tools execute under their own IAM execution roles, isolated from the gateway's permissions. The full chain reads: 
+
+>**GitLab WIF -> AWS STS -> temporary credentials -> Terraform provisions -> Agent Runtime (scoped IAM) -> Gateway (Workload Identity OAuth2) -> MCP Tools (Lambda execution roles)**.
 
 ### Token Handler Pattern
 
@@ -149,7 +166,7 @@ Create a `terraform.tfvars` file or use one of the provided examples.
 
 ```hcl
 agent_name  = "my-agent"
-region      = "us-east-1"
+region      = "eu-west-2"
 environment = "dev"
 
 enable_gateway      = true
