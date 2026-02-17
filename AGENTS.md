@@ -17,8 +17,7 @@
 
 ### Key References
 - **Architecture**: `docs/architecture.md`
-- **Remediation Plan**: `docs/plans/REMEDIATION_PLAN_V1.md`
-- **ADRs**: `docs/adr/`
+- **ADRs**: `docs/adr/` (Review 0009, 0010, 0011)
 - **Human Guide**: `DEVELOPER_GUIDE.md`
 
 ---
@@ -37,14 +36,45 @@
 ### Security Rules - NEVER Violate These
 
 #### Rule 1.1: IAM Resources MUST Be Specific
-Every wildcard MUST have a comment: `# AWS-REQUIRED: <Reason>`.
+```hcl
+# FORBIDDEN:
+Resource = "*"
+
+# REQUIRED:
+Resource = [
+  "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/*"
+]
+Condition = {
+  StringEquals = {
+    "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+  }
+}
+```
+
+**Known Exceptions (AWS-Required Wildcards)**:
+Certain actions do NOT support resource-level scoping and MUST use `Resource = "*"`. These are accommodated in tests:
+- `logs:PutResourcePolicy`: Required for Bedrock AgentCore log delivery.
+- `sts:GetCallerIdentity`: Required for identity verification.
+- `ec2:CreateNetworkInterface`: Required for dynamic VPC networking.
+- `s3:ListAllMyBuckets`: Required for bucket discovery.
+
+**Rule**: Every wildcard MUST have a comment: `# AWS-REQUIRED: <Reason>`.
 
 #### Rule 1.2: Errors MUST Fail Fast
-Provisioners MUST check output files: `if [ ! -s "file.json" ]; then exit 1; fi`.
+Forbidden:
+```bash
+cp -r "${local.source_path}"/* "$BUILD_DIR/code/" 2>/dev/null || true
+```
+Required:
+```bash
+if [ ! -d "${local.source_path}" ]; then
+  echo "ERROR: Source path not found: ${local.source_path}"
+  exit 1
+fi
+cp -r "${local.source_path}"/* "$BUILD_DIR/code/"
+```
 
-#### Rule 1.8: Bedrock Guardrails (Secure by Default)
-- **Policy**: Bedrock Guardrails are ENABLED by default for all agent aliases.
-- **Active Rejection**: Disabling guardrails requires an explicit `enable_guardrails = false` toggle AND a documented justification.
+**Why**: Error suppression masks deployment failures.
 
 ---
 
@@ -52,6 +82,12 @@ Provisioners MUST check output files: `if [ ! -s "file.json" ]; then exit 1; fi`
 
 Dependency direction (IMMUTABLE):
 foundation -> tools/runtime -> governance
+
+Module boundaries:
+- **foundation**: Gateway, Identity, Observability
+- **tools**: Code Interpreter, Browser
+- **runtime**: Runtime, Memory, Packaging
+- **governance**: Policies, Evaluations
 
 Reference: `docs/architecture.md`
 
@@ -63,105 +99,92 @@ Reference: `docs/architecture.md`
 - Prefer `for_each` with stable keys over `count`.
 - Use explicit types and validation for all variables.
 - Mark secrets as `sensitive = true`.
+- Avoid `null_resource` unless using the CLI pattern (Rule 4).
 
 ### Rule 3.2: Python (Strands SDK)
 - **Target**: Python 3.12 only.
 - **Format**: Black + Flake8 (Line length 120).
 - **Testing**: `pytest` under `examples/*/agent-code/tests/`.
+- **Behavior**: Use `logging` instead of `print`.
+- **Mocks**: No network calls in unit tests; mock external services.
 
 ---
 
 ## RULE 4: CLI Pattern is MANDATORY
 
-The following resources MUST use the `null_resource` + AWS CLI pattern:
-1. Gateway, 2. Identity, 3. Browser, 4. Code Interpreter, 5. Runtime, 6. Memory, 7. Policy Engine, 8. Evaluators, 9. Credential Providers.
+The following resources MUST use the `null_resource` + AWS CLI pattern due to provider gaps:
+1. Gateway
+2. Identity
+3. Browser
+4. Code Interpreter
+5. Runtime
+6. Memory
+7. Policy Engine / Cedar Policies
+8. Evaluators
+9. Credential Providers
 
 ---
 
-## RULE 5: SSM State Persistence (Zero Local IDs)
+## RULE 9: Discovery is EXPLICIT
 
-### Rule 5.1: No Ephemeral Metadata
-- **Problem**: Local JSON files in `.terraform/` are lost in CI/CD, breaking state recovery and downstream data sources.
-- **Requirement**: ALL resource IDs, ARNs, and Endpoints created via CLI MUST be persisted to **AWS SSM Parameter Store**.
-- **Pattern**:
-  1. CLI creates resource and captures metadata (ID, ARN, Endpoint).
-  2. CLI calls `aws ssm put-parameter` for EACH metadata field using predictable paths.
-  3. Subsequent resources and outputs use `data "aws_ssm_parameter"` to retrieve the values.
-- **Paths**:
-  - `/agentcore/${agent_name}/${type}/id`
-  - `/agentcore/${agent_name}/${type}/arn`
-  - `/agentcore/${agent_name}/${type}/endpoint`
+### Rule 9.1: Agents Must Be Discoverable
+- **Requirement**: Every agent MUST expose `/.well-known/agent-card.json`.
+- **Registry**: Agents MUST register with **Cloud Map** (East-West) or the **Gateway Manifest** (Northbound).
+
+### Rule 9.2: Gateway is the Tool Source
+- **Requirement**: Tools MUST be accessed via the **AgentCore Gateway**.
+- **Forbidden**: Invoking Tool Lambdas directly via `lambda:InvokeFunction`.
 
 ---
 
-## RULE 6: Zombie Resource Prevention (Cleanup Hooks)
+## RULE 10: Identity Propagation is MANDATORY
 
-### Rule 6.1: Mandatory Destroy Provisioners
-- **Problem**: `null_resource` does not automatically delete AWS resources on `terraform destroy`.
-- **Requirement**: Every `null_resource` MUST include a `destroy` provisioner.
-- **Implementation**:
-  ```hcl
-  provisioner "local-exec" {
-    when    = destroy
-    command = "aws bedrock-agentcore-control delete-... --id ${self.triggers.resource_id}"
-  }
-  ```
-- **Constraint**: Use `triggers` to pass the ID into the destroy context.
+### Rule 10.1: No Anonymous A2A Calls
+- **Requirement**: Agent-to-Agent calls MUST use a **Workload Token**.
+- **Pattern**: `GetWorkloadAccessTokenForJWT` -> `Authorization: Bearer <token>`.
 
----
-
-## RULE 7: Zero Trust Identity (ABAC Scoping)
-
-### Rule 7.1: Attribute-Based Trust
-- **Requirement**: Agent identity roles MUST NOT use name-based wildcards for trust relationships.
-- **Enforcement**: Use **Attribute-Based Access Control (ABAC)** tags.
-- **Policy**: `Condition = { StringEquals = { "aws:PrincipalTag/Project" = "${var.project_tag}" } }`.
+### Rule 10.2: User Context Must Persist
+- **Requirement**: Original Entra ID context MUST be exchanged, not dropped.
 
 ---
 
 ## RULE 11: Frontend Security (Token Handler)
 
 ### Rule 11.1: No Tokens in Browser
-- **Forbidden**: Storing tokens in `localStorage` or JS-accessible cookies.
-- **Requirement**: Tokens must be stored server-side.
+- **Forbidden**: Storing Access/Refresh Tokens in `localStorage`, `sessionStorage`, or Cookies accessible to JS.
+- **Requirement**: Tokens must be stored server-side (DynamoDB/ElastiCache).
+
+### Rule 11.2: Session Management
+- **Pattern**: Use **Secure, HTTP-only, SameSite=Strict** cookies for Session IDs.
+- **Reference**: ADR 0011 (Serverless Token Handler).
 
 ---
 
-## RULE 12: Issue Reporting & Verification
+## RULE 12: Comprehensive Issue Reporting
 
-### Rule 12.3: Post-Commit Verification
-- **Mandatory**: After every `git push`, AI agents MUST check the CI logs (`gh run list/view`).
-- **Action**: If CI fails, the agent MUST investigate and fix the root cause in the next turn.
+### Rule 12.1: Issue Structure
+AI Agents MUST create comprehensive GitHub issues. Every issue MUST include:
+- **Context**: Why is this change needed? (Relate to ADRs/Rules).
+- **Technical Detail**: Specific AWS APIs, Python libraries, or Terraform patterns to be used.
+- **Implementation Tasks**: A checklist of specific actionable items.
+- **Acceptance Criteria**: Verifiable outcomes (e.g., "Exit code 0", "Test passes").
 
----
-
-## RULE 13: Example Parity
-- **Requirement**: Any change to a core module MUST be accompanied by an update to at least one example in `examples/`.
-- **Goal**: Demonstrate new functionality and ensure backward compatibility.
-
----
-
-## RULE 14: Read-After-Write (RAW) Verification
-- **Requirement**: After any `write_file` or `replace` operation, the agent MUST immediately `read_file` the affected section.
-- **Goal**: Verify correct implementation and catch formatting regressions immediately.
+### Rule 12.2: Roadmap Alignment
+- Every planned item in `ROADMAP.md` MUST have a corresponding GitHub Issue.
+- The Roadmap provides the **Strategic Vision**; Issues provide the **Execution Detail**.
+- When an issue is closed, the corresponding item in `ROADMAP.md` MUST be ticked.
 
 ---
 
-## RULE 15: Shadow JSON Validation
-- **Requirement**: All CLI-based resources (`null_resource`) MUST generate their AWS CLI JSON payload to a temporary file (e.g., `.terraform/payload.json`) before execution.
-- **Goal**: Enable auditability of exact data sent to AWS APIs.
+## RULE 13: Repo Layout & Reorg Guardrails
 
----
+**Layout**: Terraform core is in `terraform/`. Examples live in `examples/`. Docs live at repo root and `docs/`.
 
-## RULE 16: Failure Mode Documentation
-- **Requirement**: Every module's `README.md` MUST contain a "Known Failure Modes" section.
-- **Content**: Detail manual recovery steps for CLI/provisioner failures (e.g., SSM parameter cleanup).
-
-## RULE 17: Template Integrity & Parity
-- **Trigger**: Any modification to `terraform/variables.tf`, `terraform/main.tf`, or module interfaces.
-- **Requirement**: You MUST update `templates/agent-project` to reflect the change.
-- **Verification**: The `template-test` CI job must pass (generates a fresh project and runs validation).
-- **Definition of Done**: A feature is not complete until it works in the Core Modules, The Examples, *AND* The Template.
+**Rules**:
+- Do not move docs into `terraform/`.
+- Keep examples adjacent at repo root.
+- If you move Terraform files, update references in `README.md`, `DEVELOPER_GUIDE.md`, `Makefile`, `validate_windows.bat`, `scripts/`, and `tests/`.
+- Run the preflight tests in `docs/runbooks/repo-restructure.md` before and after any move.
 
 ---
 
@@ -169,18 +192,80 @@ The following resources MUST use the `null_resource` + AWS CLI pattern:
 
 | Question | Answer |
 | --- | --- |
-| Where do IDs go? | persisted to AWS SSM Parameter Store (Rule 5). |
-| How to delete? | Mandatory `when = destroy` provisioner (Rule 6). |
-| How to trust? | ABAC tags, never name-wildcards (Rule 7). |
+| Terraform-native or CLI? | If `aws_bedrockagentcore_X` exists AND passes `terraform validate`, use native. Otherwise use CLI pattern. |
+| Which module? | Foundation, Tools, Runtime, Governance (Fixed architecture). |
+| Use dynamic block? | Only for repeatable blocks. NEVER for single attributes. |
 | KMS or AWS-managed? | AWS-managed (SSE-S3) by default. |
+| Hardcode ARNs/regions? | NEVER. Use data sources or module outputs. |
+| Where do tokens go? | DynamoDB (server-side). Never in the browser. |
 
 ---
 
 ## CHECKLIST: Before Every Commit
 
 ```bash
-terraform fmt -check -recursive
-terraform validate
-tflint --recursive
-gh run list --limit 1 # Post-push check (Rule 12.3)
+terraform -chdir=terraform fmt -check -recursive
+terraform -chdir=terraform validate
+terraform -chdir=terraform plan -backend=false -var-file=../examples/research-agent.tfvars
+checkov -d terraform --framework terraform --compact --config-file terraform/.checkov.yaml
+tflint --chdir=terraform --recursive --config terraform/.tflint.hcl
+pre-commit run --all-files
 ```
+
+### Windows Notes (Pre-commit + Terraform Hooks)
+- Terraform-related pre-commit hooks require **bash**. On Windows, run `pre-commit` from **Git Bash or WSL** for full checks.
+- For a Windows-native minimal check, use `validate_windows.bat` (runs `terraform fmt` + `pre-commit` with Terraform hooks skipped).
+
+### YAML Rule for Pre-commit Entries
+- If a `pre-commit` hook `entry:` contains `:` or complex shell, use a block scalar (`>-`) to avoid YAML parse errors.
+
+### Binary Hygiene
+- Do not commit tool binaries. Keep `.tools/` ignored and download tooling via scripts when needed.
+
+---
+
+## KEY DECISIONS (ADRs)
+
+| ADR | Decision | Rationale |
+|-----|----------|-----------|
+| 0001 | 4-module architecture | Clear separation of concerns |
+| 0002 | CLI-based resources | AWS provider gaps |
+| 0008 | AWS-managed encryption | Simpler, equivalent security |
+| 0009 | B2E Publishing & Identity | Streaming + Entra ID |
+| 0010 | Service Discovery (Dual-Tier) | Cloud Map + Registry |
+| 0011 | Serverless SPA & BFF | Token Handler Pattern (No XSS) |
+
+---
+
+## RULE 14: Multi-Tenant Isolation (MANDATORY)
+
+### Rule 14.1: No Implicit Tenant Trust
+- **Requirement**: Components MUST NOT trust a `tenant_id` or `session_id` provided in the request body without verifying it against the authenticated OIDC context (JWT claims).
+- **Enforcement**: The `Agent Proxy` MUST validate that the `sessionId` belongs to the `tenant_id` and `app_id` extracted from the authorizer context.
+
+### Rule 14.2: Partitioned Storage
+- **Requirement**: All persistent state (S3 Memory, DynamoDB Sessions) MUST be partitioned by `app_id` and `tenant_id`.
+- **Pattern (S3)**: `s3://{bucket}/{app_id}/{tenant_id}/{agent_name}/memory/`.
+- **Pattern (DynamoDB)**:
+  - `PartitionKey (PK)`: `APP#{app_id}#TENANT#{tenant_id}`
+  - `SortKey (SK)`: `SESSION#{session_id}`
+
+### Rule 14.3: ABAC Enforcement
+- **Requirement**: Access to resources MUST be restricted using **Attribute-Based Access Control (ABAC)**.
+- **Implementation**: IAM and Cedar policies MUST use conditions comparing the `principal.tenant_id` with the `resource.tenant_id`.
+- **Example**:
+  ```hcl
+  Condition = {
+    StringEquals = { "s3:ExistingObjectTag/TenantID" = "${aws:PrincipalTag/TenantID}" }
+  }
+  ```
+
+### Rule 14.4: Hierarchical Identity (North-South Join)
+- **Requirement**: Every interaction MUST be anchored by the North-South hierarchy.
+- **North Anchor**: `AppID` (Logical application/environment boundary).
+- **Middle Anchor**: `TenantID` (Unit of ownership).
+- **South Anchor**: `AgentName` (Physical compute resource).
+- **Join Logic**: `Identity = [AppID] + [TenantID]`, `Compute = [AgentName]`.
+
+### Rule 14.5: Just-in-Time (ZTO) Onboarding
+- **Requirement**: Tenant-specific logical resources (S3 prefixes, DDB items) MUST be provisioned just-in-time upon first successful OIDC authentication.

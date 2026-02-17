@@ -40,11 +40,11 @@ Our security model assumes the frontend may be compromised:
 
 ### Logic & Modules
 ```mermaid
-graph TD
-    A[agentcore-foundation<br/>Gateway, Identity, Observability] --> B[agentcore-tools<br/>Code Interpreter, Browser]
-    A --> C[agentcore-runtime<br/>Runtime, Memory, Packaging]
-    C --> D[agentcore-governance<br/>Policy Engine, Evaluations]
-    A --> E[agentcore-bff<br/>OIDC, Proxy, SPA]
+flowchart TD
+    A["agentcore-foundation<br/>Gateway, Identity, Observability"] --> B["agentcore-tools<br/>Code Interpreter, Browser"]
+    A --> C["agentcore-runtime<br/>Runtime, Memory, Packaging"]
+    C --> D["agentcore-governance<br/>Policy Engine, Evaluations"]
+    A --> E["agentcore-bff<br/>OIDC, Proxy, SPA"]
 
     style A fill:#e1f5fe
     style B fill:#f3e5f5
@@ -56,28 +56,28 @@ graph TD
 ### Physical Infrastructure
 ```mermaid
 flowchart TD
-    subgraph North[Entry Point: AppID]
-        APIGW[API Gateway]
+    subgraph North["Entry Point: AppID"]
+        APIGW["API Gateway"]
     end
 
-    subgraph Middle[Identity Layer: TenantID]
-        LAuthorizer[Lambda Authorizer]
-        DDB[(DynamoDB Sessions<br/>PK: APP#AppID#TENANT#TenantID)]
+    subgraph Middle["Identity Layer: TenantID"]
+        LAuthorizer["Lambda Authorizer"]
+        DDB[("DynamoDB Sessions<br/>PK: APP#AppID#TENANT#TenantID")]
     end
 
-    subgraph South[Compute Layer: AgentName]
-        LProxy[Proxy Lambda]
-        BGateway[Bedrock Gateway]
-        BRuntime[Bedrock Runtime]
-        BSandbox[Code Interpreter<br/>x86_64 / arm64]
+    subgraph South["Compute Layer: AgentName"]
+        LProxy["Proxy Lambda"]
+        BGateway["Bedrock Gateway"]
+        BRuntime["Bedrock Runtime"]
+        BSandbox["Code Interpreter<br/>x86_64 / arm64"]
     end
 
-    subgraph Storage[Partitioned Persistence]
-        S3Memory[S3 Memory<br/>/AppID/TenantID/AgentName/]
-        S3Deploy[S3 Deploy]
+    subgraph Storage["Partitioned Persistence"]
+        S3Memory["S3 Memory<br/>/AppID/TenantID/AgentName/"]
+        S3Deploy["S3 Deploy"]
     end
 
-    Browser[Browser] -- "AppID Context" --> North
+    Browser["Browser"] -- "AppID Context" --> North
     North --> LAuthorizer
     LAuthorizer <--> DDB
     North -- "Validated Identity" --> LProxy
@@ -105,24 +105,24 @@ stateDiagram-v2
 
 ```mermaid
 flowchart LR
-  subgraph Phase1[Phase 1: Local Build]
-    A[Write agent and tool code] --> B[Run locally]
-    B --> C[Quick checks and tests]
+  subgraph Phase1["Phase 1: Local Build"]
+    A["Write agent and tool code"] --> B["Run locally"]
+    B --> C["Quick checks and tests"]
   end
 
-  subgraph Phase2[Phase 2: Observability]
-    D[Enable telemetry] --> E[Weave or OTEL backend]
+  subgraph Phase2["Phase 2: Observability"]
+    D["Enable telemetry"] --> E["Weave or OTEL backend"]
   end
 
-  subgraph Phase3[Phase 3: Infra and Deploy]
-    F[Terraform plan and apply] --> G[AgentCore runtime and gateway]
-    G --> H[MCP tools - Lambda]
+  subgraph Phase3["Phase 3: Infra and Deploy"]
+    F["Terraform plan and apply"] --> G["AgentCore runtime and gateway"]
+    G --> H["MCP tools - Lambda"]
   end
 
-  subgraph Phase4[Phase 4: Operate]
-    I[User traffic] --> J[Runtime executes]
-    J --> K[Logs and traces]
-    K --> L[Fix and iterate]
+  subgraph Phase4["Phase 4: Operate"]
+    I["User traffic"] --> J["Runtime executes"]
+    J --> K["Logs and traces"]
+    K --> L["Fix and iterate"]
   end
 
   C --> F
@@ -555,9 +555,9 @@ See `CLAUDE.md` Rule 1.7 for details.
 
 ```mermaid
 graph LR
-    A[Local Python Dev] --> B[Add Dependencies]
-    B --> C[Terraform Deploy]
-    C --> D[Monitor & Iterate]
+    A["Local Python Dev"] --> B["Add Dependencies"]
+    B --> C["Terraform Deploy"]
+    C --> D["Monitor & Iterate"]
 
     style A fill:#e1f5fe
     style B fill:#fff3e0
@@ -588,5 +588,3 @@ See [DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md) for:
 ## License
 
 MIT - See LICENSE file for details.
-   
- 
