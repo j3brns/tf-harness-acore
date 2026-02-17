@@ -1,6 +1,8 @@
 # Bedrock AgentCore Terraform
 
-A hardened Terraform framework for deploying enterprise AI agents on AWS Bedrock AgentCore. The gap between a raw foundation model and a production-grade agent is filled with identity propagation, tenant isolation, encrypted state management, and a deployment pipeline that refuses to cut corners. The `hashicorp/aws` provider does not yet support AgentCore resources -- verified through v5.100.0. 
+A hardened Terraform framework for deploying enterprise AI agents on AWS Bedrock AgentCore. The gap between a raw foundation model and a production-grade agent is filled with identity propagation, tenant isolation, encrypted state management, and a deployment pipeline that refuses to cut corners.
+
+> The `hashicorp/aws` provider does not yet support AgentCore resources -- verified through v5.100.0. 
 
 This framework bridges that gap with a stateful CLI bridge pattern that wraps every AgentCore control-plane operation in a lifecycle manager backed by SSM Parameter Store, giving you full infrastructure-as-code semantics today and a clean `terraform import` migration path when native resources arrive.
 
