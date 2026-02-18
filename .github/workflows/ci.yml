@@ -57,12 +57,12 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: TFLint init
         working-directory: terraform
-        run: tflint --init --config=.tflint.hcl
+        run: tflint --init --config="${GITHUB_WORKSPACE}/terraform/.tflint.hcl"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: TFLint
         working-directory: terraform
-        run: tflint --recursive --format compact --config=.tflint.hcl
+        run: tflint --recursive --format compact --config="${GITHUB_WORKSPACE}/terraform/.tflint.hcl"
 
   checkov:
     runs-on: ubuntu-latest
