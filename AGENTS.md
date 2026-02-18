@@ -60,6 +60,12 @@ Certain actions do NOT support resource-level scoping and MUST use `Resource = "
 
 **Rule**: Every wildcard MUST have a comment: `# AWS-REQUIRED: <Reason>`.
 
+**Exception Change Control**:
+- A new wildcard exception is allowed only with a linked AWS primary source proving resource-level scoping is unsupported.
+- The policy statement MUST include `# AWS-REQUIRED: <Reason>` and a doc reference in adjacent comments.
+- Add/update tests that explicitly validate only the approved wildcard actions.
+- Update this "Known Exceptions" list in the same change.
+
 #### Rule 1.2: Errors MUST Fail Fast
 Forbidden:
 ```bash
@@ -122,6 +128,44 @@ The following resources MUST use the `null_resource` + AWS CLI pattern due to pr
 7. Policy Engine / Cedar Policies
 8. Evaluators
 9. Credential Providers
+
+For the nine resources above, this rule takes precedence over Terraform-native preferences.
+For all other resources, follow the decision framework (native provider first when available and stable).
+
+---
+
+## RULE 5: AWS Query Source of Truth (MANDATORY)
+
+### Rule 5.1: AWS Knowledge MCP First
+- For any AWS-specific question, agents MUST query `aws-knowledge-mcp-server` before answering.
+- This includes: service availability, API/CLI syntax, limits/quotas, pricing, release status, and troubleshooting.
+- General memory may be used for context, but final answers MUST be grounded in AWS Knowledge MCP results.
+- Fallback: If `aws-knowledge-mcp-server` is unavailable, agents MUST state that explicitly, use best-effort official AWS docs, and mark the answer as lower confidence.
+
+### Rule 5.2: Required Query Flow
+1. Choose the first tool by question type:
+   - Regional availability: `get_regional_availability`.
+   - API/CLI usage, limits, errors, best practices: `search_documentation`.
+2. If a specific documentation URL is found or provided, use `read_documentation` on that URL.
+3. If results conflict or are unclear, run a second targeted query and state the uncertainty explicitly.
+4. Prefer primary AWS documentation pages over secondary summaries.
+
+### Rule 5.3: Response Requirements
+- Include the exact check date in the response for time-sensitive AWS facts.
+- Include source links (AWS docs/AWS Knowledge MCP-backed URLs).
+- Clearly label any inference vs directly confirmed facts.
+- Include exact command/API field names when answering implementation questions.
+- If fallback mode was used, include: "AWS Knowledge MCP unavailable at query time."
+
+### Rule 5.4: Query Examples
+- Availability check:
+  - `get_regional_availability(region="eu-west-2", resource_type="product", filters=["Amazon Bedrock AgentCore","Amazon Bedrock AgentCore Runtime"])`
+- API/CLI reference:
+  - `search_documentation(search_phrase="bedrock-agentcore-control create-gateway", topics=["reference_documentation"])`
+- Troubleshooting:
+  - `search_documentation(search_phrase="AccessDenied bedrock-agentcore create-gateway-target", topics=["troubleshooting"])`
+- Release awareness:
+  - `search_documentation(search_phrase="Amazon Bedrock AgentCore new features", topics=["current_awareness"])`
 
 ---
 
@@ -192,7 +236,7 @@ AI Agents MUST create comprehensive GitHub issues. Every issue MUST include:
 
 | Question | Answer |
 | --- | --- |
-| Terraform-native or CLI? | If `aws_bedrockagentcore_X` exists AND passes `terraform validate`, use native. Otherwise use CLI pattern. |
+| Terraform-native or CLI? | Gateway/Identity/Browser/Code Interpreter/Runtime/Memory/Policy Engine/Evaluators/Credential Providers: CLI pattern mandatory (Rule 4). All others: use native provider if available and stable; otherwise use CLI pattern. |
 | Which module? | Foundation, Tools, Runtime, Governance (Fixed architecture). |
 | Use dynamic block? | Only for repeatable blocks. NEVER for single attributes. |
 | KMS or AWS-managed? | AWS-managed (SSE-S3) by default. |
