@@ -4,8 +4,13 @@ _min_copier_version: "9.0.0"
 # Questions
 agent_name:
   type: str
-  help: "What is the name of your agent?"
+  help: "Physical name of the agent resources (alphanumeric + hyphen)"
   default: "my-agent"
+
+app_id:
+  type: str
+  help: "Logical application ID for multi-tenant partitioning"
+  default: "{{ agent_name }}"
 
 description:
   type: str
@@ -23,6 +28,15 @@ region:
     - "eu-west-2"
     - "eu-central-1"
 
+environment:
+  type: str
+  help: "Deployment environment"
+  default: "dev"
+  choices:
+    - "dev"
+    - "staging"
+    - "prod"
+
 # Capabilities
 enable_guardrails:
   type: bool
@@ -36,7 +50,7 @@ enable_code_interpreter:
 
 enable_knowledge_base:
   type: bool
-  help: "Enable RAG (Knowledge Base)?"
+  help: "Enable RAG (Knowledge Base)? (reserved for future scaffold wiring)"
   default: false
 
 enable_bff:
@@ -49,3 +63,16 @@ python_version:
   type: str
   default: "3.12"
   choices: ["3.12", "3.11"]
+
+_message_after_copy: |
+  Agent scaffold created at: {{ _copier_conf.dst_path }}
+
+  Next steps:
+    1. cd {{ _copier_conf.dst_path }}/terraform
+    2. terraform init -backend=false
+    3. terraform validate
+
+  If BFF is enabled, replace placeholder OIDC values before deploy:
+    - local.oidc_issuer
+    - oidc_client_id
+    - oidc_client_secret_arn

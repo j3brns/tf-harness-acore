@@ -418,23 +418,23 @@ pre-commit run --all-files
 
 ## CI Pipeline
 
-### Current: GitHub Actions (validation only)
+### GitHub Actions (validation only)
 - Runs docs/tests gate, Terraform fmt/validate, TFLint, Checkov, and example validation.
 - Uses `terraform init -backend=false` on the runner (local only, no AWS).
 - Uses shared GitHub Actions for Terraform, TFLint, and Checkov setup plus caching.
 - Caches Terraform plugins, TFLint plugins, and pip downloads to speed CI runs.
 - No deployments run in GitHub Actions.
 
-### Next Phase: GitLab CI Pipeline
+### GitLab CI (deployment pipeline)
 
 ### Pipeline Stages
 
 ```
-validate -> lint -> test -> deploy-dev -> deploy-test -> deploy-prod
-  (auto)    (auto)  (auto)    (auto)       (manual)       (manual)
+validate -> lint -> test -> plan:dev -> deploy:dev -> smoke-test:dev -> plan:test -> deploy:test -> smoke-test:test -> gate:prod-from-test -> plan:prod -> deploy:prod -> smoke-test:prod
+  (auto)    (auto)  (auto)    (auto)       (auto)         (auto)            (auto)      (manual)      (auto)              (auto)                 (auto)      (manual)      (auto)
 ```
 
-### Triggering Deployments (after GitLab migration)
+### Triggering Deployments
 
 **Dev**: Automatic on merge to `main`
 ```bash
@@ -453,9 +453,10 @@ git push origin release/v1.2.0
 
 **Prod**: Manual from tag
 ```bash
+# Tag the same commit SHA that passed release/* deploy:test + smoke-test:test
 git tag v1.2.0
 git push origin v1.2.0
-# Go to GitLab, trigger deploy-prod job manually (requires approval)
+# gate:prod-from-test must pass, then trigger deploy-prod manually
 ```
 
 ## Best Practices

@@ -237,7 +237,36 @@ Terraform pre-commit hooks require bash, which makes them hostile to native Wind
 
 ### Scaffolding New Agents
 
-The `templates/agent-project/` directory contains a Copier template that generates a complete agent project from interactive prompts. Provide an agent name, description, region, and toggle optional features (guardrails, code interpreter, knowledge base, BFF), and Copier produces a ready-to-deploy Terraform configuration with the correct module wiring, a starter Python agent, and a test suite. The CI pipeline validates that the template itself generates valid Terraform on every push, so the scaffolding never drifts from the framework's current structure.
+The `templates/agent-project/` directory contains a Copier template for bootstrapping a new agent project with Terraform wiring, starter runtime code, and optional BFF/front-end files.
+
+Interactive flow:
+
+```bash
+python3 -m pip install --user copier
+export PATH="$HOME/.local/bin:$PATH"
+copier copy --trust templates/agent-project .scratch/my-agent
+cd .scratch/my-agent/terraform
+terraform init -backend=false
+terraform validate
+```
+
+Non-interactive flow (repeatable in automation):
+
+```bash
+copier copy --force --trust \
+  --data agent_name=my-agent \
+  --data app_id=my-agent \
+  --data region=us-east-1 \
+  --data environment=dev \
+  --data enable_bff=true \
+  templates/agent-project .scratch/my-agent
+```
+
+Notes:
+- `app_id` is the logical app boundary for multi-tenant partitioning; keep it stable across related agents.
+- If `enable_bff=true`, replace OIDC placeholder values in generated `terraform/main.tf` before deploy.
+- Copier templates project files only; repository permissions/branch protection are managed in GitLab project/group settings.
+- The CI pipeline validates template generation + `terraform validate` on every push so scaffolding drift is caught early.
 
 ---
 
@@ -367,7 +396,7 @@ The framework ships with both a GitLab CI pipeline for full deployment and a Git
 
 ### GitLab CI (Full Pipeline)
 
-The GitLab pipeline spans 12 stages across three environments, with every stage authenticated via Web Identity Federation -- no long-lived AWS access keys exist anywhere in the system.
+The GitLab pipeline spans 13 stages across three environments, with every stage authenticated via Web Identity Federation -- no long-lived AWS access keys exist anywhere in the system.
 
 | Stage | Environment | Trigger | Purpose |
 |-------|-------------|---------|---------|
@@ -381,9 +410,152 @@ The GitLab pipeline spans 12 stages across three environments, with every stage 
 | `test:python-*` | -- | MR / main | pytest suites for each example agent |
 | `plan:dev` + `deploy:dev` + `smoke-test:dev` | Dev | Merge to `main` | Automatic deploy to dev account |
 | `plan:test` + `deploy:test` + `smoke-test:test` | Test | `release/*` branch | Manual deploy to test account |
+| `gate:prod-from-test` | -- | Git tag | Verifies same SHA has successful `deploy:test` + `smoke-test:test` |
 | `plan:prod` + `deploy:prod` + `smoke-test:prod` | Prod | Git tag | Manual deploy to prod account (with approval) |
 
 Scheduled pipelines run drift detection across all environments using `terraform plan -detailed-exitcode`. If infrastructure has diverged from state, the pipeline flags the drift and optionally sends a Slack notification.
+
+### GitLab Hardening Checklist (Settings + IaC Mapping)
+
+Use this as the baseline hardening profile for production promotion.
+
+1. Protect `main` and block direct pushes.
+2. Require merge requests with CODEOWNERS approval for protected branches.
+3. Protect release tags (`v*`) so only release managers/maintainers can create them.
+4. Protect `production` environment and restrict who can deploy `deploy:prod`.
+5. Require explicit MR approval rules (for platform/security groups).
+6. Mark prod CI variables as protected (`CI_ENVIRONMENT_ROLE_ARN_PROD`, `TF_STATE_BUCKET_PROD`, secrets).
+
+Terraform GitLab provider mapping:
+
+| Control | Terraform Resource | Notes |
+|---------|--------------------|-------|
+| Protected branch policy | `gitlab_branch_protection` | Set no direct push to `main`, require CODEOWNERS approval where licensed. |
+| Protected tag policy | `gitlab_tag_protection` | Protect `v*` tag creation to release managers/maintainers. |
+| Protected production deploys | `gitlab_project_protected_environment` | Restrict deploy access for `production` environment. |
+| MR approval requirements | `gitlab_project_level_mr_approvals`, `gitlab_project_approval_rule` | Enforce minimum approvers and approval groups. |
+| CODEOWNERS in repo | `gitlab_repository_file` | Manage `CODEOWNERS` as code. |
+| Team access assignment | `gitlab_project_share_group`, `gitlab_group_membership` | Delegate project/group roles to dev teams. |
+
+Folder-level permissions are not natively supported by GitLab. Use protected branches + CODEOWNERS + MR approvals as the enforcement stack in a single repo.
+
+Starter Terraform (copy/paste):
+
+Core-compatible baseline:
+
+```hcl
+terraform {
+  required_providers {
+    gitlab = {
+      source = "gitlabhq/gitlab"
+    }
+  }
+}
+
+provider "gitlab" {}
+
+variable "project_id" {
+  type = string
+}
+
+variable "dev_group_id" {
+  type = number
+}
+
+resource "gitlab_project_share_group" "dev_access" {
+  project      = var.project_id
+  group_id     = var.dev_group_id
+  group_access = "developer"
+}
+
+resource "gitlab_branch_protection" "main" {
+  project                = var.project_id
+  branch                 = "main"
+  push_access_level      = "no one"
+  merge_access_level     = "maintainer"
+  unprotect_access_level = "maintainer"
+}
+
+resource "gitlab_tag_protection" "release_tags" {
+  project             = var.project_id
+  tag                 = "v*"
+  create_access_level = "maintainer"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "gitlab_repository_file" "codeowners" {
+  project        = var.project_id
+  branch         = "main"
+  file_path      = "CODEOWNERS"
+  encoding       = "text"
+  commit_message = "chore: enforce path ownership"
+  content        = <<-EOT
+    /examples/1-hello-world/** @platform/dev-team-a
+    /examples/2-gateway-tool/** @platform/dev-team-b
+    /examples/3-deepresearch/** @platform/dev-team-c
+    /terraform/** @platform/platform-team
+  EOT
+}
+```
+
+Premium/Ultimate hardened add-on:
+
+```hcl
+variable "release_manager_group_id" {
+  type = number
+}
+
+variable "platform_approver_group_id" {
+  type = number
+}
+
+# Replace gitlab_branch_protection.main from the baseline with this block.
+resource "gitlab_branch_protection" "main" {
+  project                      = var.project_id
+  branch                       = "main"
+  push_access_level            = "no one"
+  merge_access_level           = "maintainer"
+  unprotect_access_level       = "maintainer"
+  code_owner_approval_required = true
+}
+
+resource "gitlab_project_level_mr_approvals" "project_defaults" {
+  project                                        = var.project_id
+  reset_approvals_on_push                        = true
+  disable_overriding_approvers_per_merge_request = true
+  merge_requests_author_approval                 = false
+  merge_requests_disable_committers_approval     = true
+}
+
+resource "gitlab_project_approval_rule" "platform" {
+  project                           = var.project_id
+  name                              = "Platform approval"
+  approvals_required                = 1
+  group_ids                         = [var.platform_approver_group_id]
+  applies_to_all_protected_branches = true
+}
+
+resource "gitlab_project_protected_environment" "production" {
+  project     = var.project_id
+  environment = "production"
+
+  deploy_access_levels_attribute = [
+    {
+      group_id = var.release_manager_group_id
+    }
+  ]
+
+  approval_rules = [
+    {
+      group_id           = var.platform_approver_group_id
+      required_approvals = 1
+    }
+  ]
+}
+```
 
 ### GitHub Actions (Validation Only)
 

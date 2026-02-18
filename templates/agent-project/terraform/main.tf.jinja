@@ -29,6 +29,7 @@ data "http" "oidc_config" {
 }
 
 locals {
+  app_id = "{{ app_id }}"
   oidc_issuer = "https://login.microsoftonline.com/YOUR_TENANT_ID/v2.0"
   oidc_discovery = try(jsondecode(data.http.oidc_config[0].response_body), {})
 }
@@ -41,7 +42,7 @@ module "agentcore_foundation" {
   agent_name  = "{{ agent_name }}"
   region      = "{{ region }}"
   bedrock_region = "{{ region }}"
-  environment = "dev"
+  environment = "{{ environment }}"
 
   # Gateway configuration
   enable_gateway      = true
@@ -76,8 +77,10 @@ module "agentcore_runtime" {
   source = "github.com/j3brns/tf-harness-acore//terraform/modules/agentcore-runtime?ref=main"
 
   agent_name = "{{ agent_name }}"
+  app_id     = local.app_id
   region     = "{{ region }}"
   bedrock_region = "{{ region }}"
+  environment = "{{ environment }}"
 
   # Runtime configuration
   enable_runtime          = true
@@ -125,9 +128,10 @@ module "agentcore_bff" {
 
   enable_bff  = {{ enable_bff | lower }}
   agent_name  = "{{ agent_name }}"
+  app_id      = local.app_id
   region      = "{{ region }}"
   agentcore_region = "{{ region }}"
-  environment = "dev"
+  environment = "{{ environment }}"
   agentcore_runtime_arn = module.agentcore_runtime.runtime_arn
 
   # Auth Configuration (Placeholders - MUST be updated)
