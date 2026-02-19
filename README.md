@@ -442,7 +442,8 @@ The GitLab pipeline spans 13 stages across three environments, with every stage 
 | `test:examples` | -- | Every push to tracked branches | Validate all example configurations |
 | `test:cedar-policies` | -- | Every push to tracked branches | Cedar policy syntax validation |
 | `test:python-*` | -- | Every push to tracked branches | pytest suites for each example agent |
-| `plan:dev` + `deploy:dev` + `smoke-test:dev` | Dev | Push to `main` | Automatic deploy to dev account |
+| `promote:dev` | Dev Gate | Push to `main` | Manual promotion gate required before any dev deploy |
+| `plan:dev` -> `deploy:dev` -> `smoke-test:dev` | Dev | Push to `main` after `promote:dev` | Chained dev deployment flow; `deploy:dev` is blocked until promotion is approved |
 | `promote:test` | Test Gate | Manual pipeline (`Run pipeline` / API) on `release/*` (current line: `release/v0.1`) | Manual promotion gate; verifies successful `main` pipeline for same SHA |
 | `plan:test` -> `deploy:test` -> `smoke-test:test` | Test | Same manual `release/*` pipeline after `promote:test` | Explicit chained DAG; test-environment jobs are never created on push pipelines |
 | `gate:prod-from-test` | -- | Git tag | Verifies same SHA has successful `deploy:test` + `smoke-test:test` |

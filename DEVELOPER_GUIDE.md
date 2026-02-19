@@ -416,18 +416,19 @@ pre-commit run --all-files
 ### Pipeline Stages
 
 ```
-validate -> lint -> test -> plan:dev -> deploy:dev -> smoke-test:dev -> promote:test -> plan:test -> deploy:test -> smoke-test:test -> gate:prod-from-test -> plan:prod -> deploy:prod -> smoke-test:prod
-  (auto)    (auto)  (auto)    (auto)       (auto)         (auto)              (manual)      (auto)       (manual)      (auto)              (auto)                 (auto)      (manual)      (auto)
+validate -> lint -> test -> plan:dev -> promote:dev -> deploy:dev -> smoke-test:dev -> promote:test -> plan:test -> deploy:test -> smoke-test:test -> gate:prod-from-test -> plan:prod -> deploy:prod -> smoke-test:prod
+  (auto)    (auto)  (auto)    (auto)       (manual)       (auto)         (auto)              (manual)      (auto)       (manual)      (auto)              (auto)                 (auto)      (manual)      (auto)
 ```
 
 ### Triggering Deployments
 
-**Dev**: Automatic on push to `main`
+**Dev**: Planned on push to `main`, deploy gated by manual promotion
 ```bash
 git checkout main
 git push origin main
 git push gitlab main
-# CI deploys to dev automatically
+# In GitLab, run promote:dev to allow deploy:dev.
+# deploy:dev -> smoke-test:dev then continue automatically.
 ```
 
 **Test**: Manual pipeline from `release/*` branch only (optional stabilization flow)

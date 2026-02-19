@@ -15,6 +15,29 @@ This document outlines planned features and improvements for the Bedrock AgentCo
 
 ## 🚀 High Priority (Reliability & Security)
 
+- [ ] **Terraform v2 Native Resource Migration Plan (Dev-first)**
+  * **Problem:** Control-plane resources remain on CLI `null_resource` patterns; provider-native coverage is evolving.
+  * **Goal:** Migrate to native Terraform resources where stable, without introducing state churn or deployment ambiguity.
+  * **Scope Control:** Dev first, test/prod only through explicit promotion gates.
+  * **Phases:**
+    1. **Inventory & Decision Matrix**
+       - Map every CLI-managed resource to native provider status (`available`, `partial`, `not available`).
+       - Freeze mapping in docs and open one issue per resource group.
+    2. **Pilot in Dev**
+       - Migrate one resource family at a time behind a branch-scoped rollout plan.
+       - Validate plan/apply parity, drift behavior, and destroy semantics in dev.
+    3. **State Transition Controls**
+       - Define import/move steps per resource (`terraform import`/`moved`/state backup runbook).
+       - Require zero unexpected destroys in dev before promoting.
+    4. **Promotion to Test/Prod**
+       - Promote only SHAs that pass dev smoke and migration checks.
+       - Keep test/prod guarded by manual promotion jobs.
+  * **Acceptance Criteria:**
+    - A written resource-by-resource migration matrix exists and is current.
+    - Dev migration runbook validated end-to-end on at least one native resource family.
+    - No unplanned resource replacement in promoted pipelines.
+  * **Issue:** #20
+
 ## 📈 Enterprise Features (Scale & Compliance)
 
 - [ ] **Persistence for Audit Logs (Rule 15)**
