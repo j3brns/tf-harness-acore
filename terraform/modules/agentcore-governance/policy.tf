@@ -1,6 +1,5 @@
 # Policy Engine - CLI-based provisioning with SSM Persistence (Rule 5)
-# Note: Native aws_bedrockagentcore_policy and aws_bedrockagentcore_policy_engine are available
-# in AWS provider 6.33+, but Rule 4 keeps these resources on the CLI pattern until v2 migration.
+# Note: Native aws_bedrockagentcore_policy_engine resource not yet available in Terraform.
 
 resource "null_resource" "policy_engine" {
   count = var.enable_policy_engine ? 1 : 0
