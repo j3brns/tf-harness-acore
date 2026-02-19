@@ -416,8 +416,8 @@ pre-commit run --all-files
 ### Pipeline Stages
 
 ```
-validate -> lint -> test -> plan:dev -> deploy:dev -> smoke-test:dev -> plan:test -> deploy:test -> smoke-test:test -> gate:prod-from-test -> plan:prod -> deploy:prod -> smoke-test:prod
-  (auto)    (auto)  (auto)    (auto)       (auto)         (auto)            (auto)      (manual)      (auto)              (auto)                 (auto)      (manual)      (auto)
+validate -> lint -> test -> plan:dev -> deploy:dev -> smoke-test:dev -> promote:test -> plan:test -> deploy:test -> smoke-test:test -> gate:prod-from-test -> plan:prod -> deploy:prod -> smoke-test:prod
+  (auto)    (auto)  (auto)    (auto)       (auto)         (auto)              (manual)      (auto)       (manual)      (auto)              (auto)                 (auto)      (manual)      (auto)
 ```
 
 ### Triggering Deployments
@@ -430,14 +430,15 @@ git push gitlab main
 # CI deploys to dev automatically
 ```
 
-**Test**: Manual from `release/*` branch (optional stabilization flow)
+**Test**: Manual pipeline from `release/*` branch only (optional stabilization flow)
 ```bash
 # Current line example:
 git checkout -b release/v0.1
 git push origin release/v0.1
 git push gitlab release/v0.1
-# In GitLab, trigger promote:test manually first.
-# Then run plan:test; deploy:test and smoke-test:test are chained after it.
+# Pushes do not create test-environment jobs.
+# In GitLab, click "Run pipeline" on release/v0.1 (or trigger via API), then run promote:test.
+# plan:test -> deploy:test -> smoke-test:test are chained behind promote:test in that manual pipeline.
 ```
 
 **Prod**: Manual from tag

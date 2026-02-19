@@ -475,7 +475,9 @@ promote:test:
   when: manual
   allow_failure: false
   rules:
-    - if: $CI_COMMIT_BRANCH =~ /^release\/.*/
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $CI_COMMIT_BRANCH =~ /^release\/.*/
+      when: manual
+    - when: never
 
 # =============================================================================
 # STAGE 7: PLAN TEST (Review before approving deploy)
@@ -514,8 +516,9 @@ plan:test:
       - $TF_ROOT/test-plan.txt
     expire_in: 4 hours
   rules:
-    - if: $CI_COMMIT_BRANCH =~ /^release\/.*/
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $CI_COMMIT_BRANCH =~ /^release\/.*/
       when: on_success
+    - when: never
 
 # =============================================================================
 # STAGE 8: DEPLOY TEST (Manual - operator reviews plan first)
@@ -563,7 +566,9 @@ deploy:test:
     expire_in: 30 days
   when: manual
   rules:
-    - if: $CI_COMMIT_BRANCH =~ /^release\/.*/
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $CI_COMMIT_BRANCH =~ /^release\/.*/
+      when: manual
+    - when: never
 
 smoke-test:test:
   stage: smoke-test-test
@@ -586,8 +591,9 @@ smoke-test:test:
     - cd $TF_ROOT
     - python scripts/validate_bff.py
   rules:
-    - if: $CI_COMMIT_BRANCH =~ /^release\/.*/
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $CI_COMMIT_BRANCH =~ /^release\/.*/
       when: on_success
+    - when: never
 
 # =============================================================================
 # STAGE 9: GATE PROD (Require successful test promotion evidence)
