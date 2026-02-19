@@ -1,4 +1,4 @@
-.PHONY: help init plan apply destroy validate fmt lint docs clean test
+.PHONY: help init plan apply destroy validate fmt lint docs clean test push-main-both push-tag-both ci-status-both
 
 # Variables
 ROOT_DIR := $(abspath .)
@@ -226,5 +226,22 @@ ci-validate: validate fmt module-validate
 
 ci-plan: ci-validate plan
 	@echo "✓ CI plan generated"
+
+# Dual-remote integration (GitHub + GitLab)
+push-main-both: ## Push main to both origin (GitHub) and gitlab remotes
+	git push origin main
+	git push gitlab main
+
+push-tag-both: ## Push TAG=vX.Y.Z to both origin and gitlab remotes
+	@test -n "$(TAG)" || (echo "ERROR: Provide TAG, e.g. make push-tag-both TAG=v0.1.0" && exit 1)
+	git push origin $(TAG)
+	git push gitlab $(TAG)
+
+ci-status-both: ## Show recent GitHub Actions and current GitLab CI status
+	@echo "GitHub Actions (latest 5):"
+	gh run list --limit 5 || true
+	@echo ""
+	@echo "GitLab CI status:"
+	glab ci status || true
 
 .DEFAULT_GOAL := help

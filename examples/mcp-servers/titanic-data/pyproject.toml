@@ -1,6 +1,6 @@
 [project]
 name = "titanic-data-mcp"
-version = "1.0.0"
+version = "0.1.0"
 description = "Titanic Dataset MCP Server for Bedrock AgentCore"
 requires-python = ">=3.12"
 dependencies = []  # No external dependencies - uses stdlib only

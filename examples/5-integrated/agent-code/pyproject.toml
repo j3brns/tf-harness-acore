@@ -1,9 +1,12 @@
 [project]
 name = "integrated-demo-agent"
-version = "1.0.0"
+version = "0.1.0"
 description = "Integrated demo agent using S3 and Titanic MCP servers"
 requires-python = ">=3.12"
-dependencies = []  # No external dependencies
+dependencies = [
+    "bedrock-agentcore>=1.0.7",
+    "strands-agents>=1.18.0",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -17,3 +20,8 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"

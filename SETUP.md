@@ -176,8 +176,8 @@ EOF
 cat > pyproject.toml << 'EOF'
 [project]
 name = "my-agent"
-version = "1.0.0"
-requires-python = ">=3.9"
+version = "0.1.0"
+requires-python = ">=3.12"
 
 [project.optional-dependencies]
 dev = [

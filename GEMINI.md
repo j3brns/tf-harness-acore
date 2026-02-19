@@ -5,6 +5,39 @@
 
 ---
 
+## TEMPORARY PROLOG: Migration Plan (v0.1.x Freeze)
+
+**Status**: Temporary. Applies until the exit criteria below are met.
+
+### Purpose
+- Freeze a clean SemVer baseline (`0.1.x`) without carrying repository sprawl into release history.
+- Align GitHub (`origin`) and GitLab (`gitlab`) release behavior.
+
+### Execution Order (Mandatory)
+1. Snapshot current mixed work to a non-release WIP branch; do not delete files.
+2. Build a clean release commit containing only versioning/governance/docs-sync changes.
+3. Run local gates before push: fmt, validate, tflint, checkov, pre-commit.
+4. Push `main` to both remotes: `origin` and `gitlab`.
+5. Create release tag `v0.1.x`, then push the tag to both remotes.
+6. Verify both CI systems:
+   - GitHub Actions: validation green on commit/tag.
+   - GitLab CI: promotion/deployment gates green or approved.
+7. Record release evidence (tag, SHAs, CI URLs) in release notes/changelog context.
+8. Move remaining sprawl cleanup to follow-up scoped commits (no mixed release commits).
+
+### Temporary Constraints
+- No net-new feature work is allowed in the release freeze commit unless it is a release blocker fix.
+- No script/file proliferation during migration; one-off artifacts remain in `.scratch/` and uncommitted.
+- `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` must stay byte-identical.
+
+### Exit Criteria (Remove This Prolog After Completion)
+- `VERSION` matches release tag `v0.1.x`.
+- `CHANGELOG.md` contains the matching release entry.
+- `main` and release tag are present on both remotes (`origin`, `gitlab`).
+- GitHub Actions and GitLab CI are green for the tagged release SHA.
+
+---
+
 ## RULE 0: Quick Start (Hard Stops)
 
 ### Non-Negotiables
@@ -166,6 +199,62 @@ For all other resources, follow the decision framework (native provider first wh
   - `search_documentation(search_phrase="AccessDenied bedrock-agentcore create-gateway-target", topics=["troubleshooting"])`
 - Release awareness:
   - `search_documentation(search_phrase="Amazon Bedrock AgentCore new features", topics=["current_awareness"])`
+
+---
+
+## RULE 6: Versioning & Release Freeze (MANDATORY)
+
+### Rule 6.1: Canonical Version Source
+- The repository version MUST be stored in the root `VERSION` file using SemVer (`MAJOR.MINOR.PATCH`).
+- During the current pre-1.0 phase, the active release line is `0.1.x`.
+- Any release change MUST update `VERSION` and `CHANGELOG.md` in the same commit.
+
+### Rule 6.2: Tags Are the Release Artifact
+- Official releases MUST be created as immutable Git tags in the format `vMAJOR.MINOR.PATCH` (example: `v0.1.0`).
+- Branches are for integration only; tags are the source of truth for Terraform module consumers.
+- Forks are NOT a release mechanism for this repo.
+
+### Rule 6.3: Promotion Model
+- `main` is the integration branch.
+- Optional `release/*` branch may be used only as a short-lived stabilization branch when required by pipeline policy (for the current line: `release/v0.1`).
+- Production promotion MUST reference a tag that points to the exact tested commit SHA.
+
+### Rule 6.4: GitHub + GitLab Remote Sync
+- This repository is dual-remote: `origin` (GitHub) and `gitlab` (GitLab).
+- Release commits and release tags MUST be pushed to both remotes.
+- Use non-interactive CLI commands only (for example: `git push origin main`, `git push gitlab main`, `git push origin v0.1.0`, `git push gitlab v0.1.0`).
+- Validate both CI systems after push: GitHub Actions for validation and GitLab CI for deployment gates.
+
+---
+
+## RULE 7: Documentation Sync & Sprawl Control
+
+### Rule 7.1: Agent Rule Docs Must Match
+- `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` MUST remain byte-identical.
+- If one file changes, all three MUST be updated in the same commit.
+
+### Rule 7.2: Update Docs Before Commit/Push
+- Any behavioral, CI/CD, architecture, or workflow change MUST include the required docs update before commit and before push.
+- "Follow-up docs later" is not permitted.
+
+### Rule 7.3: Ephemeral Work Area
+- Temporary experiments, generated files, and one-off tooling outputs MUST live under `.scratch/`.
+- `.scratch/` content is session-scoped and MUST NOT be committed.
+- Reusable automation belongs in existing maintained locations (`terraform/scripts/`, `Makefile`) and requires documentation.
+
+### Rule 7.4: No File Proliferation
+- Do not create variant files like `*_v2.*`, `*_improved.*`, `*_enhanced.*`, `*_copy.*`, `*_tmp.*`, or `*_backup.*`.
+- Prefer editing existing files in place.
+- A new file is allowed only when it introduces genuinely new functionality that cannot fit an existing file without reducing clarity.
+
+### Rule 7.5: Script Sprawl Control
+- Committed automation scripts are allowed only in established locations (`terraform/scripts/`, CI workflows, or template/example agent-code paths).
+- One-off scripts for investigation/migration must be created under `.scratch/` and must remain uncommitted.
+
+### Rule 7.6: New-File Accountability
+- Any committed new file MUST be accompanied by:
+  - a short rationale in the commit message, and
+  - required docs updates in the same commit when behavior/workflow changes.
 
 ---
 

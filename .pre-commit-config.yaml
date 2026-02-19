@@ -124,11 +124,38 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: agent-docs-sync-check
+        name: Check Agent Rule Docs In Sync
+        description: Ensures AGENTS.md, CLAUDE.md, and GEMINI.md are identical
+        entry: >-
+          bash -c 'cmp -s AGENTS.md CLAUDE.md && cmp -s AGENTS.md GEMINI.md || { echo "ERROR: AGENTS.md, CLAUDE.md, GEMINI.md must be identical"; exit 1; }'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: scratch-ephemeral-check
+        name: Block .scratch Commits
+        description: Prevents committing ephemeral files from .scratch/
+        entry: >-
+          bash -c 'if git diff --cached --name-only | grep -q "^\\.scratch/"; then echo "ERROR: .scratch/ is ephemeral and must not be committed"; exit 1; fi'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: file-proliferation-check
+        name: Prevent File Proliferation
+        description: Blocks ad-hoc variant filenames and script sprawl outside approved paths
+        entry: >-
+          bash -c 'set -euo pipefail; ADDED="$(git diff --cached --name-only --diff-filter=A)"; [ -z "$ADDED" ] && exit 0; BAD_NAMES="$(printf "%s\n" "$ADDED" | grep -Ei "(^|/).*(copy|backup|tmp|temp|old|new|v2|v3|improved|enhanced)(\\.|_|$)" || true)"; if [ -n "$BAD_NAMES" ]; then echo "ERROR: File proliferation naming detected (copy/tmp/v2/improved/etc):"; printf "%s\n" "$BAD_NAMES"; exit 1; fi; SCRIPT_ADDED="$(printf "%s\n" "$ADDED" | grep -E "\\.(sh|bash|zsh|ps1|bat|cmd|py)$" || true)"; if [ -n "$SCRIPT_ADDED" ]; then SCRIPT_BAD="$(printf "%s\n" "$SCRIPT_ADDED" | grep -Ev "^(terraform/scripts/|examples/.*/agent-code/|templates/agent-project/agent-code/|\\.github/)" || true)"; if [ -n "$SCRIPT_BAD" ]; then echo "ERROR: New scripts must be in approved paths (terraform/scripts, example/template agent-code, .github). Use .scratch/ for ephemeral scripts."; printf "%s\n" "$SCRIPT_BAD"; exit 1; fi; fi'
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: no-placeholder-arns
         name: Check No Placeholder ARNs
         description: Prevents placeholder AWS account IDs in code
         entry: >-
-          bash -c 'git diff --cached --name-only | xargs grep -l "123456789012\|999999999999\|000000000000" 2>/dev/null && echo "ERROR: Placeholder ARNs found" && exit 1 || exit 0'
+          bash -c 'set -euo pipefail; FILES="$(git diff --cached --name-only | grep -E "\.(tf|tfvars|py|sh|bash|zsh|ps1|yaml|yml|json)$" | grep -v "^\\.pre-commit-config\\.yaml$" || true)"; [ -z "$FILES" ] && exit 0; echo "$FILES" | xargs grep -l "123456789012\|999999999999\|000000000000" 2>/dev/null && echo "ERROR: Placeholder ARNs found" && exit 1 || exit 0'
         language: system
         pass_filenames: false
         types: [text]

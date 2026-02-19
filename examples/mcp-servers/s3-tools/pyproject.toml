@@ -1,6 +1,6 @@
 [project]
 name = "s3-tools-mcp"
-version = "1.0.0"
+version = "0.1.0"
 description = "S3 Tools MCP Server for Bedrock AgentCore"
 requires-python = ">=3.12"
 dependencies = [

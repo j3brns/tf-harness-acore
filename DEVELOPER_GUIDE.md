@@ -49,6 +49,14 @@ terraform plan \
 
 If all commands succeed, you're ready to develop!
 
+## Versioning
+
+- Canonical repo version lives in `VERSION`.
+- Current release line is `0.1.x`.
+- Release tags are immutable and formatted as `vMAJOR.MINOR.PATCH` (example `v0.1.0`).
+- When bumping version, update `VERSION` and `CHANGELOG.md` in the same commit.
+- Push release refs to both remotes: `origin` (GitHub) and `gitlab` (GitLab).
+
 ## Core Variables
 
 | Variable | Description | Default |
@@ -63,27 +71,24 @@ If all commands succeed, you're ready to develop!
 ### Making Changes
 
 ```bash
-# 1. Create feature branch
-git checkout -b feature/add-new-capability
-
-# 2. Make your changes
+# 1. Make your changes
 # Edit files...
 
-# 3. Validate locally (NO AWS needed)
+# 2. Validate locally (NO AWS needed)
 cd terraform
 terraform fmt -recursive
 terraform validate
 terraform plan -backend=false
 
-# 4. Security scan
+# 3. Security scan
 checkov -d . --framework terraform --compact --config-file .checkov.yaml
 
-# 5. Commit (pre-commit hooks run automatically)
+# 4. Commit (pre-commit hooks run automatically)
 git add .
 git commit -m "feat: add new capability"
 
-# 6. Push and create MR
-git push origin feature/add-new-capability
+# 5. Push to main
+git push origin main
 ```
 
 ### Local Testing (No AWS Required)
@@ -175,43 +180,24 @@ repo-root/
 ### Task 1: Create a New Example Agent
 
 ```bash
-# 1. Create example directory
-mkdir -p examples/5-my-agent/agent-code
+# 1. Scaffold in scratch using Copier (non-interactive)
+copier copy --force --trust \
+  --data agent_name=my-agent \
+  --data app_id=my-agent \
+  --data region=us-east-1 \
+  --data environment=dev \
+  --data enable_bff=true \
+  templates/agent-project .scratch/my-agent
 
-# 2. Create agent code
-cat > examples/5-my-agent/agent-code/runtime.py <<'EOF'
-from bedrock_agentcore import BedrockAgentCoreApp
+# 2. Validate generated agent code
+cd .scratch/my-agent/agent-code
+python3 -m pip install -e ".[dev]"
+python3 -m pytest tests/ -v --tb=short
 
-app = BedrockAgentCoreApp()
-
-@app.entrypoint
-def invoke(payload, context=None):
-    return {"status": "success", "message": "Hello from my agent!"}
-
-if __name__ == "__main__":
-    app.run()
-EOF
-
-# 3. Create terraform.tfvars file
-cat > examples/5-my-agent/terraform.tfvars <<'EOF'
-agent_name          = "my-agent"
-region              = "us-east-1"
-environment         = "dev"
-agentcore_region    = ""
-bedrock_region      = ""
-bff_region          = ""
-bff_agentcore_runtime_arn = ""
-
-enable_gateway      = true
-enable_runtime      = true
-runtime_source_path = "../examples/5-my-agent/agent-code"
-
-enable_observability = true
-EOF
-
-# 4. Test it
-cd terraform
-terraform plan -var-file=../examples/5-my-agent/terraform.tfvars
+# 3. Validate generated Terraform
+cd ../terraform
+terraform init -backend=false
+terraform validate
 ```
 
 ### Task 2: Add a New Variable
@@ -436,26 +422,29 @@ validate -> lint -> test -> plan:dev -> deploy:dev -> smoke-test:dev -> plan:tes
 
 ### Triggering Deployments
 
-**Dev**: Automatic on merge to `main`
+**Dev**: Automatic on push to `main`
 ```bash
 git checkout main
-git merge feature/my-branch
 git push origin main
+git push gitlab main
 # CI deploys to dev automatically
 ```
 
-**Test**: Manual from release branch
+**Test**: Manual from `release/*` branch (optional stabilization flow)
 ```bash
-git checkout -b release/v1.2.0
-git push origin release/v1.2.0
+# Current line example:
+git checkout -b release/v0.1
+git push origin release/v0.1
+git push gitlab release/v0.1
 # Go to GitLab, trigger deploy-test job manually
 ```
 
 **Prod**: Manual from tag
 ```bash
 # Tag the same commit SHA that passed release/* deploy:test + smoke-test:test
-git tag v1.2.0
-git push origin v1.2.0
+git tag v0.1.0
+git push origin v0.1.0
+git push gitlab v0.1.0
 # gate:prod-from-test must pass, then trigger deploy-prod manually
 ```
 
@@ -467,7 +456,7 @@ git push origin v1.2.0
 - Test examples after module changes
 - Add validation to variables
 - Use descriptive commit messages
-- Keep changes focused (one feature per MR)
+- Keep changes focused (one logical change per commit)
 - Document decisions in ADRs
 - Update docs when changing code
 - Close issues with a comprehensive summary comment (changes, validation, outcomes)
@@ -476,7 +465,6 @@ git push origin v1.2.0
 - Use `Resource = "*"` in IAM policies
 - Suppress errors with `|| true`
 - Skip validation before pushing
-- Commit directly to main (use MRs)
 - Use placeholder ARNs (123456789012)
 - Make changes without running Checkov
 - Forget to update documentation
@@ -516,7 +504,7 @@ terraform --help
 2. Read `CLAUDE.md`
 3. Review `examples/`
 4. Try modifying an example
-5. Create your first MR
+5. Create your first release tag (`v0.1.x`) after validation
 6. Deploy to dev
 
 Welcome to the team!

@@ -9,11 +9,11 @@ A hardened Terraform framework for deploying enterprise AI agents on AWS Bedrock
 
 ### The North-South Join
 
-The North-South Join is a hierarchical identity model that anchors every request to three coordinates. 
+The North-South Join is a hierarchical identity model that anchors every request to three coordinates.
 
 -**North** is the entry point: the AppID, materialized as an API Gateway.
 -**Middle** is the identity layer: the TenantID, extracted from the OIDC token and validated by a Lambda Authorizer against DynamoDB.
--**South** is the compute layer: the AgentName, where the Bedrock Runtime Engine executes agent logic. 
+-**South** is the compute layer: the AgentName, where the Bedrock Runtime Engine executes agent logic.
 
 Data partitioning follows the same hierarchy -- DynamoDB composite keys use `APP#{app_id}#TENANT#{tenant_id}`, S3 paths use `{app_id}/{tenant_id}/{agent_name}/memory/`, and CloudWatch log groups nest under `/aws/bedrock/agentcore/{resource-type}/{agent-name}`.
 
@@ -60,7 +60,7 @@ graph TD
     Middle -.-> CW
 ```
 
-> The `hashicorp/aws` provider does not yet support AgentCore resources -- verified through v5.100.0. 
+> The `hashicorp/aws` provider does not yet support AgentCore resources -- verified through v5.100.0.
 
 This framework bridges that gap with a stateful CLI bridge pattern that wraps every AgentCore control-plane operation in a lifecycle manager backed by SSM Parameter Store, giving you full infrastructure-as-code semantics today and a clean `terraform import` migration path when native resources arrive.
 
@@ -70,7 +70,7 @@ This framework bridges that gap with a stateful CLI bridge pattern that wraps ev
 
 ### Identity Translation Engine
 
-Every agent interaction begins with a human. That human arrives carrying a JWT from their corporate identity provider -- Entra ID, Okta, Auth0 -- and the framework must translate that ephemeral, provider-specific token into a scoped AWS Workload Token before any compute touches it. Agents never see master session tokens. They receive a least-privilege identity anchored to the North-South Join hierarchy: 
+Every agent interaction begins with a human. That human arrives carrying a JWT from their corporate identity provider -- Entra ID, Okta, Auth0 -- and the framework must translate that ephemeral, provider-specific token into a scoped AWS Workload Token before any compute touches it. Agents never see master session tokens. They receive a least-privilege identity anchored to the North-South Join hierarchy:
 - **AppID** defines the application boundary
 - **TenantID** defines the ownership unit
 - **AgentName** identifies the compute resource. Together, these three dimensions form a composite key that threads through every layer of the stack.
@@ -79,7 +79,7 @@ ABAC enforcement happens at runtime through dynamic IAM session policies. When a
 
 ### OCDS Build Protocol
 
-The Optimized Code/Dependency Separation protocol splits Lambda packaging into two deterministic stages. 
+The Optimized Code/Dependency Separation protocol splits Lambda packaging into two deterministic stages.
 Stage 1 reads `pyproject.toml`, resolves dependencies against the target platform (`manylinux2014_x86_64` or `manylinux2014_aarch64` for Graviton), and caches them in an isolated layer.
 Stage 2 packages only your agent logic. The result is that a one-line change to your agent's reasoning loop produces a rebuild measured in seconds, not minutes, because the 200MB dependency layer is untouched.
 
@@ -87,7 +87,7 @@ Architecture-aware binary fetching means you can target ARM64/Graviton by flippi
 
 ### Stateful CLI Bridge
 
-> Ten distinct AgentCore resource types -- Gateway, Workload Identity, Browser, Code Interpreter, Runtime, Memory, Policy Engine, Cedar Policies, Evaluators, and OAuth2 Credential Providers -- have no Terraform provider representation. 
+> Ten distinct AgentCore resource types -- Gateway, Workload Identity, Browser, Code Interpreter, Runtime, Memory, Policy Engine, Cedar Policies, Evaluators, and OAuth2 Credential Providers -- have no Terraform provider representation.
 
 The framework wraps each in a `null_resource` with a `local-exec` provisioner that calls the `bedrock-agentcore-control` CLI, captures JSON output, and surfaces resource IDs through `data.external` sources. SHA256-based triggers on the resource configuration ensure idempotency: if the configuration has not changed, Terraform does not re-create the resource.
 
@@ -133,7 +133,7 @@ graph TD
 
 Credentials never persist. The deployment pipeline authenticates via GitLab Web Identity Federation: the CI runner presents a JWT to AWS STS, receives temporary credentials scoped to a deployment role, and uses those credentials for exactly one pipeline execution. Terraform provisions resources under those temporary credentials. The agent runtime itself operates under a dedicated IAM role with least-privilege permissions -- it can invoke Bedrock, read its own S3 prefix, and write to its own log group. Nothing more.
 
-The MCP Gateway adds a second authentication layer. Inbound requests authenticate via Workload Identity, which validates the caller's OAuth2 token and issues a scoped session. Lambda MCP tools execute under their own IAM execution roles, isolated from the gateway's permissions. The full chain reads: 
+The MCP Gateway adds a second authentication layer. Inbound requests authenticate via Workload Identity, which validates the caller's OAuth2 token and issues a scoped session. Lambda MCP tools execute under their own IAM execution roles, isolated from the gateway's permissions. The full chain reads:
 
 >**GitLab WIF -> AWS STS -> temporary credentials -> Terraform provisions -> Agent Runtime (scoped IAM) -> Gateway (Workload Identity OAuth2) -> MCP Tools (Lambda execution roles)**.
 
@@ -232,7 +232,7 @@ No target requires AWS credentials except those that explicitly deploy or read l
 
 ### Pre-commit Enforcement
 
-Every commit passes through a hook chain that catches problems before they reach CI. Terraform formatting, validation, and docs generation run automatically. TFLint applies the AWS ruleset. Checkov scans for security misconfigurations. Black and Flake8 enforce Python style at line-length 120. Three custom local hooks round out the chain: `docs-sync-check` blocks Terraform changes that lack documentation updates, `tests-sync-check` blocks Terraform changes that lack test updates, and `no-placeholder-arns` catches hardcoded dummy account IDs before they can ship.
+Every commit passes through a hook chain that catches problems before they reach CI. Terraform formatting, validation, and docs generation run automatically. TFLint applies the AWS ruleset. Checkov scans for security misconfigurations. Black and Flake8 enforce Python style at line-length 120. Custom local hooks round out the chain: `docs-sync-check` blocks Terraform changes that lack documentation updates, `tests-sync-check` blocks Terraform changes that lack test updates, `agent-docs-sync-check` enforces parity across `AGENTS.md`/`CLAUDE.md`/`GEMINI.md`, `scratch-ephemeral-check` blocks committing `.scratch/` artifacts, `file-proliferation-check` blocks ad-hoc variant filenames/scripts outside approved paths, and `no-placeholder-arns` catches hardcoded dummy account IDs before they can ship.
 
 ### Windows Support
 
@@ -240,7 +240,12 @@ Terraform pre-commit hooks require bash, which makes them hostile to native Wind
 
 ### Scaffolding New Agents
 
-The `templates/agent-project/` directory contains a Copier template for bootstrapping a new agent project with Terraform wiring, starter runtime code, and optional BFF/front-end files.
+The `templates/agent-project/` directory contains a Copier template for bootstrapping a new agent project with Terraform wiring, optional BFF/front-end files, and a production-ready agent code pattern:
+- `agent-code/runtime.py` (Bedrock entrypoint)
+- `agent-code/agent.py` (Strands composition/orchestration)
+- `agent-code/tools.py` (`@tool` functions)
+- `agent-code/tests/test_runtime.py` (starter tests)
+- `agent-code/pyproject.toml` (Python dependencies + pytest config)
 
 Interactive flow:
 
@@ -269,7 +274,7 @@ Notes:
 - `app_id` is the logical app boundary for multi-tenant partitioning; keep it stable across related agents.
 - If `enable_bff=true`, replace OIDC placeholder values in generated `terraform/main.tf` before deploy.
 - Copier templates project files only; repository permissions/branch protection are managed in GitLab project/group settings.
-- The CI pipeline validates template generation + `terraform validate` on every push so scaffolding drift is caught early.
+- CI validates template generation and generated `terraform validate` so scaffolding drift is caught early.
 
 ---
 
@@ -393,6 +398,32 @@ terraform plan -var-file=../examples/3-deepresearch/terraform.tfvars
 
 ---
 
+## Versioning And Release Contract
+
+- Canonical repository version is stored in `VERSION` (current line: `0.1.x`).
+- Official releases are immutable tags in the format `vMAJOR.MINOR.PATCH` (for example `v0.1.0`).
+- `main` is the integration branch.
+- `release/*` is optional and short-lived for test stabilization only (current line: `release/v0.1`).
+- Forks are not part of release promotion.
+- Release refs must be pushed to both remotes: `origin` (GitHub) and `gitlab` (GitLab).
+
+For Terraform module consumers, pin to a release tag rather than a branch ref.
+
+Dual-remote push flow:
+
+```bash
+# Integration commit
+git push origin main
+git push gitlab main
+
+# Release tag
+git tag v0.1.0
+git push origin v0.1.0
+git push gitlab v0.1.0
+```
+
+---
+
 ## CI/CD Pipeline
 
 The framework ships with both a GitLab CI pipeline for full deployment and a GitHub Actions workflow for validation-only CI.
@@ -405,14 +436,14 @@ The GitLab pipeline spans 13 stages across three environments, with every stage 
 |-------|-------------|---------|---------|
 | `validate:fmt` | -- | Every push | Terraform formatting check |
 | `validate:syntax` | -- | Every push | `terraform init` + `terraform validate` |
-| `validate:docs-and-tests` | -- | MR / main | Enforce that Terraform changes include doc and test updates |
-| `lint:tflint` | -- | MR / main | TFLint recursive scan |
-| `lint:checkov` | -- | MR / main | Checkov security scan with JUnit reporting |
-| `test:examples` | -- | MR / main | Validate all example configurations |
-| `test:cedar-policies` | -- | MR / main | Cedar policy syntax validation |
-| `test:python-*` | -- | MR / main | pytest suites for each example agent |
-| `plan:dev` + `deploy:dev` + `smoke-test:dev` | Dev | Merge to `main` | Automatic deploy to dev account |
-| `plan:test` + `deploy:test` + `smoke-test:test` | Test | `release/*` branch | Manual deploy to test account |
+| `validate:docs-and-tests` | -- | Every push to tracked branches | Enforce that Terraform changes include doc and test updates |
+| `lint:tflint` | -- | Every push to tracked branches | TFLint recursive scan |
+| `lint:checkov` | -- | Every push to tracked branches | Checkov security scan with JUnit reporting |
+| `test:examples` | -- | Every push to tracked branches | Validate all example configurations |
+| `test:cedar-policies` | -- | Every push to tracked branches | Cedar policy syntax validation |
+| `test:python-*` | -- | Every push to tracked branches | pytest suites for each example agent |
+| `plan:dev` + `deploy:dev` + `smoke-test:dev` | Dev | Push to `main` | Automatic deploy to dev account |
+| `plan:test` + `deploy:test` + `smoke-test:test` | Test | `release/*` branch (current line: `release/v0.1`) | Manual deploy to test account |
 | `gate:prod-from-test` | -- | Git tag | Verifies same SHA has successful `deploy:test` + `smoke-test:test` |
 | `plan:prod` + `deploy:prod` + `smoke-test:prod` | Prod | Git tag | Manual deploy to prod account (with approval) |
 
@@ -423,10 +454,10 @@ Scheduled pipelines run drift detection across all environments using `terraform
 Use this as the baseline hardening profile for production promotion.
 
 1. Protect `main` and block direct pushes.
-2. Require merge requests with CODEOWNERS approval for protected branches.
+2. If you use merge request gates, require CODEOWNERS approval for protected branches.
 3. Protect release tags (`v*`) so only release managers/maintainers can create them.
 4. Protect `production` environment and restrict who can deploy `deploy:prod`.
-5. Require explicit MR approval rules (for platform/security groups).
+5. If you use merge request gates, require explicit approval rules (platform/security groups).
 6. Mark prod CI variables as protected (`CI_ENVIRONMENT_ROLE_ARN_PROD`, `TF_STATE_BUCKET_PROD`, secrets).
 
 Terraform GitLab provider mapping:
@@ -436,11 +467,11 @@ Terraform GitLab provider mapping:
 | Protected branch policy | `gitlab_branch_protection` | Set no direct push to `main`, require CODEOWNERS approval where licensed. |
 | Protected tag policy | `gitlab_tag_protection` | Protect `v*` tag creation to release managers/maintainers. |
 | Protected production deploys | `gitlab_project_protected_environment` | Restrict deploy access for `production` environment. |
-| MR approval requirements | `gitlab_project_level_mr_approvals`, `gitlab_project_approval_rule` | Enforce minimum approvers and approval groups. |
+| MR approval requirements (optional) | `gitlab_project_level_mr_approvals`, `gitlab_project_approval_rule` | Enforce minimum approvers and approval groups if MR flow is enabled. |
 | CODEOWNERS in repo | `gitlab_repository_file` | Manage `CODEOWNERS` as code. |
 | Team access assignment | `gitlab_project_share_group`, `gitlab_group_membership` | Delegate project/group roles to dev teams. |
 
-Folder-level permissions are not natively supported by GitLab. Use protected branches + CODEOWNERS + MR approvals as the enforcement stack in a single repo.
+Folder-level permissions are not natively supported by GitLab. Use protected branches, path ownership, and approval controls that match your chosen workflow in a single repo.
 
 Starter Terraform (copy/paste):
 
@@ -562,7 +593,9 @@ resource "gitlab_project_protected_environment" "production" {
 
 ### GitHub Actions (Validation Only)
 
-The GitHub Actions workflow runs on every pull request and push to `main`. It executes formatting checks, `terraform validate`, TFLint, Checkov, example validation, and Copier template tests. It does not deploy to AWS and requires no cloud credentials.
+The GitHub Actions workflow runs on every pull request, push to `main`, and `v*` tag push. It executes formatting checks, `terraform validate`, TFLint, Checkov, example validation, and Copier template generation + generated `terraform validate`. It does not deploy to AWS and requires no cloud credentials.
+
+GitLab CI is the deployment pipeline. It runs validation/lint/test stages and then handles environment promotion gates for deploy.
 
 ---
 
