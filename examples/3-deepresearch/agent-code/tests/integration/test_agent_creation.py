@@ -12,6 +12,35 @@ from unittest.mock import MagicMock, patch
 class TestAgentCreation:
     """Integration tests for agent creation."""
 
+    @staticmethod
+    def _extract_graph_summary(agent):
+        """Extract a minimal graph summary from a Strands-compatible agent object."""
+        graph = getattr(agent, "graph", None)
+        if graph is None:
+            raise AssertionError("Agent graph not found")
+
+        nodes_raw = graph.get("nodes", [])
+        edges_raw = graph.get("edges", [])
+
+        node_names = []
+        for node in nodes_raw:
+            if isinstance(node, dict):
+                node_names.append(node.get("id") or node.get("name"))
+            else:
+                node_names.append(str(node))
+
+        edge_pairs = []
+        for edge in edges_raw:
+            if isinstance(edge, dict):
+                edge_pairs.append((edge.get("from"), edge.get("to")))
+            else:
+                edge_pairs.append(tuple(edge))
+
+        return {
+            "nodes": [n for n in node_names if n],
+            "edges": edge_pairs,
+        }
+
     @pytest.fixture
     def mock_strands_components(self):
         """Mock Strands DeepAgents components."""
@@ -22,15 +51,33 @@ class TestAgentCreation:
         ) as mock_haiku:
             mock_model.return_value = MagicMock()
             mock_haiku.return_value = MagicMock()
-            mock_subagent.return_value = MagicMock()
-            mock_agent = MagicMock()
-            mock_create.return_value = mock_agent
+
+            def _build_subagent(*args, **kwargs):
+                subagent = MagicMock()
+                subagent.name = kwargs.get("name", "subagent")
+                subagent.tools = kwargs.get("tools", [])
+                return subagent
+
+            def _build_agent(**kwargs):
+                subagents = kwargs.get("subagents", [])
+                lead_node = "research_lead"
+                subagent_nodes = [getattr(sa, "name", "subagent") for sa in subagents]
+                graph = {
+                    "nodes": [{"id": lead_node}] + [{"id": name} for name in subagent_nodes],
+                    "edges": [{"from": lead_node, "to": name} for name in subagent_nodes],
+                }
+                agent = MagicMock()
+                agent.graph = graph
+                return agent
+
+            mock_subagent.side_effect = _build_subagent
+            mock_create.side_effect = _build_agent
+
             yield {
                 "subagent": mock_subagent,
                 "create_agent": mock_create,
                 "model": mock_model,
                 "haiku": mock_haiku,
-                "agent": mock_agent,
             }
 
     def test_create_agent_with_default_config(self, mock_strands_components):
@@ -132,6 +179,22 @@ class TestAgentCreation:
         subagent_calls = mock_strands_components["subagent"].call_args_list
         citations_call = subagent_calls[1]
         assert citations_call[1]["name"] == "citations_agent"
+
+    def test_detects_strands_graph(self, mock_strands_components):
+        """Should expose a detectable graph with expected node topology."""
+        from deepresearch.main import create_deepsearch_agent
+
+        mock_tool = MagicMock()
+        mock_tool.__name__ = "internet_search"
+
+        agent = create_deepsearch_agent(research_tool=mock_tool)
+        graph = self._extract_graph_summary(agent)
+
+        assert "research_lead" in graph["nodes"]
+        assert "research_subagent" in graph["nodes"]
+        assert "citations_agent" in graph["nodes"]
+        assert ("research_lead", "research_subagent") in graph["edges"]
+        assert ("research_lead", "citations_agent") in graph["edges"]
 
 
 class TestRuntimeIntegration:
