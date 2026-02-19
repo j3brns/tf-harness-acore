@@ -19,6 +19,7 @@ resource "null_resource" "agent_runtime" {
       set -e
 
       echo "Creating agent runtime for ${self.triggers.agent_name}..."
+      mkdir -p "${path.module}/.terraform"
 
       # Get deployment package from S3
       DEPLOYMENT_S3_URI="s3://${local.deployment_bucket}"
@@ -128,6 +129,7 @@ resource "null_resource" "agent_memory" {
       set -e
 
       echo "Setting up agent memory for ${self.triggers.agent_name}..."
+      mkdir -p "${path.module}/.terraform"
 
       # Short-term memory
       if [[ "${self.triggers.memory_type}" == "SHORT_TERM" || "${self.triggers.memory_type}" == "BOTH" ]]; then

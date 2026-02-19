@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- Runtime and inference-profile CLI provisioners now create `${path.module}/.terraform` before writing JSON output artifacts, preventing deploy failures on clean CI runners.
+
 ## [0.1.0] - 2026-02-19
 
 ### Added

@@ -19,6 +19,7 @@ resource "null_resource" "inference_profile" {
       set -e
 
       echo "Creating inference profile ${self.triggers.profile_name}..."
+      mkdir -p "${path.module}/.terraform"
 
       jq -n \
         --arg name "${self.triggers.profile_name}" \
