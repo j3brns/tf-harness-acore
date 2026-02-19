@@ -1,6 +1,6 @@
 # Agent Runtime - CLI-based provisioning with SSM Persistence (Rule 5)
-# Note: Native aws_bedrockagentcore_runtime resource not yet available in Terraform
-# Using null_resource + local-exec pattern for CLI-based deployment
+# Note: Native aws_bedrockagentcore_agent_runtime and aws_bedrockagentcore_memory are available
+# in AWS provider 6.33+, but Rule 4 keeps these resources on the CLI pattern until v2 migration.
 
 resource "null_resource" "agent_runtime" {
   count = var.enable_runtime ? 1 : 0
@@ -113,7 +113,6 @@ resource "null_resource" "agent_runtime" {
 }
 
 # Agent Memory - CLI-based provisioning
-# Note: Native aws_bedrockagentcore_memory resource not yet available in Terraform
 
 resource "null_resource" "agent_memory" {
   count = var.enable_memory ? 1 : 0

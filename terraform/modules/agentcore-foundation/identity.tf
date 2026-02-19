@@ -12,6 +12,7 @@ resource "null_resource" "workload_identity" {
   provisioner "local-exec" {
     command = <<-EOT
       set -e
+      mkdir -p "${path.module}/.terraform"
 
       aws bedrock-agentcore-control create-workload-identity \
         --name "${self.triggers.name}" \

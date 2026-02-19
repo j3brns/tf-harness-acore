@@ -1,5 +1,6 @@
 # Custom Evaluator for Agent Quality Assessment
-# Note: Native aws_bedrockagentcore_evaluator resource not yet available in Terraform
+# Note: Native aws_bedrockagentcore_evaluator is available in AWS provider 6.33+,
+# but Rule 4 keeps this resource on the CLI pattern until v2 migration.
 
 resource "null_resource" "custom_evaluator" {
   count = var.enable_evaluations ? 1 : 0
@@ -16,6 +17,7 @@ resource "null_resource" "custom_evaluator" {
   provisioner "local-exec" {
     command = <<-EOT
       set -e
+      mkdir -p "${path.module}/.terraform"
 
       echo "Creating custom evaluator for ${self.triggers.agent_name}..."
 

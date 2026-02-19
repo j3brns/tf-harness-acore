@@ -5,7 +5,8 @@ All notable changes to this project are documented in this file.
 ## [Unreleased]
 
 ### Fixed
-- Runtime and inference-profile CLI provisioners now create `${path.module}/.terraform` before writing JSON output artifacts, preventing deploy failures on clean CI runners.
+- CLI provisioners in foundation/tools/runtime/governance modules now create `${path.module}/.terraform` before writing local output artifacts, preventing deploy failures on clean CI runners.
+- Validation coverage now asserts this output-directory guard across all CLI-managed modules.
 
 ## [0.1.0] - 2026-02-19
 

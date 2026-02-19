@@ -12,6 +12,7 @@ resource "null_resource" "code_interpreter" {
   provisioner "local-exec" {
     command = <<-EOT
       set -e
+      mkdir -p "${path.module}/.terraform"
 
       aws bedrock-agentcore-control create-code-interpreter \
         --name "${self.triggers.name}" \

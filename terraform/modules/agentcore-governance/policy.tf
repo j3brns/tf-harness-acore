@@ -1,5 +1,6 @@
 # Policy Engine - CLI-based provisioning with SSM Persistence (Rule 5)
-# Note: Native aws_bedrockagentcore_policy_engine resource not yet available in Terraform
+# Note: Native aws_bedrockagentcore_policy and aws_bedrockagentcore_policy_engine are available
+# in AWS provider 6.33+, but Rule 4 keeps these resources on the CLI pattern until v2 migration.
 
 resource "null_resource" "policy_engine" {
   count = var.enable_policy_engine ? 1 : 0
@@ -13,6 +14,7 @@ resource "null_resource" "policy_engine" {
   provisioner "local-exec" {
     command = <<-EOT
       set -e
+      mkdir -p "${path.module}/.terraform"
 
       echo "Creating policy engine for ${self.triggers.agent_name}..."
 
@@ -97,6 +99,7 @@ resource "null_resource" "cedar_policies" {
   provisioner "local-exec" {
     command = <<-EOT
       set -e
+      mkdir -p "${path.module}/.terraform"
 
       echo "Creating Cedar policy: ${self.triggers.policy_name}..."
 
@@ -175,6 +178,7 @@ resource "null_resource" "guardrail" {
   provisioner "local-exec" {
     command = <<-EOT
       set -e
+      mkdir -p "${path.module}/.terraform"
 
       echo "Creating Bedrock Guardrail ${self.triggers.name}..."
 

@@ -18,6 +18,7 @@ resource "null_resource" "gateway" {
   provisioner "local-exec" {
     command = <<-EOT
       set -e
+      mkdir -p "${path.module}/.terraform"
 
       echo "Creating MCP Gateway..."
 
@@ -119,6 +120,7 @@ resource "null_resource" "gateway_target" {
   provisioner "local-exec" {
     command = <<-EOT
       set -e
+      mkdir -p "${path.module}/.terraform"
 
       echo "Creating Gateway Target: ${self.triggers.name}..."
 

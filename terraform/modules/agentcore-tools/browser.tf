@@ -12,6 +12,7 @@ resource "null_resource" "browser" {
   provisioner "local-exec" {
     command = <<-EOT
       set -e
+      mkdir -p "${path.module}/.terraform"
 
       aws bedrock-agentcore-control create-browser \
         --name "${self.triggers.name}" \
