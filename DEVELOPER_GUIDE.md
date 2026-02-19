@@ -437,7 +437,7 @@ git checkout -b release/v0.1
 git push origin release/v0.1
 git push gitlab release/v0.1
 # In GitLab, trigger promote:test manually first.
-# Then run plan:test / deploy:test as needed.
+# Then run plan:test; deploy:test and smoke-test:test are chained after it.
 ```
 
 **Prod**: Manual from tag

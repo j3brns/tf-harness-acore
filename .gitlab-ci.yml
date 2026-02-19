@@ -533,10 +533,19 @@ deploy:test:
     TF_VAR_environment: "test"
     TF_VAR_app_id: "agentcore-test"
     TF_VAR_lambda_architecture: "arm64"
-  needs: [plan:test]
+  needs:
+    - job: promote:test
+      artifacts: true
+    - job: plan:test
+      artifacts: true
   resource_group: terraform-test
   timeout: 30m
   script:
+    - |
+      if [ "${PROMOTION_TO_TEST_APPROVED:-}" != "true" ]; then
+        echo "ERROR: Test promotion not approved. Trigger promote:test first."
+        exit 1
+      fi
     - cd $TF_ROOT
     - echo "=== Plan to be applied ===" && cat test-plan.txt
     - !reference [.generate_backend, script]
@@ -560,9 +569,19 @@ smoke-test:test:
   stage: smoke-test-test
   extends: [.aws_auth, .notify_failure]
   image: python:3.12-slim
+  needs:
+    - job: promote:test
+      artifacts: true
+    - job: deploy:test
+      artifacts: true
   variables:
     AWS_ROLE_ARN: ${CI_ENVIRONMENT_ROLE_ARN_TEST}
   script:
+    - |
+      if [ "${PROMOTION_TO_TEST_APPROVED:-}" != "true" ]; then
+        echo "ERROR: Test promotion not approved. Trigger promote:test first."
+        exit 1
+      fi
     - pip install -q boto3
     - cd $TF_ROOT
     - python scripts/validate_bff.py
