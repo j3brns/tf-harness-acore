@@ -13,6 +13,7 @@ stages:
   - plan-dev     # Plan dev deployment (no apply)
   - deploy-dev   # Auto-deploy to dev (AWS dev account)
   - smoke-test-dev # Verify dev deployment
+  - promote-test # Manual promotion gate before any test env actions
   - plan-test    # Plan test deployment for review
   - deploy-test  # Manual deploy to test (AWS test account)
   - smoke-test-test # Verify test deployment
@@ -448,12 +449,44 @@ smoke-test:dev:
       when: on_success
 
 # =============================================================================
-# STAGE 6: PLAN TEST (Review before approving deploy)
+# STAGE 6: PROMOTE TEST (Manual gate - no test env actions without promotion)
+# =============================================================================
+
+promote:test:
+  stage: promote-test
+  extends: [.install_tools, .notify_failure]
+  script:
+    - |
+      set -euo pipefail
+      echo "Validating promotion prerequisites for $CI_COMMIT_SHA on branch $CI_COMMIT_BRANCH"
+      PIPELINES_JSON=$(curl -sS --fail --header "JOB-TOKEN: $CI_JOB_TOKEN" \
+        "$CI_API_V4_URL/projects/$CI_PROJECT_ID/pipelines?sha=$CI_COMMIT_SHA&status=success&per_page=100")
+      MAIN_OK=$(printf '%s' "$PIPELINES_JSON" | jq -r '[.[] | select(.ref == $main_ref)] | length' --arg main_ref "$CI_DEFAULT_BRANCH")
+      if [ "$MAIN_OK" -lt 1 ]; then
+        echo "ERROR: No successful $CI_DEFAULT_BRANCH pipeline found for this SHA. Promote from dev/main first."
+        exit 1
+      fi
+      echo "PROMOTION_TO_TEST_APPROVED=true" > promote-test.env
+      echo "Promotion approved for test."
+  artifacts:
+    reports:
+      dotenv: promote-test.env
+    expire_in: 7 days
+  when: manual
+  allow_failure: false
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^release\/.*/
+
+# =============================================================================
+# STAGE 7: PLAN TEST (Review before approving deploy)
 # =============================================================================
 
 plan:test:
   stage: plan-test
   extends: [.aws_auth, .terraform_cache, .notify_failure]
+  needs:
+    - job: promote:test
+      artifacts: true
   environment:
     name: test
   variables:
@@ -463,6 +496,11 @@ plan:test:
     TF_VAR_app_id: "agentcore-test"
     TF_VAR_lambda_architecture: "arm64"
   script:
+    - |
+      if [ "${PROMOTION_TO_TEST_APPROVED:-}" != "true" ]; then
+        echo "ERROR: Test promotion not approved. Trigger promote:test first."
+        exit 1
+      fi
     - cd $TF_ROOT
     - !reference [.generate_backend, script]
     - terraform plan
@@ -480,7 +518,7 @@ plan:test:
       when: on_success
 
 # =============================================================================
-# STAGE 7: DEPLOY TEST (Manual - operator reviews plan first)
+# STAGE 8: DEPLOY TEST (Manual - operator reviews plan first)
 # =============================================================================
 
 deploy:test:
@@ -533,7 +571,7 @@ smoke-test:test:
       when: on_success
 
 # =============================================================================
-# STAGE 8: GATE PROD (Require successful test promotion evidence)
+# STAGE 9: GATE PROD (Require successful test promotion evidence)
 # =============================================================================
 
 gate:prod-from-test:
@@ -571,7 +609,7 @@ gate:prod-from-test:
     - if: $CI_COMMIT_TAG
 
 # =============================================================================
-# STAGE 9: PLAN PROD (Mandatory review before prod deploy)
+# STAGE 10: PLAN PROD (Mandatory review before prod deploy)
 # =============================================================================
 
 plan:prod:
@@ -606,7 +644,7 @@ plan:prod:
     - if: $CI_COMMIT_TAG
 
 # =============================================================================
-# STAGE 10: DEPLOY PROD (Manual - operator reviews plan output before approving)
+# STAGE 11: DEPLOY PROD (Manual - operator reviews plan output before approving)
 # =============================================================================
 
 deploy:prod:

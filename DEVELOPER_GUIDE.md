@@ -436,7 +436,8 @@ git push gitlab main
 git checkout -b release/v0.1
 git push origin release/v0.1
 git push gitlab release/v0.1
-# Go to GitLab, trigger deploy-test job manually
+# In GitLab, trigger promote:test manually first.
+# Then run plan:test / deploy:test as needed.
 ```
 
 **Prod**: Manual from tag

@@ -217,6 +217,7 @@ For all other resources, follow the decision framework (native provider first wh
 ### Rule 6.3: Promotion Model
 - `main` is the integration branch.
 - Optional `release/*` branch may be used only as a short-lived stabilization branch when required by pipeline policy (for the current line: `release/v0.1`).
+- Test environment actions (`plan:test`, `deploy:test`, `smoke-test:test`) require explicit manual promotion first (`promote:test`).
 - Production promotion MUST reference a tag that points to the exact tested commit SHA.
 
 ### Rule 6.4: GitHub + GitLab Remote Sync

@@ -443,7 +443,8 @@ The GitLab pipeline spans 13 stages across three environments, with every stage 
 | `test:cedar-policies` | -- | Every push to tracked branches | Cedar policy syntax validation |
 | `test:python-*` | -- | Every push to tracked branches | pytest suites for each example agent |
 | `plan:dev` + `deploy:dev` + `smoke-test:dev` | Dev | Push to `main` | Automatic deploy to dev account |
-| `plan:test` + `deploy:test` + `smoke-test:test` | Test | `release/*` branch (current line: `release/v0.1`) | Manual deploy to test account |
+| `promote:test` | Test Gate | `release/*` branch (current line: `release/v0.1`) | Manual promotion gate; verifies successful `main` pipeline for same SHA |
+| `plan:test` + `deploy:test` + `smoke-test:test` | Test | `release/*` branch after `promote:test` | Test actions only after explicit promotion |
 | `gate:prod-from-test` | -- | Git tag | Verifies same SHA has successful `deploy:test` + `smoke-test:test` |
 | `plan:prod` + `deploy:prod` + `smoke-test:prod` | Prod | Git tag | Manual deploy to prod account (with approval) |
 
