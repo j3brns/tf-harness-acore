@@ -16,12 +16,12 @@ Need CI/CD pipeline for automated testing and deployment.
 ## Decision
 
 Use GitLab CI with:
-- 12 stages (validate, lint, test, plan-dev, deploy-dev, smoke-test-dev, plan-test, deploy-test, smoke-test-test, plan-prod, deploy-prod, smoke-test-prod)
+- 15 stages (validate, lint, test, plan-dev, promote-dev, deploy-dev, smoke-test-dev, promote-test, plan-test, deploy-test, smoke-test-test, gate-prod, plan-prod, deploy-prod, smoke-test-prod)
 - AWS Web Identity Federation (WIF) for authentication
-- Branch/tag promotion:
-  - `main` -> dev plan + auto deploy + smoke test
-  - `release/*` -> test plan + manual deploy + smoke test
-  - tags -> prod plan + manual deploy + smoke test
+- Main/tag promotion:
+  - `main` push -> validate/lint/test + dev plan (no test jobs)
+  - `main` manual/API pipeline -> `promote:dev` gate, dev deploy/smoke, then `promote:test` gate, test plan/deploy/smoke
+  - tags -> prod plan + manual deploy + smoke test (gated on successful test evidence from `main`)
 - Maximum local testing (no AWS for validate/lint/test stages)
 - Scheduled drift detection (non-blocking) runs in the test stage
 
@@ -33,11 +33,14 @@ stages:
   - lint            # TFLint, Checkov (NO AWS)
   - test            # Example validation, Cedar policies (NO AWS)
   - plan-dev        # Plan dev deployment (no apply)
-  - deploy-dev      # Auto-deploy to dev (AWS dev account)
+  - promote-dev     # Manual gate before dev deploy
+  - deploy-dev      # Deploy to dev (AWS dev account)
   - smoke-test-dev  # Verify dev deployment
+  - promote-test    # Manual gate before test actions
   - plan-test       # Plan test deployment for review
   - deploy-test     # Manual deploy to test (AWS test account)
   - smoke-test-test # Verify test deployment
+  - gate-prod       # Validate test evidence before prod
   - plan-prod       # Plan prod deployment for review
   - deploy-prod     # Manual deploy to prod (AWS prod account)
   - smoke-test-prod # Verify prod deployment
@@ -65,7 +68,7 @@ Terraform commands with AWS access
 
 - GitLab CI is the deployment control plane
 - WIF more secure than static IAM credentials (no secrets to rotate)
-- Branch/tag strategy provides clear promotion path with explicit plan gates
+- Main/tag strategy provides clear promotion path with explicit manual promotion gates
 - Local testing reduces AWS costs
 - Stages 1-3 run without AWS account
 

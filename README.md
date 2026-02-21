@@ -403,7 +403,7 @@ terraform plan -var-file=../examples/3-deepresearch/terraform.tfvars
 - Canonical repository version is stored in `VERSION` (current line: `0.1.x`).
 - Official releases are immutable tags in the format `vMAJOR.MINOR.PATCH` (for example `v0.1.0`).
 - `main` is the integration branch.
-- `release/*` is optional and short-lived for test stabilization only (current line: `release/v0.1`).
+- `main` is the promotion branch for dev and test (manual/API pipeline gates for test).
 - Forks are not part of release promotion.
 - Release refs must be pushed to both remotes: `origin` (GitHub) and `gitlab` (GitLab).
 
@@ -444,9 +444,9 @@ The GitLab pipeline spans 13 stages across three environments, with every stage 
 | `test:python-*` | -- | Every push to tracked branches | pytest suites for each example agent |
 | `promote:dev` | Dev Gate | Push to `main` | Manual promotion gate required before any dev deploy |
 | `plan:dev` -> `deploy:dev` -> `smoke-test:dev` | Dev | Push to `main` after `promote:dev` | Chained dev deployment flow; `deploy:dev` is blocked until promotion is approved |
-| `promote:test` | Test Gate | Manual pipeline (`Run pipeline` / API) on `release/*` (current line: `release/v0.1`) | Manual promotion gate; verifies successful `main` pipeline for same SHA |
-| `plan:test` -> `deploy:test` -> `smoke-test:test` | Test | Same manual `release/*` pipeline after `promote:test` | Explicit chained DAG; test-environment jobs are never created on push pipelines |
-| `gate:prod-from-test` | -- | Git tag | Verifies same SHA has successful `deploy:test` + `smoke-test:test` |
+| `promote:test` | Test Gate | Manual/API pipeline on `main` | Manual promotion gate; requires successful `deploy:dev` + `smoke-test:dev` in the same pipeline |
+| `plan:test` -> `deploy:test` -> `smoke-test:test` | Test | Same manual/API `main` pipeline after `promote:test` | Explicit chained DAG; test-environment jobs are never created on push pipelines |
+| `gate:prod-from-test` | -- | Git tag | Verifies same SHA has successful `deploy:test` + `smoke-test:test` in a successful `main` pipeline |
 | `plan:prod` + `deploy:prod` + `smoke-test:prod` | Prod | Git tag | Manual deploy to prod account (with approval) |
 
 Scheduled pipelines run drift detection across all environments using `terraform plan -detailed-exitcode`. If infrastructure has diverged from state, the pipeline flags the drift and optionally sends a Slack notification.

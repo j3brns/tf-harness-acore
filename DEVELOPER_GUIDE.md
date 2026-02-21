@@ -431,20 +431,17 @@ git push gitlab main
 # deploy:dev -> smoke-test:dev then continue automatically.
 ```
 
-**Test**: Manual pipeline from `release/*` branch only (optional stabilization flow)
+**Test**: Manual/API pipeline from `main` only
 ```bash
-# Current line example:
-git checkout -b release/v0.1
-git push origin release/v0.1
-git push gitlab release/v0.1
 # Pushes do not create test-environment jobs.
-# In GitLab, click "Run pipeline" on release/v0.1 (or trigger via API), then run promote:test.
-# plan:test -> deploy:test -> smoke-test:test are chained behind promote:test in that manual pipeline.
+# In GitLab, click "Run pipeline" on main (or trigger via API), then run promote:test.
+# promote:test requires deploy:dev + smoke-test:dev success in the same pipeline.
+# plan:test -> deploy:test -> smoke-test:test are chained behind promote:test.
 ```
 
 **Prod**: Manual from tag
 ```bash
-# Tag the same commit SHA that passed release/* deploy:test + smoke-test:test
+# Tag the same commit SHA that passed main deploy:test + smoke-test:test
 git tag v0.1.0
 git push origin v0.1.0
 git push gitlab v0.1.0

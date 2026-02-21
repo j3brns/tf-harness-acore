@@ -492,11 +492,14 @@ promote:test:
     - |
       set -euo pipefail
       echo "Validating promotion prerequisites for $CI_COMMIT_SHA on branch $CI_COMMIT_BRANCH"
-      PIPELINES_JSON=$(curl -sS --fail --header "JOB-TOKEN: $CI_JOB_TOKEN" \
-        "$CI_API_V4_URL/projects/$CI_PROJECT_ID/pipelines?sha=$CI_COMMIT_SHA&status=success&per_page=100")
-      MAIN_OK=$(printf '%s' "$PIPELINES_JSON" | jq -r '[.[] | select(.ref == $main_ref)] | length' --arg main_ref "$CI_DEFAULT_BRANCH")
-      if [ "$MAIN_OK" -lt 1 ]; then
-        echo "ERROR: No successful $CI_DEFAULT_BRANCH pipeline found for this SHA. Promote from dev/main first."
+      JOBS_JSON=$(curl -sS --fail --header "JOB-TOKEN: $CI_JOB_TOKEN" \
+        "$CI_API_V4_URL/projects/$CI_PROJECT_ID/pipelines/$CI_PIPELINE_ID/jobs?per_page=100")
+      if ! printf '%s' "$JOBS_JSON" | jq -e '.[] | select(.name=="deploy:dev" and .status=="success")' >/dev/null; then
+        echo "ERROR: deploy:dev is not successful in this pipeline. Promote dev first."
+        exit 1
+      fi
+      if ! printf '%s' "$JOBS_JSON" | jq -e '.[] | select(.name=="smoke-test:dev" and .status=="success")' >/dev/null; then
+        echo "ERROR: smoke-test:dev is not successful in this pipeline. Promote dev first."
         exit 1
       fi
       echo "PROMOTION_TO_TEST_APPROVED=true" > promote-test.env
@@ -508,7 +511,7 @@ promote:test:
   when: manual
   allow_failure: false
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $CI_COMMIT_BRANCH =~ /^release\/.*/
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       when: manual
     - when: never
 
@@ -549,7 +552,7 @@ plan:test:
       - $TF_ROOT/test-plan.txt
     expire_in: 4 hours
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $CI_COMMIT_BRANCH =~ /^release\/.*/
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       when: on_success
     - when: never
 
@@ -599,7 +602,7 @@ deploy:test:
     expire_in: 30 days
   when: manual
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $CI_COMMIT_BRANCH =~ /^release\/.*/
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       when: manual
     - when: never
 
@@ -624,7 +627,7 @@ smoke-test:test:
     - cd $TF_ROOT
     - python scripts/validate_bff.py
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $CI_COMMIT_BRANCH =~ /^release\/.*/
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       when: on_success
     - when: never
 
@@ -641,26 +644,26 @@ gate:prod-from-test:
       echo "Checking promotion gate for tag ${CI_COMMIT_TAG:-<none>} at SHA ${CI_COMMIT_SHA}"
       PIPELINES_JSON=$(curl -sS --fail --header "JOB-TOKEN: $CI_JOB_TOKEN" \
         "$CI_API_V4_URL/projects/$CI_PROJECT_ID/pipelines?sha=$CI_COMMIT_SHA&status=success&per_page=100")
-      RELEASE_PIPELINE_IDS=$(printf '%s' "$PIPELINES_JSON" | jq -r '.[] | select(.ref | test("^release/")) | .id')
-      if [ -z "$RELEASE_PIPELINE_IDS" ]; then
-        echo "ERROR: No successful release/* pipeline found for this SHA. Promote through test first."
+      MAIN_PIPELINE_IDS=$(printf '%s' "$PIPELINES_JSON" | jq -r '.[] | select(.ref == $main_ref) | .id' --arg main_ref "$CI_DEFAULT_BRANCH")
+      if [ -z "$MAIN_PIPELINE_IDS" ]; then
+        echo "ERROR: No successful $CI_DEFAULT_BRANCH pipeline found for this SHA. Promote through test first."
         exit 1
       fi
 
       GATE_PASSED=0
-      for PIPELINE_ID in $RELEASE_PIPELINE_IDS; do
+      for PIPELINE_ID in $MAIN_PIPELINE_IDS; do
         JOBS_JSON=$(curl -sS --fail --header "JOB-TOKEN: $CI_JOB_TOKEN" \
           "$CI_API_V4_URL/projects/$CI_PROJECT_ID/pipelines/${PIPELINE_ID}/jobs?per_page=100")
         if printf '%s' "$JOBS_JSON" | jq -e '.[] | select(.name=="deploy:test" and .status=="success")' >/dev/null \
           && printf '%s' "$JOBS_JSON" | jq -e '.[] | select(.name=="smoke-test:test" and .status=="success")' >/dev/null; then
-          echo "Promotion gate satisfied by release pipeline ID: ${PIPELINE_ID}"
+          echo "Promotion gate satisfied by main pipeline ID: ${PIPELINE_ID}"
           GATE_PASSED=1
           break
         fi
       done
 
       if [ "$GATE_PASSED" -ne 1 ]; then
-        echo "ERROR: No successful release/* pipeline for this SHA contains deploy:test + smoke-test:test."
+        echo "ERROR: No successful main pipeline for this SHA contains deploy:test + smoke-test:test."
         exit 1
       fi
   rules:
