@@ -451,6 +451,7 @@ git push gitlab v0.1.0
 ## Best Practices
 
 ### DO
+- Run `make preflight-session` at session start and before commit/push
 - Run `terraform validate` before every commit
 - Use pre-commit hooks
 - Test examples after module changes

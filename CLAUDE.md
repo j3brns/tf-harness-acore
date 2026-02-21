@@ -257,6 +257,11 @@ For all other resources, follow the decision framework (native provider first wh
   - a short rationale in the commit message, and
   - required docs updates in the same commit when behavior/workflow changes.
 
+### Rule 7.7: Startup Preflight is Mandatory
+- Session startup/worktree safety checks are governed by the repo SoT file: `terraform/scripts/session/preflight.policy`.
+- Agents and humans MUST run `make preflight-session` at session start and before commit/push.
+- If preflight fails, do not proceed with edits/commits until resolved.
+
 ---
 
 ## RULE 9: Discovery is EXPLICIT

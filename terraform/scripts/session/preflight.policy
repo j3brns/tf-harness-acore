@@ -1,0 +1,6 @@
+# Session preflight source-of-truth for local worktree/branch safety checks.
+
+REQUIRED_MAIN_BRANCH="main"
+WORKTREE_BRANCH_REGEX='^wt/[a-z0-9._-]+/[0-9]+-[a-z0-9._-]+$'
+ENFORCE_GH_ISSUE_LOOKUP="true"
+REQUIRE_CLEAN_WORKTREE="false"

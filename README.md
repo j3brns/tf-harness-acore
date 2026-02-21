@@ -234,6 +234,16 @@ No target requires AWS credentials except those that explicitly deploy or read l
 
 Every commit passes through a hook chain that catches problems before they reach CI. Terraform formatting, validation, and docs generation run automatically. TFLint applies the AWS ruleset. Checkov scans for security misconfigurations. Black and Flake8 enforce Python style at line-length 120. Custom local hooks round out the chain: `docs-sync-check` blocks Terraform changes that lack documentation updates, `tests-sync-check` blocks Terraform changes that lack test updates, `agent-docs-sync-check` enforces parity across `AGENTS.md`/`CLAUDE.md`/`GEMINI.md`, `scratch-ephemeral-check` blocks committing `.scratch/` artifacts, `file-proliferation-check` blocks ad-hoc variant filenames/scripts outside approved paths, and `no-placeholder-arns` catches hardcoded dummy account IDs before they can ship.
 
+### Session Preflight (Worktree Safety)
+
+Run session preflight checks before editing and before commit/push:
+
+```bash
+make preflight-session
+```
+
+The preflight source-of-truth is `terraform/scripts/session/preflight.policy`. It enforces branch/worktree guardrails and issue-linked worktree naming conventions.
+
 ### Windows Support
 
 Terraform pre-commit hooks require bash, which makes them hostile to native Windows development. `validate_windows.bat` provides an alternative: it locates your Terraform binary (checking PATH, then falling back to common install locations), runs `terraform fmt -check -recursive`, and then invokes pre-commit with the bash-dependent hooks skipped. Pass `--fix` to auto-format instead of just checking. The script finds pre-commit through multiple strategies -- `uv tool run`, standalone binary, `py -3.12 -m pre_commit` -- so it works regardless of how Python is installed.
