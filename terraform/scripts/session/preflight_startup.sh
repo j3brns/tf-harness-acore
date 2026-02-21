@@ -17,6 +17,12 @@ if ! command -v git >/dev/null 2>&1; then
   exit 1
 fi
 
+ORIGIN_URL="$(git remote get-url origin 2>/dev/null || true)"
+GH_REPO=""
+if [[ "${ORIGIN_URL}" =~ github\.com[:/]([^/]+)/([^/.]+)(\.git)?$ ]]; then
+  GH_REPO="${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+fi
+
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 if [ -z "${REPO_ROOT}" ]; then
   echo "ERROR: not inside a git repository"
@@ -63,8 +69,12 @@ else
     ISSUE_ID="${BASH_REMATCH[1]}"
     if [ "${ENFORCE_GH_ISSUE_LOOKUP}" = "true" ]; then
       if command -v gh >/dev/null 2>&1; then
-        if ! gh issue view "${ISSUE_ID}" >/dev/null 2>&1; then
-          ERRORS+=("branch issue id '${ISSUE_ID}' does not resolve via gh issue view")
+        if [ -n "${GH_REPO}" ]; then
+          if ! gh api "repos/${GH_REPO}/issues/${ISSUE_ID}" >/dev/null 2>&1; then
+            ERRORS+=("branch issue id '${ISSUE_ID}' does not resolve via gh api for repo '${GH_REPO}'")
+          fi
+        else
+          ERRORS+=("cannot resolve GitHub repo from origin URL; issue lookup could not be validated")
         fi
       else
         WARNINGS+=("gh CLI not found; skipped issue lookup for #${ISSUE_ID}")
