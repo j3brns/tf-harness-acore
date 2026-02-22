@@ -86,6 +86,15 @@ Edit `main.tf` to:
 - Change agent capabilities (enable browser, memory, etc.)
 - Modify runtime configuration
 
+### Frontend Dashboard Customization
+
+The example frontend now uses a reusable React/Tailwind component library (no bundler required):
+
+- `frontend/components.js` contains reusable primitives (`AppShell`, `Panel`, `MetricCard`, `Transcript`, `Timeline`, `ToolCatalog`, `JsonPreview`)
+- `frontend/app.js` composes those primitives into an operator dashboard
+
+To build a specialized dashboard, keep shared UI blocks in `frontend/components.js` and swap panel composition/data wiring in `frontend/app.js`. The app will also try to load `docs/api/mcp-tools-v1.openapi.json` to populate a tool catalog panel from generated OpenAPI metadata.
+
 ## Testing
 
 ```bash
