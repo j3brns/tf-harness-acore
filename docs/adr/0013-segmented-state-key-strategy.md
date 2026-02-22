@@ -36,9 +36,26 @@ Examples:
 
 Rationale:
 - `env` preserves the current explicit environment boundary.
-- `app_id` groups state by logical application (North anchor).
+- `app_id` groups state by logical application (North anchor / inventory partition).
 - `agent_name` prevents collisions for multiple physical agents under one app.
 - The resulting path is human-readable for recovery and audit workflows.
+- `tenant_id` remains primarily a runtime authorization/isolation context unless infrastructure is tenant-dedicated.
+
+### 1.1 Alignment with Multi-Tenant Guidance and Gateway Interceptors
+
+This ADR intentionally separates:
+- backend state partitioning (deploy-unit identity),
+- runtime target routing (route/app -> agent -> runtime ARN),
+- tenant authorization/isolation (JWT claims, policy, headers, interceptors).
+
+AWS Prescriptive Guidance and AgentCore Gateway interceptor guidance emphasize tenant context propagation, tenant isolation enforcement, and fine-grained access control at runtime/tool boundaries. They do not require `tenant_id` to be the default Terraform backend key for shared app/agent stacks.
+
+E8A therefore treats:
+- `app_id` as the primary inventory/state partition anchor,
+- `agent_name` as the physical runtime discriminator,
+- `tenant_id` as an authorization context (default), with an optional `tenant_alias` state segment only for future tenant-dedicated infrastructure stacks.
+
+See `.context/e8a-agentcore-multitenancy-routing-synthesis-2026-02-22.md` for the full repo-specific synthesis and AWS source mapping.
 
 ### 2. Candidate Patterns Considered (Criteria-Based)
 
@@ -155,6 +172,7 @@ Repo sources:
 - `docs/runbooks/eu-split-deployment.md`
 - `docs/adr/0007-single-region-decision.md`
 - `.context/e8a-agentcore-regional-availability-matrix-2026-02-22.md`
+- `.context/e8a-agentcore-multitenancy-routing-synthesis-2026-02-22.md`
 
 Issue handoff:
 - `#73` (E8A architecture/decision)
@@ -164,3 +182,9 @@ AWS sources (AWS Knowledge MCP-backed in E8A):
 - https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-regions.html
 - https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/cross-region-inference.html
 - https://docs.aws.amazon.com/general/latest/gr/bedrock_agentcore.html
+- https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/inbound-jwt-authorizer.html
+- https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/scope-credential-provider-access.html
+- https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-prerequisites-permissions.html
+- https://aws.amazon.com/blogs/machine-learning/apply-fine-grained-access-control-with-bedrock-agentcore-gateway-interceptors/
+- https://docs.aws.amazon.com/prescriptive-guidance/latest/agentic-ai-multitenant/agents-meet-multi-tenancy.html
+- https://docs.aws.amazon.com/prescriptive-guidance/latest/agentic-ai-multitenant/enforcing-tenant-isolation.html
