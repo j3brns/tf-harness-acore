@@ -362,7 +362,8 @@ AI Agents MUST create comprehensive GitHub issues. Every issue MUST include:
 - Tracker agents SHOULD stop after coordination outputs unless the tracker is explicitly a planning/docs implementation task.
 
 ### Rule 12.7: Allocation Status Labels (Standard)
-- Use labels for execution state: `ready`, `in-progress`, `blocked`, `review`, `done`.
+- Use labels for execution state: `triage`, `ready`, `in-progress`, `blocked`, `review`, `done`.
+- `triage` is the queue intake state for open issues that are not yet scheduled/allocatable.
 - Workstream lane labels (roadmap-aligned) are: `a`, `b`, `c`, `d`, `e`.
 - Roadmap item labels (optional) are labels like `a0`, `a1`, `b0`, `c2`, `d1`, `e3`.
 - Optional domain/topic labels (for example `provider-matrix`, `freeze-point`) MAY be used for filtering and reporting.
@@ -416,15 +417,18 @@ Every issue MUST define completion evidence:
 ### Rule 12.11: Label Hygiene for Queueing (MANDATORY)
 - This rule is the source of truth for issue label taxonomy used by the `ready` queue and `make worktree`.
 - The `ready` queue is a scheduling mechanism and MUST remain high-signal.
+- All open issues MUST be in the issue queue taxonomy, even if they are not roadmap-planned or not yet allocatable.
 - Issues used for agent allocation MUST maintain label hygiene before they are marked `ready`.
-- Every allocatable issue MUST have:
+- Every open issue MUST have:
   - exactly one issue-type label: `tracker` or `execution`,
-  - exactly one status label from: `ready`, `in-progress`, `blocked`, `review`, `done`.
+  - exactly one status label from: `triage`, `ready`, `in-progress`, `blocked`, `review`, `done`.
+- Every allocatable issue MUST additionally satisfy the `ready` requirements below.
 - Roadmap-planned issues MUST include exactly one workstream lane label (`a`, `b`, `c`, `d`, or `e`).
 - Roadmap item labels (for example `a0`, `a1`, `b0`) are RECOMMENDED for roadmap parity and queue readability, but optional.
 - Priority labels are optional, but if used MUST be singular (for example one of `p0`, `p1`, `p2`, `p3`).
 - Do not use duplicate/synonym labels for the same meaning (for example multiple competing status labels).
 - Status transitions MUST remove the previous status label in the same update (for example `ready` -> `in-progress`).
+- `triage` SHOULD be used for unscheduled backlog, legacy issues pending normalization, or issues awaiting scope/priority decisions.
 - An issue MUST NOT be labeled `ready` unless:
   - Rule 12.1 structure is complete,
   - dependencies/blockers are explicit,
