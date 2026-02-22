@@ -3,51 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgentCore // Terminal</title>
+    <title>AgentCore // Dashboard Kit</title>
+    <script>
+        window.tailwind = window.tailwind || {};
+        window.tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Sora', 'system-ui', 'sans-serif'],
+                        mono: ['IBM Plex Mono', 'monospace']
+                    },
+                    boxShadow: {
+                        panel: '0 18px 60px rgba(2, 6, 23, 0.35)'
+                    }
+                }
+            }
+        };
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="style.css" rel="stylesheet">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap');
-        body { font-family: 'Fira Code', monospace; }
-    </style>
 </head>
-<body class="bg-black text-green-500 h-screen w-screen overflow-hidden flex flex-col p-4 crt">
-
-    <!-- Header -->
-    <header class="flex justify-between border-b border-green-800 pb-2 mb-4">
-        <div>
-            <h1 class="text-xl font-bold">AGENT_CORE v2.0</h1>
-            <p class="text-xs text-green-700">SECURE CONNECTION ESTABLISHED</p>
+<body class="dashboard-shell font-sans antialiased">
+    <div id="app"></div>
+    <noscript>
+        <div style="padding: 1rem; color: #fff; background: #0f172a; font-family: sans-serif;">
+            This frontend requires JavaScript to render the React component library.
         </div>
-        <div id="status" class="text-right">
-            <span class="text-red-500 blink">DISCONNECTED</span>
-        </div>
-    </header>
-
-    <!-- Chat Output -->
-    <main id="chat-window" class="flex-grow overflow-y-auto mb-4 space-y-2 p-2 scrollbar-hide">
-        <div class="text-green-800">System initialization...</div>
-        <div class="text-green-800">Loading neural interfaces...</div>
-        <div class="text-green-500">Welcome, Operator. Authentication required.</div>
-    </main>
-
-    <!-- Input Area -->
-    <footer class="border-t border-green-800 pt-2">
-        <div id="auth-panel" class="hidden">
-            <button onclick="login()" class="border border-green-500 px-4 py-2 hover:bg-green-900 transition w-full text-left">
-                > INITIATE_OAUTH_SEQUENCE()
-            </button>
-        </div>
-
-        <form id="chat-form" class="hidden flex gap-2" onsubmit="sendMessage(event)">
-            <span class="pt-2">></span>
-            <input type="text" id="prompt"
-                class="bg-black border-none outline-none flex-grow text-green-400 focus:ring-0"
-                placeholder="Enter command..." autocomplete="off">
-            <button type="submit" class="text-xs border border-green-800 px-2 hover:bg-green-900">EXEC</button>
-        </form>
-    </footer>
-
-    <script src="app.js"></script>
+    </noscript>
+    <script type="module" src="app.js"></script>
 </body>
 </html>

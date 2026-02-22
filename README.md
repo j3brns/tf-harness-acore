@@ -212,6 +212,16 @@ python terraform/scripts/acore_debug.py
 
 The debug TUI (`acore_debug.py`) auto-discovers your deployed infrastructure from `terraform output -json`, then streams CloudWatch logs into a live terminal panel alongside a latency trace that breaks down each request into Gateway, Authorizer, Router, Lambda, and Bedrock segments. Press `r` to trigger a manual reload without leaving the debugger. The tool speaks the OCDS protocol -- when it reloads, it runs an identical targeted apply that respects the two-stage hash boundaries.
 
+### Frontend Component Library (React + Tailwind)
+
+The SPA frontend template now includes a reusable, static-hosting-compatible component library for building specialized agent dashboards without introducing a frontend build pipeline. The library lives in `templates/agent-project/frontend/components.js` and is mirrored in `examples/5-integrated/frontend/components.js`.
+
+- **Runtime model:** Browser-loaded React + Tailwind (ES modules, no bundler required)
+- **Reusable blocks:** App shell, panels, metric cards, transcript, timeline, tool catalog, JSON preview, prompt composer
+- **DX integration:** The example app attempts to load `docs/api/mcp-tools-v1.openapi.json` to populate dashboard tool panels automatically
+
+This keeps the BFF/Token Handler deployment model serverless and static while giving teams a composable UI base for role-specific consoles.
+
 ### Local MCP Development
 
 The `examples/mcp-servers/local-dev/` directory provides a Flask-based MCP server that implements the same protocol your Lambda handlers speak, without requiring an AWS account. Start it with `make dev` from the `examples/mcp-servers/` directory and it binds to `localhost:8080`, serving tool definitions and handling invocations against local data. The development cycle is bidirectional: build and test locally, promote to Lambda when the logic is stable, diagnose production issues locally by pulling real payloads down and replaying them against the Flask server.

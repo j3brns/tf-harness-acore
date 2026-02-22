@@ -114,6 +114,21 @@ make generate-openapi
 
 The generated file will be saved to `docs/api/mcp-tools-v1.openapi.json`. This spec can be used by the Web UI to dynamically build tool-calling interfaces or for testing.
 
+#### Frontend Component Library (React + Tailwind, No Bundler)
+
+The SPA template and the integrated example now ship with a reusable frontend component library:
+
+- `templates/agent-project/frontend/components.js`
+- `examples/5-integrated/frontend/components.js`
+
+The library is intentionally static-hosting friendly:
+
+- React is loaded via browser ES modules (no Node build step required)
+- Tailwind is loaded via CDN
+- Components are plain reusable blocks (`AppShell`, `Panel`, `MetricCard`, `Transcript`, `Timeline`, `ToolCatalog`, etc.)
+
+To customize a specialized dashboard, compose panels in `frontend/app.js` and keep shared primitives in `frontend/components.js`. The example app will try to load `docs/api/mcp-tools-v1.openapi.json` so issue `#33` OpenAPI output can drive tool panels.
+
 # Syntax validation
 terraform validate
 
