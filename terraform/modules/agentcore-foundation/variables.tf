@@ -1,5 +1,5 @@
 variable "agent_name" {
-  description = "Name of the agent"
+  description = "Internal agent identity used in physical AWS resource names (immutable)"
   type        = string
 }
 
@@ -20,7 +20,7 @@ variable "environment" {
 }
 
 variable "tags" {
-  description = "Tags to apply to all resources. The root module always merges canonical tags (AppID, Environment, AgentName, ManagedBy, Owner) before passing this value."
+  description = "Tags to apply to all resources. The root module always merges canonical tags (AppID, AgentAlias, Environment, AgentName, ManagedBy, Owner) before passing this value."
   type        = map(string)
   default     = {}
 }

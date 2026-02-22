@@ -61,8 +61,9 @@ If all commands succeed, you're ready to develop!
 
 | Variable | Description | Default |
 | :--- | :--- | :--- |
-| `agent_name` | Physical name of the agent resource. | - |
-| `app_id` | Logical application boundary (North Anchor). | `${agent_name}` |
+| `agent_name` | Internal physical agent identity (immutable; use suffix pattern like `research-agent-core-a1b2`). | - |
+| `app_id` | Human-facing application alias / logical boundary (North Anchor). | `${agent_name}` |
+| `allow_legacy_agent_name` | Temporary migration escape hatch for an existing deployed legacy `agent_name`. | `false` |
 | `lambda_architecture` | Compute architecture (`x86_64` or `arm64`). | `x86_64` |
 | `environment` | Deployment stage (`dev`, `staging`, `prod`). | `dev` |
 
@@ -202,7 +203,7 @@ You can target AWS Graviton (ARM64) for lower latency and cost by setting `lambd
 Every interaction is anchored by the North-South join hierarchy:
 - **North (AppID)**: The logical boundary. In development, use unique values to isolate your work.
 - **Middle (TenantID)**: The unit of data ownership, extracted from the OIDC token.
-- **South (AgentName)**: The physical compute resource.
+- **South (AgentName)**: The internal physical compute identity (keep stable; use `app_id` for human-facing labels).
 
 ## Project Structure
 
@@ -251,7 +252,7 @@ repo-root/
 ```bash
 # 1. Scaffold in scratch using Copier (non-interactive)
 copier copy --force --trust \
-  --data agent_name=my-agent \
+  --data agent_name=my-agent-core-a1b2 \
   --data app_id=my-agent \
   --data region=us-east-1 \
   --data environment=dev \

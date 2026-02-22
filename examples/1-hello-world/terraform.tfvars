@@ -1,7 +1,8 @@
 # Hello World S3 Explorer Agent
 # Minimal configuration demonstrating basic AgentCore capabilities
 
-agent_name  = "hello-world-s3"
+agent_name  = "hello-world-s3-a1b2"
+app_id      = "hello-world-s3"
 region      = "us-east-1"
 environment = "dev"
 

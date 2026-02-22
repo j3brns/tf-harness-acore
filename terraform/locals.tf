@@ -11,6 +11,7 @@ locals {
     var.tags,
     {
       AppID       = local.app_id
+      AgentAlias  = local.app_id
       Environment = var.environment
       AgentName   = var.agent_name
       ManagedBy   = "terraform"

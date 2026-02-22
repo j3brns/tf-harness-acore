@@ -1,7 +1,8 @@
 # Deep Research Agent - Full-Featured Example
 # Uses Strands DeepAgents with internet search capabilities
 
-agent_name  = "deep-research"
+agent_name  = "deep-research-agent-e5f6"
+app_id      = "deep-research"
 region      = "us-east-1"
 environment = "dev"
 

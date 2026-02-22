@@ -1,7 +1,7 @@
 # ADR 0012: Agent Identity vs Alias Naming
 
 ## Status
-Proposed
+Accepted
 
 ## Context
 `agent_name` is used as the seed for many AWS resource names (IAM roles, WAF, log groups, S3 buckets, SSM paths).
@@ -42,6 +42,9 @@ We need a clear, enforced convention to prevent collisions and avoid accidental 
 - Update `terraform/variables.tf` to enforce the naming convention for `agent_name`.
 - Ensure templates and at least one example reflect the new convention (Rule 17, Rule 13).
 - Update docs to clarify `agent_name` (internal) vs `app_id` (alias).
+
+## Implementation Status
+- Implemented in Issue #16 with root Terraform validation, example/template updates, canonical `AgentAlias` tagging, and a temporary legacy escape hatch (`allow_legacy_agent_name`) for migration safety.
 
 ## Migration Guidance
 - Existing deployments should keep current `agent_name` to avoid replacement.
