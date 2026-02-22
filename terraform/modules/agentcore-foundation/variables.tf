@@ -136,6 +136,64 @@ variable "alarm_sns_topic_arn" {
   default     = ""
 }
 
+variable "enable_agent_dashboards" {
+  description = "Enable per-agent CloudWatch dashboard creation"
+  type        = bool
+  default     = false
+}
+
+variable "agent_dashboard_name" {
+  description = "Optional CloudWatch dashboard name override (defaults to <agent_name>-dashboard when empty)"
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = length(trimspace(var.agent_dashboard_name)) <= 255
+    error_message = "agent_dashboard_name must be 255 characters or fewer."
+  }
+}
+
+variable "dashboard_region" {
+  description = "Optional region override for dashboard widgets and console URL hint (defaults to region when empty)"
+  type        = string
+  default     = ""
+}
+
+variable "dashboard_widgets_override" {
+  description = "Optional JSON array string of CloudWatch dashboard widgets to replace the default widget set"
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.dashboard_widgets_override == "" ? true : can(tolist(jsondecode(var.dashboard_widgets_override)))
+    error_message = "dashboard_widgets_override must be an empty string or a JSON array string of widget objects."
+  }
+}
+
+variable "dashboard_include_runtime_logs" {
+  description = "Include runtime log widgets in the default dashboard"
+  type        = bool
+  default     = false
+}
+
+variable "dashboard_include_code_interpreter_logs" {
+  description = "Include code interpreter log widgets in the default dashboard"
+  type        = bool
+  default     = false
+}
+
+variable "dashboard_include_browser_logs" {
+  description = "Include browser log widgets in the default dashboard"
+  type        = bool
+  default     = false
+}
+
+variable "dashboard_include_evaluator_logs" {
+  description = "Include evaluator log widgets in the default dashboard"
+  type        = bool
+  default     = false
+}
+
 variable "enable_waf" {
   description = "Enable WAF protection for API Gateway"
   type        = bool

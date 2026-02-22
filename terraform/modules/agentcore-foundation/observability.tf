@@ -1,3 +1,123 @@
+# Per-agent CloudWatch dashboard (Issue #10)
+locals {
+  agent_dashboard_name_effective = trimspace(var.agent_dashboard_name) != "" ? var.agent_dashboard_name : "${var.agent_name}-dashboard"
+  dashboard_region_effective     = trimspace(var.dashboard_region) != "" ? var.dashboard_region : var.region
+}
+
+locals {
+  agent_dashboard_metric_widgets = var.enable_gateway ? [
+    {
+      type = "metric"
+      properties = {
+        title  = "Gateway Errors"
+        region = local.dashboard_region_effective
+        view   = "timeSeries"
+        stat   = "Sum"
+        period = 300
+        metrics = [
+          ["AWS/BedrockAgentCore", "Errors", "GatewayId", local.gateway_id]
+        ]
+      }
+    },
+    {
+      type = "metric"
+      properties = {
+        title  = "Gateway Target Invocation Duration (Avg ms)"
+        region = local.dashboard_region_effective
+        view   = "timeSeries"
+        stat   = "Average"
+        period = 300
+        metrics = [
+          ["AWS/BedrockAgentCore", "TargetInvocationDuration", "GatewayId", local.gateway_id]
+        ]
+      }
+    }
+  ] : []
+
+  agent_dashboard_log_widgets = concat(
+    var.enable_gateway ? [
+      {
+        type = "log"
+        properties = {
+          title  = "Gateway Logs"
+          region = local.dashboard_region_effective
+          view   = "table"
+          query  = "SOURCE '/aws/bedrock/agentcore/gateway/${var.agent_name}' | fields @timestamp, @message, @logStream | sort @timestamp desc | limit 50"
+        }
+      }
+    ] : [],
+    var.dashboard_include_runtime_logs ? [
+      {
+        type = "log"
+        properties = {
+          title  = "Runtime Logs"
+          region = local.dashboard_region_effective
+          view   = "table"
+          query  = "SOURCE '/aws/bedrock/agentcore/runtime/${var.agent_name}-${var.environment}' | fields @timestamp, @message, @logStream | sort @timestamp desc | limit 50"
+        }
+      }
+    ] : [],
+    var.dashboard_include_code_interpreter_logs ? [
+      {
+        type = "log"
+        properties = {
+          title  = "Code Interpreter Logs"
+          region = local.dashboard_region_effective
+          view   = "table"
+          query  = "SOURCE '/aws/bedrock/agentcore/code-interpreter/${var.agent_name}' | fields @timestamp, @message, @logStream | sort @timestamp desc | limit 50"
+        }
+      }
+    ] : [],
+    var.dashboard_include_browser_logs ? [
+      {
+        type = "log"
+        properties = {
+          title  = "Browser Logs"
+          region = local.dashboard_region_effective
+          view   = "table"
+          query  = "SOURCE '/aws/bedrock/agentcore/browser/${var.agent_name}' | fields @timestamp, @message, @logStream | sort @timestamp desc | limit 50"
+        }
+      }
+    ] : [],
+    var.dashboard_include_evaluator_logs ? [
+      {
+        type = "log"
+        properties = {
+          title  = "Evaluator Logs"
+          region = local.dashboard_region_effective
+          view   = "table"
+          query  = "SOURCE '/aws/bedrock/agentcore/evaluator/${var.agent_name}' | fields @timestamp, @message, @logStream | sort @timestamp desc | limit 50"
+        }
+      }
+    ] : []
+  )
+}
+
+locals {
+  agent_dashboard_default_widgets_unpositioned = concat(local.agent_dashboard_metric_widgets, local.agent_dashboard_log_widgets)
+
+  agent_dashboard_default_widgets = [
+    for idx, widget in local.agent_dashboard_default_widgets_unpositioned :
+    merge(widget, {
+      x      = 0
+      y      = idx * 6
+      width  = 24
+      height = 6
+    })
+  ]
+
+  agent_dashboard_widgets = var.dashboard_widgets_override != "" ? tolist(jsondecode(var.dashboard_widgets_override)) : local.agent_dashboard_default_widgets
+}
+
+resource "aws_cloudwatch_dashboard" "agent" {
+  count = var.enable_observability && var.enable_agent_dashboards ? 1 : 0
+
+  dashboard_name = local.agent_dashboard_name_effective
+  dashboard_body = jsonencode({
+    widgets = local.agent_dashboard_widgets
+  })
+}
+
 # X-Ray Sampling Rule for AgentCore
 resource "aws_xray_sampling_rule" "agentcore" {
   count = var.enable_observability && var.enable_xray ? 1 : 0
