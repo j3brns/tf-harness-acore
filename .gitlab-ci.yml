@@ -41,7 +41,7 @@ variables:
     - |
       # Install system deps (minimal, fast)
       if command -v yum >/dev/null 2>&1; then
-        yum install -y --allowerasing unzip zip jq git curl python3.12 python3.12-pip --quiet
+        yum install -y --allowerasing unzip zip jq git curl make nodejs npm python3.12 python3.12-pip --quiet
         # Force python3 to point to python3.12
         ln -sf /usr/bin/python3.12 /usr/bin/python3
         python3 --version
