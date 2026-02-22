@@ -90,8 +90,8 @@ python_version   = "3.12"
 # Governance - Policy Engine
 enable_policy_engine  = false
 cedar_policy_files = {
-  # pii_protection = "${path.module}/modules/agentcore-governance/cedar_policies/pii-protection.cedar"
-  # rate_limiting = "${path.module}/modules/agentcore-governance/cedar_policies/rate-limiting.cedar"
+  # pii_protection = "${path.module}/modules/agentcore-governance/policies/cedar/pii-protection.cedar"
+  # rate_limiting = "${path.module}/modules/agentcore-governance/policies/cedar/rate-limiting.cedar"
 }
 
 # Governance - Evaluations
