@@ -50,6 +50,475 @@
         }
       }
     },
+    "/tools/local-dev/add_memory": {
+      "post": {
+        "tags": [
+          "local-dev"
+        ],
+        "summary": "Add entry to conversation memory",
+        "operationId": "local-dev_add_memory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "description": "Memory content (required)"
+                  },
+                  "role": {
+                    "type": "string",
+                    "description": "Role (user/assistant)"
+                  }
+                },
+                "required": [
+                  "content"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful tool execution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/local-dev/calculate": {
+      "post": {
+        "tags": [
+          "local-dev"
+        ],
+        "summary": "Perform simple calculations",
+        "operationId": "local-dev_calculate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expression": {
+                    "type": "string",
+                    "description": "Math expression (required)"
+                  }
+                },
+                "required": [
+                  "expression"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful tool execution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/local-dev/clear_memory": {
+      "post": {
+        "tags": [
+          "local-dev"
+        ],
+        "summary": "Clear all conversation memory",
+        "operationId": "local-dev_clear_memory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful tool execution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/local-dev/delete_value": {
+      "post": {
+        "tags": [
+          "local-dev"
+        ],
+        "summary": "Delete a stored value",
+        "operationId": "local-dev_delete_value",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "description": "Storage key (required)"
+                  }
+                },
+                "required": [
+                  "key"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful tool execution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/local-dev/echo": {
+      "post": {
+        "tags": [
+          "local-dev"
+        ],
+        "summary": "Echo back input message",
+        "operationId": "local-dev_echo",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message": {
+                    "type": "string",
+                    "description": "Message to echo back"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful tool execution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/local-dev/get_env": {
+      "post": {
+        "tags": [
+          "local-dev"
+        ],
+        "summary": "Get environment information",
+        "operationId": "local-dev_get_env",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful tool execution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/local-dev/get_memory": {
+      "post": {
+        "tags": [
+          "local-dev"
+        ],
+        "summary": "Retrieve conversation memory",
+        "operationId": "local-dev_get_memory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "limit": {
+                    "type": "string",
+                    "description": "Maximum entries to return"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful tool execution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/local-dev/get_value": {
+      "post": {
+        "tags": [
+          "local-dev"
+        ],
+        "summary": "Retrieve a stored value",
+        "operationId": "local-dev_get_value",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "description": "Storage key (required)"
+                  }
+                },
+                "required": [
+                  "key"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful tool execution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/local-dev/list_keys": {
+      "post": {
+        "tags": [
+          "local-dev"
+        ],
+        "summary": "List all stored keys",
+        "operationId": "local-dev_list_keys",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "prefix": {
+                    "type": "string",
+                    "description": "Optional key prefix filter"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful tool execution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/local-dev/store_value": {
+      "post": {
+        "tags": [
+          "local-dev"
+        ],
+        "summary": "Store a key-value pair",
+        "operationId": "local-dev_store_value",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "description": "Storage key (required)"
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "Value to store"
+                  }
+                },
+                "required": [
+                  "key"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful tool execution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/s3-tools/get_object": {
+      "post": {
+        "tags": [
+          "s3-tools"
+        ],
+        "summary": "Get object content from S3",
+        "operationId": "s3-tools_get_object",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "bucket": {
+                    "type": "string",
+                    "description": "Bucket name (required)"
+                  },
+                  "key": {
+                    "type": "string",
+                    "description": "Object key (required)"
+                  },
+                  "encoding": {
+                    "type": "string",
+                    "description": "Content encoding: text, base64, json"
+                  },
+                  "max_size": {
+                    "type": "string",
+                    "description": "Maximum size to read in bytes"
+                  }
+                },
+                "required": [
+                  "bucket",
+                  "key"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful tool execution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/s3-tools/get_object_metadata": {
+      "post": {
+        "tags": [
+          "s3-tools"
+        ],
+        "summary": "Get object metadata",
+        "operationId": "s3-tools_get_object_metadata",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "bucket": {
+                    "type": "string",
+                    "description": "Bucket name (required)"
+                  },
+                  "key": {
+                    "type": "string",
+                    "description": "Object key (required)"
+                  }
+                },
+                "required": [
+                  "bucket",
+                  "key"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful tool execution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/tools/s3-tools/list_buckets": {
       "post": {
         "tags": [
@@ -137,58 +606,6 @@
         }
       }
     },
-    "/tools/s3-tools/get_object": {
-      "post": {
-        "tags": [
-          "s3-tools"
-        ],
-        "summary": "Get object content from S3",
-        "operationId": "s3-tools_get_object",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "bucket": {
-                    "type": "string",
-                    "description": "Bucket name (required)"
-                  },
-                  "key": {
-                    "type": "string",
-                    "description": "Object key (required)"
-                  },
-                  "encoding": {
-                    "type": "string",
-                    "description": "Content encoding: text, base64, json"
-                  },
-                  "max_size": {
-                    "type": "string",
-                    "description": "Maximum size to read in bytes"
-                  }
-                },
-                "required": [
-                  "bucket",
-                  "key"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful tool execution",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ToolResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/tools/s3-tools/put_object": {
       "post": {
         "tags": [
@@ -227,50 +644,6 @@
                   "bucket",
                   "key",
                   "content"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful tool execution",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ToolResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/tools/s3-tools/get_object_metadata": {
-      "post": {
-        "tags": [
-          "s3-tools"
-        ],
-        "summary": "Get object metadata",
-        "operationId": "s3-tools_get_object_metadata",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "bucket": {
-                    "type": "string",
-                    "description": "Bucket name (required)"
-                  },
-                  "key": {
-                    "type": "string",
-                    "description": "Object key (required)"
-                  }
-                },
-                "required": [
-                  "bucket",
-                  "key"
                 ]
               }
             }
@@ -365,6 +738,42 @@
         }
       }
     },
+    "/tools/titanic-data/get_statistics": {
+      "post": {
+        "tags": [
+          "titanic-data"
+        ],
+        "summary": "Get summary statistics",
+        "operationId": "titanic-data_get_statistics",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "columns": {
+                    "type": "string",
+                    "description": "Columns to analyze"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful tool execution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/tools/titanic-data/query": {
       "post": {
         "tags": [
@@ -408,415 +817,6 @@
           }
         }
       }
-    },
-    "/tools/titanic-data/get_statistics": {
-      "post": {
-        "tags": [
-          "titanic-data"
-        ],
-        "summary": "Get summary statistics",
-        "operationId": "titanic-data_get_statistics",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "columns": {
-                    "type": "string",
-                    "description": "Columns to analyze"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful tool execution",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ToolResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/tools/local-dev/echo": {
-      "post": {
-        "tags": [
-          "local-dev"
-        ],
-        "summary": "Echo back input message",
-        "operationId": "local-dev_echo",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "message": {
-                    "type": "string",
-                    "description": "Message to echo back"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful tool execution",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ToolResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/tools/local-dev/store_value": {
-      "post": {
-        "tags": [
-          "local-dev"
-        ],
-        "summary": "Store a key-value pair",
-        "operationId": "local-dev_store_value",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "key": {
-                    "type": "string",
-                    "description": "Storage key (required)"
-                  },
-                  "value": {
-                    "type": "string",
-                    "description": "Value to store"
-                  }
-                },
-                "required": [
-                  "key"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful tool execution",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ToolResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/tools/local-dev/get_value": {
-      "post": {
-        "tags": [
-          "local-dev"
-        ],
-        "summary": "Retrieve a stored value",
-        "operationId": "local-dev_get_value",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "key": {
-                    "type": "string",
-                    "description": "Storage key (required)"
-                  }
-                },
-                "required": [
-                  "key"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful tool execution",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ToolResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/tools/local-dev/list_keys": {
-      "post": {
-        "tags": [
-          "local-dev"
-        ],
-        "summary": "List all stored keys",
-        "operationId": "local-dev_list_keys",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "prefix": {
-                    "type": "string",
-                    "description": "Optional key prefix filter"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful tool execution",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ToolResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/tools/local-dev/delete_value": {
-      "post": {
-        "tags": [
-          "local-dev"
-        ],
-        "summary": "Delete a stored value",
-        "operationId": "local-dev_delete_value",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "key": {
-                    "type": "string",
-                    "description": "Storage key (required)"
-                  }
-                },
-                "required": [
-                  "key"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful tool execution",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ToolResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/tools/local-dev/add_memory": {
-      "post": {
-        "tags": [
-          "local-dev"
-        ],
-        "summary": "Add entry to conversation memory",
-        "operationId": "local-dev_add_memory",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "content": {
-                    "type": "string",
-                    "description": "Memory content (required)"
-                  },
-                  "role": {
-                    "type": "string",
-                    "description": "Role (user/assistant)"
-                  }
-                },
-                "required": [
-                  "content"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful tool execution",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ToolResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/tools/local-dev/get_memory": {
-      "post": {
-        "tags": [
-          "local-dev"
-        ],
-        "summary": "Retrieve conversation memory",
-        "operationId": "local-dev_get_memory",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "limit": {
-                    "type": "string",
-                    "description": "Maximum entries to return"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful tool execution",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ToolResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/tools/local-dev/clear_memory": {
-      "post": {
-        "tags": [
-          "local-dev"
-        ],
-        "summary": "Clear all conversation memory",
-        "operationId": "local-dev_clear_memory",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {}
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful tool execution",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ToolResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/tools/local-dev/get_env": {
-      "post": {
-        "tags": [
-          "local-dev"
-        ],
-        "summary": "Get environment information",
-        "operationId": "local-dev_get_env",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {}
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful tool execution",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ToolResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/tools/local-dev/calculate": {
-      "post": {
-        "tags": [
-          "local-dev"
-        ],
-        "summary": "Perform simple calculations",
-        "operationId": "local-dev_calculate",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "expression": {
-                    "type": "string",
-                    "description": "Math expression (required)"
-                  }
-                },
-                "required": [
-                  "expression"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful tool execution",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ToolResponse"
-                }
-              }
-            }
-          }
-        }
-      }
     }
   },
   "components": {
@@ -843,16 +843,16 @@
       "description": "Tools from awscli-tools MCP server"
     },
     {
+      "name": "local-dev",
+      "description": "Tools from local-dev MCP server"
+    },
+    {
       "name": "s3-tools",
       "description": "Tools from s3-tools MCP server"
     },
     {
       "name": "titanic-data",
       "description": "Tools from titanic-data MCP server"
-    },
-    {
-      "name": "local-dev",
-      "description": "Tools from local-dev MCP server"
     }
   ]
 }

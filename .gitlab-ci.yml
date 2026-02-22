@@ -205,6 +205,18 @@ validate:docs-and-tests:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
+validate:openapi-client-drift:
+  stage: validate
+  extends: [.install_tools, .notify_failure]
+  script:
+    - cd $REPO_ROOT
+    - make generate-openapi
+    - make check-openapi-client
+    - git diff --exit-code -- docs/api/mcp-tools-v1.openapi.json
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
 # =============================================================================
 # STAGE 2: LINT (No AWS resources)
 # =============================================================================

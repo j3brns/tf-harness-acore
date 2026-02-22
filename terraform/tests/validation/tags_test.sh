@@ -9,7 +9,7 @@
 # Usage: bash terraform/tests/validation/tags_test.sh
 # Requires: no AWS credentials, no terraform init needed.
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
@@ -55,6 +55,7 @@ echo ""
 echo "--- versions.tf: provider default_tags ---"
 VERSIONS="$TERRAFORM_DIR/versions.tf"
 check "provider default_tags AppID"    "AppID"   "$VERSIONS"
+check "provider default_tags Environment" "Environment" "$VERSIONS"
 check "provider default_tags AgentName" "AgentName" "$VERSIONS"
 check "provider default_tags ManagedBy" "ManagedBy" "$VERSIONS"
 check "provider default_tags Owner"    "Owner"   "$VERSIONS"
@@ -72,7 +73,8 @@ else
 fi
 
 # Verify no bare var.tags left in module arguments (only in locals merge, which is expected)
-RAW_TAG_MODULE_REFS=$(grep -n "tags\s*=\s*var\.tags" "$MAIN" 2>/dev/null | wc -l || echo 0)
+RAW_TAG_MODULE_REFS=$(grep -c "tags\s*=\s*var\.tags" "$MAIN" 2>/dev/null || true)
+RAW_TAG_MODULE_REFS="${RAW_TAG_MODULE_REFS:-0}"
 if [ "$RAW_TAG_MODULE_REFS" -eq 0 ]; then
   echo "  PASS: No bare 'tags = var.tags' in module calls (all use canonical_tags)"
   PASS=$((PASS + 1))

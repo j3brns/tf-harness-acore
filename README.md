@@ -218,7 +218,7 @@ The SPA frontend template now includes a reusable, static-hosting-compatible com
 
 - **Runtime model:** Browser-loaded React + Tailwind (ES modules, no bundler required)
 - **Reusable blocks:** App shell, panels, metric cards, transcript, timeline, tool catalog, JSON preview, prompt composer
-- **DX integration:** The example app attempts to load `docs/api/mcp-tools-v1.openapi.json` to populate dashboard tool panels automatically
+- **DX integration:** The example app attempts to load `docs/api/mcp-tools-v1.openapi.json` to populate dashboard tool panels automatically, and the repo now also ships a generated typed client at `docs/api/mcp-tools-v1.client.ts` for frontend/integrator SDK usage
 
 This keeps the BFF/Token Handler deployment model serverless and static while giving teams a composable UI base for role-specific consoles.
 
@@ -236,7 +236,7 @@ make watch   # auto-restart on file changes (inotifywait)
 
 ### The Makefile
 
-The root Makefile exposes the full development surface through forty-odd targets. `make quickstart` gets a new team member from clone to validated in under a minute. `make plan-dev` through `make plan-research` let you plan against any example configuration without remembering tfvars paths. `make test-all` runs every Terraform and Python validation in sequence. `make security-scan` runs Checkov. `make logs-gateway` through `make logs-evaluator` tail CloudWatch logs per component. `make docs` regenerates terraform-docs. `make debug` runs a plan with `TF_LOG=DEBUG` for when things go sideways.
+The root Makefile exposes the full development surface through forty-odd targets. `make quickstart` gets a new team member from clone to validated in under a minute. `make plan-dev` through `make plan-research` let you plan against any example configuration without remembering tfvars paths. `make test-all` runs every Terraform and Python validation in sequence. `make security-scan` runs Checkov. `make logs-gateway` through `make logs-evaluator` tail CloudWatch logs per component. `make docs` regenerates terraform-docs plus MCP OpenAPI/typed-client artifacts, `make generate-openapi-client` regenerates the TypeScript SDK from the MCP OpenAPI spec, and `make check-openapi-client` validates generated-client drift. `make debug` runs a plan with `TF_LOG=DEBUG` for when things go sideways.
 
 No target requires AWS credentials except those that explicitly deploy or read live infrastructure. Formatting, validation, security scanning, linting, and Python unit tests all run locally and offline.
 
