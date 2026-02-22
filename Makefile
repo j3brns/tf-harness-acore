@@ -110,8 +110,8 @@ module-validate: ## Validate all modules
 	done
 
 # Testing - Terraform
-test: test-validate test-security test-examples test-cedar
-	@echo "✓ All Terraform tests passed"
+test: test-validate test-security test-examples test-cedar test-frontend
+	@echo "✓ All Terraform and Frontend tests passed"
 
 test-validate: ## Run Terraform validation tests
 	terraform -chdir=$(TERRAFORM_DIR) fmt -check -recursive
@@ -129,6 +129,14 @@ test-examples: ## Validate all example configurations
 test-cedar: ## Validate Cedar policies
 	bash $(TERRAFORM_DIR)/scripts/validate_cedar_policies.sh
 	@echo "✓ Cedar policies validated"
+
+test-frontend: ## Run frontend accessibility regression tests
+	@echo "Running frontend accessibility tests..."
+	cd terraform/tests/frontend && npm install && npx playwright install chromium && npm run test:accessibility
+
+preview-frontend: ## Run a local server to preview frontend components
+	@echo "Starting component preview server on http://localhost:8080..."
+	cd terraform/tests/frontend && npm install && npx http-server ./preview -p 8080 -o
 
 # Testing - Python (All example agents)
 test-python: test-python-hello test-python-gateway test-python-deepresearch test-python-research ## Run all Python tests

@@ -643,7 +643,7 @@ resource "gitlab_project_protected_environment" "production" {
 
 ### GitHub Actions (Validation Only)
 
-The GitHub Actions workflow runs on every pull request, push to `main`, and `v*` tag push. It executes formatting checks, `terraform validate`, TFLint, Checkov, example validation, and Copier template generation + generated `terraform validate`. It does not deploy to AWS and requires no cloud credentials.
+The GitHub Actions workflow runs on every pull request, push to `main`, and `v*` tag push. It executes formatting checks, `terraform validate`, TFLint, Checkov, example validation, Copier template generation, and **component accessibility regression testing (WCAG 2.1 AA)**. It does not deploy to AWS and requires no cloud credentials.
 
 GitLab CI is the deployment pipeline. It runs validation/lint/test stages and then handles environment promotion gates for deploy.
 
