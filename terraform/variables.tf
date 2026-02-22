@@ -33,6 +33,13 @@ variable "environment" {
   }
 }
 
+# Pilot Features (Workstream A)
+variable "use_native_gateway" {
+  description = "Whether to use native AWS provider resources for Gateway (Pilot). If true, null_resource CLI bridges are bypassed."
+  type        = bool
+  default     = false
+}
+
 variable "agent_name" {
   description = "Name of the agent"
   type        = string

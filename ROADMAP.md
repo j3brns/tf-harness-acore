@@ -34,7 +34,7 @@ This document outlines planned features and improvements for the Bedrock AgentCo
   * Record explicit non-goals (resources that must stay CLI for now).
   * **Issue:** #17
 
-- [ ] **A1: Dev-Only Pilot (Lowest-Risk Family First)**
+- [x] **A1: Dev-Only Pilot (Lowest-Risk Family First)**
   * Start with resource families already validated as native-capable in provider docs.
   * Run parallel plan comparison (`current CLI` vs `native branch`) and capture diff expectations.
   * Require zero unplanned destroys before any apply in dev.

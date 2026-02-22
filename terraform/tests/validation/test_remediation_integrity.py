@@ -79,6 +79,27 @@ def test_provider_freeze_point_pin():
     print("  PASS: AWS provider freeze-point pin verified.")
 
 
+def test_native_gateway_pilot_guards():
+    print("[Test 6] Verifying native gateway pilot compatibility guards...")
+
+    with open("terraform/modules/agentcore-foundation/gateway.tf", "r") as f:
+        content = f.read()
+        if 'var.gateway_search_type == "HYBRID" ? "SEMANTIC" : var.gateway_search_type' not in content:
+            raise Exception("FAILED: native gateway search_type compatibility guard missing in gateway.tf")
+
+    with open("terraform/modules/agentcore-foundation/variables.tf", "r") as f:
+        content = f.read()
+        if 'variable "use_native_gateway"' not in content:
+            raise Exception('FAILED: module variable "use_native_gateway" missing in foundation variables.tf')
+
+    with open("terraform/variables.tf", "r") as f:
+        content = f.read()
+        if 'variable "use_native_gateway"' not in content:
+            raise Exception('FAILED: root variable "use_native_gateway" missing in terraform/variables.tf')
+
+    print("  PASS: Native gateway pilot guards verified.")
+
+
 if __name__ == "__main__":
     try:
         test_ssm_durability()
@@ -86,6 +107,7 @@ if __name__ == "__main__":
         test_zip_exclusions()
         test_cli_output_dir_creation()
         test_provider_freeze_point_pin()
+        test_native_gateway_pilot_guards()
         print("\nAll remediation integrity tests PASSED successfully.")
     except Exception as e:
         print("\nREMEDIATION TEST FAILED: " + str(e))
