@@ -9,6 +9,7 @@ This module implements the **Serverless Token Handler Pattern** (ADR 0011) to se
 *   **API**: Amazon API Gateway (REST).
 *   **Auth**: "Token Handler" Lambdas (Login/Callback) + DynamoDB Session Store.
     The request authorizer validates the session cookie against the stored session record and JWT tenant claims before allowing `/api/*` calls.
+    On the first successful OIDC callback for a tenant, the callback handler performs JIT logical onboarding (Rule 14.5) by creating deterministic tenant metadata and baseline policy-attachment records in DynamoDB before issuing the session cookie.
 *   **Proxy**: Lambda Proxy to AgentCore Runtime (`InvokeAgentRuntime`) with streaming response support (Node.js runtime).
 
 ## Usage
@@ -39,6 +40,16 @@ module "agentcore_bff" {
 * `region`: Region for BFF resources (API Gateway, Lambda, DynamoDB, S3, CloudFront).
 * `agentcore_region`: Region for AgentCore runtime invocation (defaults to `region`).
 * `agentcore_runtime_arn`: Runtime ARN to invoke.
+
+## JIT Tenant Onboarding (Issue #28)
+
+The auth callback (`/auth/callback`) performs retry-safe, idempotent JIT onboarding for the authenticated tenant using conditional DynamoDB writes:
+
+- `TENANT#META` metadata record (tenant root prefix + session partition key)
+- baseline policy attachment records under `POLICY#BASELINE#*`
+- tenant-scoped session record (`SESSION#...`) only after onboarding records are ensured
+
+If a previous attempt partially succeeded, the callback reuses existing onboarding records after verifying invariant fields instead of creating duplicates.
 
 ## Streaming Response Format
 

@@ -3,6 +3,7 @@ import os
 import json
 import base64
 from unittest.mock import MagicMock, patch
+from botocore.exceptions import ClientError
 
 # Add the src directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -53,13 +54,26 @@ def test_tenant_extraction_in_callback():
 
         response = auth_handler.callback(event)
 
-        # Verify DDB storage includes tenant_id and composite PK/SK
-        auth_handler.table.put_item.assert_called_once()
-        item = auth_handler.table.put_item.call_args[1]["Item"]
+        # Verify callback writes JIT onboarding records plus the tenant-scoped session item.
+        put_calls = auth_handler.table.put_item.call_args_list
+        assert len(put_calls) >= 4, f"Expected JIT onboarding + session writes, got {len(put_calls)}"
+
+        put_items = [call.kwargs["Item"] for call in put_calls]
+        session_items = [item for item in put_items if str(item.get("sk", "")).startswith("SESSION#")]
+        assert len(session_items) == 1, f"Expected one permanent session item, got {len(session_items)}"
+        item = session_items[0]
 
         assert item.get("tenant_id") == "tenant-123"
         assert item.get("pk") == "APP#test-app#TENANT#tenant-123"
         assert item.get("sk").startswith("SESSION#")
+
+        tenant_meta = next((row for row in put_items if row.get("sk") == "TENANT#META"), None)
+        assert tenant_meta is not None, "Expected TENANT#META onboarding record"
+        assert tenant_meta.get("tenant_root_prefix") == "test-app/tenant-123/"
+        assert tenant_meta.get("session_partition_pk") == "APP#test-app#TENANT#tenant-123"
+
+        baseline_policy_rows = [row for row in put_items if str(row.get("sk", "")).startswith("POLICY#BASELINE#")]
+        assert len(baseline_policy_rows) >= 2, "Expected baseline policy attachment records"
 
         # Verify Cookie format includes tenant_id
         cookie = response["headers"]["Set-Cookie"]
@@ -67,6 +81,50 @@ def test_tenant_extraction_in_callback():
 
         print(f"  PASS: Composite PK: {item.get('pk')}")
         print("  PASS: Cookie contains tenant_id prefix.")
+        print("  PASS: JIT tenant onboarding records were created before session issuance.")
+
+
+def _conditional_check_failed(operation_name="PutItem"):
+    return ClientError(
+        {"Error": {"Code": "ConditionalCheckFailedException", "Message": "Item already exists"}},
+        operation_name,
+    )
+
+
+def test_jit_tenant_onboarding_is_retry_safe_for_partial_failures():
+    print("Testing JIT tenant onboarding is retry-safe and idempotent across partial failures...")
+
+    auth_handler.table = MagicMock()
+
+    # Simulate partial previous success:
+    # - tenant metadata record was created
+    # - first policy attachment already exists (conditional put fails)
+    # - helper verifies invariants and continues
+    auth_handler.table.put_item.side_effect = [None, _conditional_check_failed(), None]
+    auth_handler.table.get_item.return_value = {
+        "Item": {
+            "pk": "APP#test-app#TENANT#tenant-123",
+            "sk": "POLICY#BASELINE#tenant-isolation",
+            "type": "tenant_policy_attachment",
+            "app_id": "test-app",
+            "tenant_id": "tenant-123",
+            "attachment_state": "ATTACHED",
+            "policy_id": "tenant-isolation",
+            "policy_type": "cedar",
+            "scope": "tenant",
+            "attachment_source": "jit-onboarding",
+            "attachment_version": "jit-v1",
+        }
+    }
+
+    with patch("auth_handler.APP_ID", "test-app"), patch("auth_handler.time.time", return_value=1700000000):
+        auth_handler.ensure_tenant_onboarding("tenant-123")
+
+    assert auth_handler.table.put_item.call_count == 3
+    auth_handler.table.get_item.assert_called_once_with(
+        Key={"pk": "APP#test-app#TENANT#tenant-123", "sk": "POLICY#BASELINE#tenant-isolation"}
+    )
+    print("  PASS: Existing onboarding record was verified and onboarding continued safely.")
 
 
 def test_tenant_propagation_in_authorizer():

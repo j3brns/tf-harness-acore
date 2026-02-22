@@ -9,6 +9,7 @@ import base64
 import secrets
 import boto3
 import logging
+from botocore.exceptions import ClientError
 
 # Configure logging
 logger = logging.getLogger()
@@ -26,6 +27,20 @@ TOKEN_ENDPOINT = os.environ.get("TOKEN_ENDPOINT")
 ddb = boto3.resource("dynamodb")
 secrets_client = boto3.client("secretsmanager")
 table = ddb.Table(DDB_TABLE)
+
+JIT_ONBOARDING_VERSION = "jit-v1"
+BASELINE_POLICY_ATTACHMENTS = (
+    {
+        "policy_id": "tenant-isolation",
+        "policy_type": "cedar",
+        "scope": "tenant",
+    },
+    {
+        "policy_id": "session-partition-boundary",
+        "policy_type": "session",
+        "scope": "tenant",
+    },
+)
 
 
 def get_auth_url(params):
@@ -79,6 +94,117 @@ def decode_jwt_claims(token):
     except Exception as e:
         logger.error(f"Error decoding JWT: {e}")
         return {}
+
+
+def tenant_pk(tenant_id):
+    return f"APP#{APP_ID}#TENANT#{tenant_id}"
+
+
+def put_item_if_absent(item, invariant_fields):
+    """Create an item once; if it already exists, verify invariant fields match."""
+    try:
+        table.put_item(Item=item, ConditionExpression="attribute_not_exists(pk) AND attribute_not_exists(sk)")
+        return "created"
+    except ClientError as err:
+        error_code = err.response.get("Error", {}).get("Code")
+        if error_code != "ConditionalCheckFailedException":
+            raise
+
+        resp = table.get_item(Key={"pk": item["pk"], "sk": item["sk"]})
+        existing = resp.get("Item")
+        if not existing:
+            raise RuntimeError(f"Existing item not readable after conditional failure for {item['pk']} / {item['sk']}")
+
+        for field in invariant_fields:
+            if existing.get(field) != item.get(field):
+                raise RuntimeError(
+                    f"JIT onboarding invariant mismatch for {item['pk']} / {item['sk']} field {field}: "
+                    f"{existing.get(field)!r} != {item.get(field)!r}"
+                )
+        return "existing"
+
+
+def ensure_tenant_onboarding(tenant_id):
+    """JIT provision logical tenant records on first successful OIDC authentication."""
+    pk = tenant_pk(tenant_id)
+    now = int(time.time())
+    tenant_root_prefix = f"{APP_ID}/{tenant_id}/"
+
+    records = [
+        (
+            {
+                "pk": pk,
+                "sk": "TENANT#META",
+                "type": "tenant",
+                "app_id": APP_ID,
+                "tenant_id": tenant_id,
+                "onboarding_state": "READY",
+                "onboarding_version": JIT_ONBOARDING_VERSION,
+                "tenant_root_prefix": tenant_root_prefix,
+                "session_partition_pk": pk,
+                "created_at": now,
+                "updated_at": now,
+            },
+            [
+                "type",
+                "app_id",
+                "tenant_id",
+                "onboarding_state",
+                "onboarding_version",
+                "tenant_root_prefix",
+                "session_partition_pk",
+            ],
+        )
+    ]
+
+    for attachment in BASELINE_POLICY_ATTACHMENTS:
+        records.append(
+            (
+                {
+                    "pk": pk,
+                    "sk": f"POLICY#BASELINE#{attachment['policy_id']}",
+                    "type": "tenant_policy_attachment",
+                    "app_id": APP_ID,
+                    "tenant_id": tenant_id,
+                    "attachment_state": "ATTACHED",
+                    "policy_id": attachment["policy_id"],
+                    "policy_type": attachment["policy_type"],
+                    "scope": attachment["scope"],
+                    "attachment_source": "jit-onboarding",
+                    "attachment_version": JIT_ONBOARDING_VERSION,
+                    "created_at": now,
+                    "updated_at": now,
+                },
+                [
+                    "type",
+                    "app_id",
+                    "tenant_id",
+                    "attachment_state",
+                    "policy_id",
+                    "policy_type",
+                    "scope",
+                    "attachment_source",
+                    "attachment_version",
+                ],
+            )
+        )
+
+    created = 0
+    reused = 0
+    for item, invariant_fields in records:
+        result = put_item_if_absent(item, invariant_fields)
+        if result == "created":
+            created += 1
+        else:
+            reused += 1
+
+    logger.info(
+        "JIT tenant onboarding ensured for app_id=%s tenant_id=%s (created=%s reused=%s)",
+        APP_ID,
+        tenant_id,
+        created,
+        reused,
+    )
 
 
 def login(event):
@@ -196,6 +322,12 @@ def callback(event):
     id_token = token_resp.get("id_token")
     claims = decode_jwt_claims(id_token) if id_token else {}
     tenant_id = claims.get("tid", "unknown")
+
+    try:
+        ensure_tenant_onboarding(tenant_id)
+    except Exception as e:
+        logger.error(f"JIT tenant onboarding failed for tenant {tenant_id}: {e}")
+        return {"statusCode": 500, "body": "Tenant onboarding failed"}
 
     table.put_item(
         Item={
