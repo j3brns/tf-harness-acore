@@ -15,7 +15,7 @@ This document outlines planned features and improvements for the Bedrock AgentCo
 
 ## 🔁 Roadmap/Issue Parity Status
 
-- Roadmap-planned work items are now mapped to GitHub issues `#10`, `#16`, `#17`-`#34`, `#48`, `#50`-`#54`, and `#61`-`#65`.
+- Roadmap-planned work items are now mapped to GitHub issues `#10`, `#16`, `#17`-`#34`, `#48`, `#50`-`#54`, `#61`-`#65`, and `#72`.
 - Existing open issues currently outside this scheduled roadmap:
   - None (all current open issues are now queue-classified; non-roadmap backlog has been triaged/closed or scheduled).
 - Backlog hygiene action: maintain queue status/type labels for any newly created unscheduled issues (`triage` intake state).
@@ -171,6 +171,11 @@ This document outlines planned features and improvements for the Bedrock AgentCo
   * **Problem:** Path behavior caching/forwarding rules need a more explicit and auditable policy model.
   * **Solution:** Standardize CloudFront cache/origin request policy resources for SPA/API/auth routes while preserving current behavior.
   * **Issue:** #65
+
+- [ ] **Terraform State Key Segmentation + Terragrunt Evaluation**
+  * **Problem:** CI currently uses an environment-only Terraform backend state key, which increases blast radius and lock contention as more agents/services are managed in parallel.
+  * **Solution:** Implement a migration-safe segmented state key strategy (per app/agent or equivalent), add a state migration runbook, and explicitly evaluate Terragrunt adoption/deferment for backend/layering maintainability.
+  * **Issue:** #72
 
 ## 🛠️ Developer Experience (DX)
 

@@ -351,14 +351,14 @@ choose_ready_queue_stream_label() {
     done
   fi
 
-  echo "  1) no stream filter (ready only)" >&2
-  echo "  2) pick workstream lane label (default)" >&2
+  echo "  1) no stream filter (ready only, default)" >&2
+  echo "  2) pick workstream lane label" >&2
   echo "  3) enter custom label (e.g. provider-matrix)" >&2
   echo "  0) Back" >&2
   echo >&2
   while :; do
-    read -r -p "Choice [2]: " choice >&2
-    choice="${choice:-2}"
+    read -r -p "Choice [1]: " choice >&2
+    choice="${choice:-1}"
     case "${choice}" in
       1) printf '%s\n' ""; return 0 ;;
       2|roadmap)
@@ -1575,7 +1575,6 @@ main_menu() {
     echo "  4) Resume worktree (preflight + command)"
     echo "  5) Preflight current worktree"
     echo "  6) Finish worktree (guided protocol)"
-    echo "  7) Exit"
     echo "  0) Exit"
     echo
 
