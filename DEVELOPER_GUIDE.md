@@ -98,11 +98,11 @@ git push origin main
 cd terraform
 terraform fmt -check -recursive
 
-# Generate all documentation (including MCP Tools OpenAPI)
+# Generate all documentation (including MCP Tools OpenAPI + typed client)
 make docs
 ```
 
-#### MCP Tools OpenAPI Generation
+#### MCP Tools OpenAPI + Typed Client Generation
 
 The project includes a script to automatically generate an OpenAPI 3.1.0 specification from the MCP tools registry defined in `examples/mcp-servers/*/handler.py`.
 
@@ -112,7 +112,23 @@ To generate or update the OpenAPI spec:
 make generate-openapi
 ```
 
-The generated file will be saved to `docs/api/mcp-tools-v1.openapi.json`. This spec can be used by the Web UI to dynamically build tool-calling interfaces or for testing.
+To generate the typed TypeScript client from that OpenAPI artifact:
+
+```bash
+make generate-openapi-client
+```
+
+To verify the committed typed client matches the current OpenAPI spec (drift check used in CI):
+
+```bash
+make check-openapi-client
+```
+
+Generated artifacts:
+- `docs/api/mcp-tools-v1.openapi.json`
+- `docs/api/mcp-tools-v1.client.ts`
+
+These artifacts can be used by the Web UI and integrators to consume a consistent tool-calling contract without ad hoc request code.
 
 #### Frontend Component Library (React + Tailwind, No Bundler)
 
@@ -127,7 +143,7 @@ The library is intentionally static-hosting friendly:
 - Tailwind is loaded via CDN
 - Components are plain reusable blocks (`AppShell`, `Panel`, `MetricCard`, `Transcript`, `Timeline`, `ToolCatalog`, etc.)
 
-To customize a specialized dashboard, compose panels in `frontend/app.js` and keep shared primitives in `frontend/components.js`. The example app will try to load `docs/api/mcp-tools-v1.openapi.json` so issue `#33` OpenAPI output can drive tool panels.
+To customize a specialized dashboard, compose panels in `frontend/app.js` and keep shared primitives in `frontend/components.js`. The example app will try to load `docs/api/mcp-tools-v1.openapi.json` so issue `#33` OpenAPI output can drive tool panels, and issue `#51` adds a generated typed client at `docs/api/mcp-tools-v1.client.ts` for integrator/frontend SDK usage.
 
 # Syntax validation
 terraform validate
