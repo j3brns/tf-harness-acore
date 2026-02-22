@@ -20,8 +20,8 @@ This document tracks the migration of Bedrock AgentCore resources from CLI-manag
 | `null_resource.agent_memory` | Runtime | `aws_bedrockagentcore_memory` | **native-now** | Full support in v6.33+ |
 | `null_resource.inference_profile` | Runtime | `aws_bedrock_inference_profile` | **native-now** | Standard Bedrock resource |
 | `null_resource.guardrail` | Governance | `aws_bedrock_guardrail` | **native-now** | Standard Bedrock resource |
-| `null_resource.browser` | Tools | -- | **cli-required** | No native support yet |
-| `null_resource.code_interpreter` | Tools | -- | **cli-required** | No native support yet |
+| `null_resource.browser` | Tools | `aws_bedrockagentcore_browser` | **cli-required** | Native provider resource exists (`v6.33.0` docs), but migration remains deferred by repo policy/stability constraints (Rule 4) |
+| `null_resource.code_interpreter` | Tools | `aws_bedrockagentcore_code_interpreter` | **cli-required** | Native provider resource exists (`v6.33.0` docs), but migration remains deferred by repo policy/stability constraints (Rule 4) |
 | `null_resource.policy_engine` | Governance | -- | **cli-required** | AgentCore-specific, pending provider |
 | `null_resource.cedar_policies` | Governance | -- | **cli-required** | AgentCore-specific, pending provider |
 | `null_resource.custom_evaluator` | Governance | -- | **cli-required** | AgentCore-specific, pending provider |
@@ -30,7 +30,7 @@ This document tracks the migration of Bedrock AgentCore resources from CLI-manag
 
 ## 🛑 Explicit Non-Goals
 
-1.  **Browser/Code Interpreter**: These resources have complex lifecycle and network configurations that are currently best managed via the CLI bridge to ensure stability.
+1.  **Browser/Code Interpreter**: Native provider resources exist, but these resources have complex lifecycle and network configurations and remain CLI-managed in this repo for current stability/policy constraints.
 2.  **Policy Engine/Cedar Policies**: These are undergoing active development in the AgentCore control plane; we will wait for stable native resources.
 3.  **Evaluators**: Model-based evaluation logic is highly dynamic; CLI management provides the necessary flexibility for now.
 
@@ -54,3 +54,4 @@ aws = {
 
 - **2026-02-22**: Initial matrix creation (Issue #17).
 - **2026-02-22**: Gateway and gateway target moved from `pilot-complete` to `native-now` after legacy CLI decommission (Issue #21).
+- **2026-02-22**: Clarified Browser/Code Interpreter entries: native provider resources exist in docs, but this repo continues to defer migration and keep CLI management.

@@ -15,7 +15,7 @@ This document outlines planned features and improvements for the Bedrock AgentCo
 
 ## 🔁 Roadmap/Issue Parity Status
 
-- Roadmap-planned work items are now mapped to GitHub issues `#17` through `#34`.
+- Roadmap-planned work items are now mapped to GitHub issues `#17` through `#48`.
 - Existing open issues currently outside this scheduled roadmap:
   - `#4` RFC: Serverless SPA & BFF Architecture (Token Handler Pattern)
   - `#10` Observability dashboards + inference-profile cost isolation
@@ -53,7 +53,7 @@ This document outlines planned features and improvements for the Bedrock AgentCo
   * **Issue:** #20
 
 - [x] **A4: Decommission Legacy CLI Paths**
-  * Remove migrated `null_resource` branches only after 2 green promotion cycles.
+  * Remove migrated `null_resource` branches only after 2 green promotion cycles (default requirement; Issue #21 used a temporary documented dispensation due no active consumers at the time).
   * Keep CLI fallback only for matrix entries still marked `cli-required`.
   * **Issue:** #21
 
@@ -64,12 +64,12 @@ This document outlines planned features and improvements for the Bedrock AgentCo
   * Ensure provider `default_tags` and module `tags` are non-conflicting and deterministic.
   * **Issue:** #22
 
-- [ ] **B1: IAM/Cedar Policy Rationalization**
+- [x] **B1: IAM/Cedar Policy Rationalization**
   * Consolidate duplicated IAM statements and normalize wildcard exceptions to documented AWS-required cases only.
   * Normalize Cedar policy structure, naming, and schema versioning.
   * **Issue:** #23
 
-- [ ] **B2: ABAC Consistency Pass (Rule 14)**
+- [x] **B2: ABAC Consistency Pass (Rule 14)**
   * Verify `tenant_id`/`app_id` conditions are consistently enforced in runtime, proxy, and policy layers.
   * Add policy-level negative tests for cross-tenant access attempts.
   * **Issue:** #24
@@ -86,7 +86,7 @@ This document outlines planned features and improvements for the Bedrock AgentCo
   * Required operations: `create tenant`, `suspend tenant`, `rotate tenant credentials`, `fetch tenant audit summary`.
   * **Issue:** #26
 
-- [ ] **C1: Authorization and Guardrails**
+- [x] **C1: Authorization and Guardrails**
   * Enforce claim-based tenant authority (never trust tenant identifiers from request body alone).
   * Add policy checks that bind portal actions to `app_id` + `tenant_id` scope.
   * **Issue:** #27
@@ -101,9 +101,15 @@ This document outlines planned features and improvements for the Bedrock AgentCo
   * Add audit/event timeline view consumable by portal UI and API clients.
   * **Issue:** #29
 
+- [ ] **C4: CloudFront SPA/API Behavior Hardening**
+  * Prevent SPA fallback rewrites from masking `/api/*` and `/auth/*` 4xx responses.
+  * Preserve SPA deep-link behavior while keeping API/auth error semantics intact.
+  * Align CloudFront caching behavior/comments for SPA assets vs `index.html`.
+  * **Issue:** #48
+
 ## 📈 Enterprise Features (Scale & Compliance)
 
-- [ ] **Persistence for Audit Logs (Rule 15)**
+- [x] **Persistence for Audit Logs (Rule 15)**
   * **Problem:** Audit logs (Shadow JSON) are currently ephemeral or stuck in CloudWatch.
   * **Solution:** Direct export of proxy interaction logs to S3 with Athena integration for long-term compliance reporting.
   * **Issue:** #30
