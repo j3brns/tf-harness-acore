@@ -66,6 +66,16 @@ output "agent_dashboard_name" {
   value       = var.enable_observability && var.enable_agent_dashboards ? aws_cloudwatch_dashboard.agent[0].dashboard_name : null
 }
 
+output "inference_profile_arn" {
+  description = "ARN of the Bedrock application inference profile (null when enable_inference_profile = false)"
+  value       = var.enable_inference_profile ? aws_bedrock_inference_profile.agent[0].inference_profile_arn : null
+}
+
+output "inference_profile_id" {
+  description = "ID of the Bedrock application inference profile (null when enable_inference_profile = false)"
+  value       = var.enable_inference_profile ? aws_bedrock_inference_profile.agent[0].inference_profile_id : null
+}
+
 output "agent_dashboard_console_url" {
   description = "CloudWatch console URL for the per-agent dashboard"
   value = var.enable_observability && var.enable_agent_dashboards ? format(

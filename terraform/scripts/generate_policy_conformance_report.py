@@ -44,7 +44,7 @@ def classify_wildcard(window_text: str) -> str | None:
     return None
 
 def get_rationale(window_text: str) -> str:
-    match = re.search(r'#\s*(AWS-REQUIRED:.*|Rule 7.2:.*)', window_text)
+    match = re.search(r'#\s*(AWS-REQUIRED:.*|Rule 14\.3 ABAC.*)', window_text)
     if match:
         return match.group(1).strip()
     return "MISSING RATIONALE"

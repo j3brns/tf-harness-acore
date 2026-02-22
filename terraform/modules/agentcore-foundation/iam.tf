@@ -45,7 +45,7 @@ resource "aws_iam_role_policy" "gateway" {
             "bedrock:InvokeModel",
             "bedrock:InvokeModelWithResponseStream"
           ]
-          Resource = "arn:aws:bedrock:${local.bedrock_region}::foundation-model/*"
+          Resource = local.model_invoke_resource
         },
         {
           Effect = "Allow"
@@ -154,44 +154,60 @@ resource "aws_iam_role" "workload_identity" {
 }
 
 resource "aws_iam_role_policy" "workload_identity" {
-  # checkov:skip=CKV_AWS_107: Bedrock actions require wildcard with ABAC condition
-  # checkov:skip=CKV_AWS_108: Bedrock actions require wildcard with ABAC condition
-  # checkov:skip=CKV_AWS_109: Bedrock actions require wildcard with ABAC condition
-  # checkov:skip=CKV_AWS_110: Bedrock actions require wildcard with ABAC condition
-  # checkov:skip=CKV_AWS_111: Bedrock actions require wildcard with ABAC condition
-  # checkov:skip=CKV_AWS_356: Bedrock actions require wildcard with ABAC condition
+  # checkov:skip=CKV_AWS_107: Fallback path uses wildcard with ABAC condition when inference profile is disabled
+  # checkov:skip=CKV_AWS_108: Fallback path uses wildcard with ABAC condition when inference profile is disabled
+  # checkov:skip=CKV_AWS_109: Fallback path uses wildcard with ABAC condition when inference profile is disabled
+  # checkov:skip=CKV_AWS_110: Fallback path uses wildcard with ABAC condition when inference profile is disabled
+  # checkov:skip=CKV_AWS_111: Fallback path uses wildcard with ABAC condition when inference profile is disabled
+  # checkov:skip=CKV_AWS_356: Fallback path uses wildcard with ABAC condition when inference profile is disabled
   name = "${var.agent_name}-workload-policy"
   role = aws_iam_role.workload_identity.id
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "bedrock:*"
-        ]
-        Resource = "*"
-        # Rule 14.3 ABAC: scope to this agent's tagged resources.
-        # StringEqualsIfExists is required because AWS-managed resources (e.g. Bedrock
-        # foundation models) cannot carry customer tags — a strict StringEquals would
-        # deny model invocation. For user-taggable AgentCore resources (runtimes,
-        # gateways, memory) the condition enforces agent-level isolation.
-        Condition = {
-          StringEqualsIfExists = {
-            "aws:ResourceTag/AgentName" = var.agent_name
+    Statement = concat(
+      var.enable_inference_profile ? [
+        {
+          # Preferred path: invocation scoped to the application inference profile ARN.
+          # No wildcard resource; profile tags carry cost/quota attribution.
+          Sid    = "InvokeViaInferenceProfile"
+          Effect = "Allow"
+          Action = [
+            "bedrock:InvokeModel",
+            "bedrock:InvokeModelWithResponseStream",
+            "bedrock:GetInferenceProfile"
+          ]
+          Resource = aws_bedrock_inference_profile.agent[0].inference_profile_arn
+        }
+        ] : [
+        {
+          # Fallback path (enable_inference_profile = false): broad ABAC-scoped grant.
+          # Rule 14.3 ABAC: StringEqualsIfExists is required because AWS-managed resources
+          # (e.g. Bedrock foundation models) cannot carry customer tags — a strict
+          # StringEquals would deny model invocation. For user-taggable AgentCore resources
+          # (runtimes, gateways, memory) the condition enforces agent-level isolation.
+          Sid      = "BedrockABACFallback"
+          Effect   = "Allow"
+          Action   = ["bedrock:*"]
+          Resource = "*"
+          Condition = {
+            StringEqualsIfExists = {
+              "aws:ResourceTag/AgentName" = var.agent_name
+            }
           }
         }
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "ssm:GetParameter",
-          "ssm:PutParameter",
-          "ssm:DeleteParameter"
-        ]
-        Resource = "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/agentcore/${var.agent_name}/*"
-      }
-    ]
+      ],
+      [
+        {
+          Effect = "Allow"
+          Action = [
+            "ssm:GetParameter",
+            "ssm:PutParameter",
+            "ssm:DeleteParameter"
+          ]
+          Resource = "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/agentcore/${var.agent_name}/*"
+        }
+      ]
+    )
   })
 }

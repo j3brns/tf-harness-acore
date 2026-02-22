@@ -58,9 +58,9 @@ def validate_documentation(
         return
 
     if classification == "bedrock_abac_scoped":
-        if "# Rule 7.2: Resource-level ABAC" not in window_text:
+        if "# Rule 14.3 ABAC" not in window_text:
             errors.append(f"{prefix}: missing ABAC rationale comment for workload identity wildcard")
-        if '"aws:ResourceTag/Project"' not in window_text:
+        if '"aws:ResourceTag/AgentName"' not in window_text:
             errors.append(f"{prefix}: workload identity wildcard missing ABAC tag condition")
         return
 

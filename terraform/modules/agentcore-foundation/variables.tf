@@ -222,6 +222,57 @@ variable "xray_sampling_priority" {
   }
 }
 
+# Bedrock application inference profile
+variable "enable_inference_profile" {
+  description = "Create a Bedrock application inference profile and scope IAM policies to its ARN instead of foundation-model/*"
+  type        = bool
+  default     = false
+}
+
+variable "inference_profile_name" {
+  description = "Name for the Bedrock application inference profile"
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.enable_inference_profile ? length(trimspace(var.inference_profile_name)) > 0 : true
+    error_message = "inference_profile_name must be set when enable_inference_profile is true."
+  }
+}
+
+variable "inference_profile_model_source_arn" {
+  description = "Foundation model or system-defined inference profile ARN that the application profile wraps"
+  type        = string
+  default     = ""
+
+  validation {
+    condition = var.enable_inference_profile ? can(
+      regex(
+        "^arn:aws[a-z-]*:bedrock:[a-z0-9-]+:(?:[0-9]{12})?:(foundation-model|inference-profile)/[A-Za-z0-9._:-]+$",
+        var.inference_profile_model_source_arn
+      )
+    ) : true
+    error_message = "inference_profile_model_source_arn must be a valid Bedrock foundation model or inference profile ARN."
+  }
+}
+
+variable "inference_profile_description" {
+  description = "Optional description for the inference profile"
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = length(var.inference_profile_description) <= 200
+    error_message = "inference_profile_description must be 200 characters or fewer."
+  }
+}
+
+variable "inference_profile_tags" {
+  description = "Additional tags to apply to the inference profile (merged with var.tags)"
+  type        = map(string)
+  default     = {}
+}
+
 variable "manage_log_resource_policy" {
   description = "Create the account-level CloudWatch log resource policy for Bedrock AgentCore. AWS allows a maximum of 10 per account/region. Set to false for every agent after the first in the same account/environment — the shared policy already covers all agents."
   type        = bool
