@@ -2,6 +2,7 @@ import os
 import boto3
 import time
 import json
+import base64
 import urllib.parse
 import urllib.request
 import logging
@@ -20,6 +21,34 @@ TOKEN_ENDPOINT = os.environ.get("TOKEN_ENDPOINT")
 ddb = boto3.resource("dynamodb")
 secrets_client = boto3.client("secretsmanager")
 table = ddb.Table(DDB_TABLE)
+
+
+def decode_jwt_claims(token):
+    if not token:
+        return {}
+    try:
+        parts = token.split(".")
+        if len(parts) != 3:
+            return {}
+        payload = parts[1]
+        missing_padding = len(payload) % 4
+        if missing_padding:
+            payload += "=" * (4 - missing_padding)
+        decoded = base64.urlsafe_b64decode(payload).decode("utf-8")
+        return json.loads(decoded)
+    except Exception as e:
+        logger.error(f"Error decoding JWT in authorizer: {e}")
+        return {}
+
+
+def extract_tenant_claim(item):
+    # Prefer id_token (OIDC identity claims), then fall back to access_token if it is a JWT.
+    for field in ("id_token", "access_token"):
+        claims = decode_jwt_claims(item.get(field))
+        tenant_claim = claims.get("tid") or claims.get("tenant_id")
+        if tenant_claim:
+            return str(tenant_claim), claims
+    return None, {}
 
 
 def get_secret(arn):
@@ -119,6 +148,31 @@ def lambda_handler(event, context):
     item = resp.get("Item")
 
     if not item:
+        logger.warning("Authorizer deny: session not found for app/tenant/session key")
+        return generate_policy("user", "Deny", event["methodArn"])
+
+    # Rule 14.1: Never trust cookie tenant/session without verifying the stored session record.
+    stored_tenant_id = str(item.get("tenant_id", ""))
+    stored_app_id = str(item.get("app_id", ""))
+    stored_session_id = str(item.get("session_id", session_id))
+
+    if stored_tenant_id and stored_tenant_id != tenant_id:
+        logger.warning("Authorizer deny: cookie tenant_id mismatch with stored session tenant_id")
+        return generate_policy("user", "Deny", event["methodArn"])
+    if stored_app_id and stored_app_id != APP_ID:
+        logger.warning("Authorizer deny: session app_id mismatch")
+        return generate_policy("user", "Deny", event["methodArn"])
+    if stored_session_id and stored_session_id != session_id:
+        logger.warning("Authorizer deny: cookie session_id mismatch with stored session session_id")
+        return generate_policy("user", "Deny", event["methodArn"])
+
+    # Claim-scoped tenancy enforcement: tenant in session must match JWT tenant claim.
+    claim_tenant_id, claims = extract_tenant_claim(item)
+    if not claim_tenant_id:
+        logger.warning("Authorizer deny: no tenant claim found in session tokens")
+        return generate_policy("user", "Deny", event["methodArn"])
+    if claim_tenant_id != tenant_id:
+        logger.warning("Authorizer deny: tenant claim mismatch")
         return generate_policy("user", "Deny", event["methodArn"])
 
     access_token = item["access_token"]
@@ -148,5 +202,7 @@ def lambda_handler(event, context):
             "session_id": session_id,
             "tenant_id": tenant_id,
             "app_id": APP_ID,
+            "principal_sub": str(claims.get("sub") or claims.get("oid") or ""),
+            "principal_email": str(claims.get("email") or claims.get("upn") or ""),
         },
     )
