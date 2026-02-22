@@ -34,19 +34,9 @@ resource "aws_iam_role_policy" "policy_engine" {
   name  = "${var.agent_name}-policy-engine-policy"
   role  = aws_iam_role.policy_engine[0].id
 
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Resource = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/policy-engine/*"
-      }
-    ]
+  policy = templatefile("${path.module}/policies/iam/policy_engine_policy.json.tftpl", {
+    region     = var.region
+    account_id = data.aws_caller_identity.current.account_id
   })
 }
 
@@ -81,26 +71,10 @@ resource "aws_iam_role_policy" "evaluator" {
   name  = "${var.agent_name}-evaluator-policy"
   role  = aws_iam_role.evaluator[0].id
 
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Resource = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/evaluator/*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "bedrock:InvokeModel",
-          "bedrock:InvokeModelWithResponseStream"
-        ]
-        Resource = "arn:aws:bedrock:${local.bedrock_region}::foundation-model/${var.evaluator_model_id}"
-      }
-    ]
+  policy = templatefile("${path.module}/policies/iam/evaluator_policy.json.tftpl", {
+    region             = var.region
+    account_id         = data.aws_caller_identity.current.account_id
+    bedrock_region     = local.bedrock_region
+    evaluator_model_id = var.evaluator_model_id
   })
 }

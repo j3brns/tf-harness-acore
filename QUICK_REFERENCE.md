@@ -150,8 +150,8 @@ when {
 # Policy Engine
 enable_policy_engine  = true
 cedar_policy_files = {
-  pii_protection = "./cedar_policies/pii-protection.cedar"
-  rate_limiting  = "./cedar_policies/rate-limiting.cedar"
+  pii_protection = "./policies/cedar/pii-protection.cedar"
+  rate_limiting  = "./policies/cedar/rate-limiting.cedar"
 }
 
 # Evaluations

@@ -352,7 +352,8 @@ terraform apply
 
 ```bash
 # Create policy file
-cat > cedar_policies/access-control.cedar << 'EOF'
+mkdir -p policies/cedar
+cat > policies/cedar/access-control.cedar << 'EOF'
 permit (
   principal,
   action == Action::"invoke",
@@ -366,7 +367,7 @@ EOF
 # Enable in terraform.tfvars
 enable_policy_engine = true
 cedar_policy_files = {
-  access_control = "./cedar_policies/access-control.cedar"
+  access_control = "./policies/cedar/access-control.cedar"
 }
 ```
 

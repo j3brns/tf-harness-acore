@@ -183,8 +183,8 @@ terraform apply -var-file="../examples/support-agent.tfvars"
 - `examples/support-agent.tfvars` - Complete example
 
 #### Cedar Policy Files (.cedar)
-- `terraform/modules/agentcore-governance/cedar_policies/pii-protection.cedar`
-- `terraform/modules/agentcore-governance/cedar_policies/rate-limiting.cedar`
+- `terraform/modules/agentcore-governance/policies/cedar/pii-protection.cedar`
+- `terraform/modules/agentcore-governance/policies/cedar/rate-limiting.cedar`
 
 #### Documentation Files (.md)
 - `README.md` - Full documentation
@@ -244,7 +244,7 @@ terraform apply -var-file="../examples/support-agent.tfvars"
 → Edit `code_interpreter_network_mode` in `terraform/terraform.tfvars`
 
 **Create policies**
-→ Add `.cedar` files to `terraform/modules/agentcore-governance/cedar_policies/`
+→ Add `.cedar` files to `terraform/modules/agentcore-governance/policies/cedar/`
 
 **Monitor deployment**
 → Check `terraform/modules/agentcore-foundation/observability.tf` and CloudWatch logs

@@ -13,7 +13,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 TERRAFORM_DIR="$REPO_ROOT/terraform"
-POLICY_DIR="$TERRAFORM_DIR/modules/agentcore-governance/cedar_policies"
+POLICY_DIR="$TERRAFORM_DIR/modules/agentcore-governance/policies/cedar"
 
 # Colors for output
 RED='\033[0;31m'

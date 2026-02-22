@@ -15,7 +15,7 @@ echo "=========================================="
 cd "$TERRAFORM_DIR"
 
 # Find Cedar policy files
-POLICY_DIR="$TERRAFORM_DIR/modules/agentcore-governance/cedar_policies"
+POLICY_DIR="$TERRAFORM_DIR/modules/agentcore-governance/policies/cedar"
 
 if [ ! -d "$POLICY_DIR" ]; then
     echo "WARN: Cedar policies directory not found: $POLICY_DIR"
