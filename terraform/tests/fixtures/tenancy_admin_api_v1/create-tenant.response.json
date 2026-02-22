@@ -1,0 +1,12 @@
+{
+  "tenantId": "acme-finance",
+  "appId": "portal-prod",
+  "status": "PENDING_ONBOARDING",
+  "onboardingState": "QUEUED",
+  "credentials": {
+    "mode": "PORTAL_CLIENT_SECRET",
+    "nextRotationDueAt": "2026-03-24T12:00:00Z"
+  },
+  "createdAt": "2026-02-22T12:00:00Z",
+  "auditEventId": "evt-01-create"
+}

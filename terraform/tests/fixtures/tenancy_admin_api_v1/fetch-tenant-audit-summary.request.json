@@ -1,0 +1,9 @@
+{
+  "path": {
+    "tenantId": "acme-finance"
+  },
+  "query": {
+    "windowHours": 24,
+    "includeActors": true
+  }
+}
