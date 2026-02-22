@@ -70,7 +70,12 @@ This document outlines planned features and improvements for the Bedrock AgentCo
   * Add policy-level negative tests for cross-tenant access attempts.
   * **Issue:** #24
 
-- [x] **B3: CI Enforcement**
+- [x] **B3: Policy Exception Inventory**
+  * Generate and publish a canonical report of all IAM wildcard exceptions and their rationales.
+  * Standardize tag conformance inventory across foundation, tools, and runtime modules.
+  * **Issue:** #61
+
+- [ ] **B4: CI Enforcement**
   * Add lint/test checks for required tags and policy conformance.
   * Fail CI on missing required tags or undocumented wildcard policy actions.
   * **Issue:** #25

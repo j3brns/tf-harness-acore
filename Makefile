@@ -1,4 +1,4 @@
-.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both ci-status-both streaming-load-test
+.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both ci-status-both streaming-load-test policy-report
 
 # Variables
 ROOT_DIR := $(abspath .)
@@ -83,6 +83,28 @@ tflint: ## Run TFLint for style checking
 	tflint --chdir=$(TERRAFORM_DIR) --format compact --config $(TERRAFORM_DIR)/.tflint.hcl
 
 # Documentation
+docs: generate-openapi generate-openapi-client ## Generate all documentation (Terraform + OpenAPI + TS client)
+	@echo "Generating Terraform documentation..."
+	terraform-docs markdown $(TERRAFORM_DIR) > docs/terraform.md
+	@echo "✓ Documentation generated to docs/terraform.md"
+
+generate-openapi: ## Generate OpenAPI spec from MCP tools registry
+	@echo "Generating OpenAPI spec..."
+	python3 terraform/scripts/generate_mcp_openapi.py
+	@echo "✓ OpenAPI spec generated to docs/api/mcp-tools-v1.openapi.json"
+
+generate-openapi-client: ## Generate typed TypeScript client from MCP Tools OpenAPI spec
+	@echo "Generating typed MCP Tools TypeScript client..."
+	python3 terraform/scripts/generate_mcp_typescript_client.py
+	@echo "✓ Typed client generated to docs/api/mcp-tools-v1.client.ts"
+
+check-openapi-client: ## Verify generated MCP Tools TypeScript client matches OpenAPI spec
+	@echo "Checking MCP Tools TypeScript client drift..."
+	python3 terraform/scripts/generate_mcp_typescript_client.py --check
+	@echo "✓ MCP Tools TypeScript client is in sync"
+
+# Module management
+module-list: ## List all modules
 docs: generate-openapi generate-openapi-client ## Generate all documentation (Terraform + OpenAPI + TS client)
 	@echo "Generating Terraform documentation..."
 	terraform-docs markdown $(TERRAFORM_DIR) > docs/terraform.md
@@ -202,6 +224,11 @@ test-all: test test-python ## Run all tests (Terraform + Python)
 
 streaming-load-test: ## Run BFF/AgentCore streaming load tester (pass ARGS='...')
 	python3 terraform/scripts/streaming_load_tester.py $(ARGS)
+
+policy-report: ## Generate policy and tag conformance report
+	@echo "Generating policy and tag conformance report..."
+	python3 terraform/scripts/generate_policy_conformance_report.py
+	@echo "✓ Report generated to docs/POLICY_CONFORMANCE_REPORT.md"
 
 # Logging and monitoring
 logs-gateway: ## Tail gateway logs

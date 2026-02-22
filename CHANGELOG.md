@@ -5,6 +5,9 @@ All notable changes to this project are documented in this file.
 ## [Unreleased]
 
 ### Added
+- Policy and tag conformance report generation via `make policy-report` (Issue #61).
+- Automated IAM wildcard and tag taxonomy inventory script `terraform/scripts/generate_policy_conformance_report.py`.
+- Baseline governance report published at `docs/POLICY_CONFORMANCE_REPORT.md`.
 - Custom domain and ACM certificate support for the BFF CloudFront distribution (Issue #53).
 - MCP Tools OpenAPI 3.1.0 specification generation from the tool registry in `examples/mcp-servers/` (Issue #33).
 - New `make generate-openapi` target in root `Makefile` to update the specification file at `docs/api/mcp-tools-v1.openapi.json`.
