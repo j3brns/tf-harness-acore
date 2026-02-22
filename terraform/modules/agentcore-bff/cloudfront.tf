@@ -30,10 +30,13 @@ resource "aws_cloudfront_response_headers_policy" "security" {
 }
 
 resource "aws_cloudfront_distribution" "bff" {
-  # checkov:skip=CKV2_AWS_47: WAF requires cost/complexity decision (out of scope for harness)
+  # checkov:skip=CKV2_AWS_47: WAF association is optional; configure via cloudfront_waf_acl_arn for enterprise deployments
   # checkov:skip=CKV2_AWS_42: Custom SSL requires ACM cert (out of scope for harness default)
   # checkov:skip=CKV2_AWS_46: S3 Origin Access is enabled via OAC
   count = var.enable_bff ? 1 : 0
+
+  # Optional WAFv2 CLOUDFRONT-scope Web ACL association (must be in us-east-1)
+  web_acl_id = var.cloudfront_waf_acl_arn != "" ? var.cloudfront_waf_acl_arn : null
 
   origin {
     domain_name              = aws_s3_bucket.spa[0].bucket_regional_domain_name

@@ -63,6 +63,43 @@ Useful outputs:
 - `audit_logs_athena_table`
 - `audit_logs_athena_workgroup`
 
+## Optional CloudFront WAF Association (Issue #54)
+
+Enterprise deployments can attach a WAFv2 Web ACL to the CloudFront distribution for internet-facing threat protection (rate limiting, geo-blocking, managed rule sets such as the AWS Managed Rules Common Rule Set).
+
+### Constraints
+
+- The Web ACL **must** be created in `us-east-1` with `scope = "CLOUDFRONT"`. CloudFront only accepts global-scope WAFv2 ACLs.
+- This is **separate** from `waf_acl_arn`, which attaches a REGIONAL Web ACL to the API Gateway stage.
+- Enabling WAF incurs additional AWS cost per million requests evaluated. Refer to [AWS WAF pricing](https://aws.amazon.com/waf/pricing/) before enabling.
+
+### Usage
+
+```hcl
+module "agentcore_bff" {
+  source = "./modules/agentcore-bff"
+
+  enable_bff = true
+  # ... other required variables ...
+
+  # Optional: attach a CloudFront-scope WAFv2 Web ACL (must be in us-east-1)
+  cloudfront_waf_acl_arn = "arn:aws:wafv2:us-east-1:123456789012:global/webacl/my-cf-acl/abc-123"
+}
+```
+
+The harness default is `cloudfront_waf_acl_arn = ""` (WAF disabled on CloudFront).
+
+### Operational Considerations
+
+| Topic | Guidance |
+|---|---|
+| **Managed rules** | Start with `AWSManagedRulesCommonRuleSet` and `AWSManagedRulesAmazonIpReputationList`. Add `AWSManagedRulesBotControlRuleSet` for bot mitigation if needed. |
+| **False positives** | Initially deploy rules in `COUNT` mode; promote to `BLOCK` after a baselining period (≥48 h of production traffic). |
+| **WAF logging** | Enable WAF logging to a CloudWatch log group or Kinesis Firehose -> S3. Use the BFF `logging_bucket_id` bucket as the Firehose destination for consolidated access and WAF logs. |
+| **Geo-blocking** | Add a geographic match rule to the Web ACL if service is restricted to specific regions. Do not use CloudFront geo-restriction for this (WAF geo match is more granular and auditable). |
+| **IP rate limiting** | Add a rate-based rule (threshold ≥ 2000 req/5 min per IP recommended as a starting baseline) to protect the `/auth/*` OIDC callback path. |
+| **Alert on BLOCK actions** | Create a CloudWatch metric filter on the WAF log group and alarm on `terminatingRuleType = REGULAR` action `BLOCK` to detect attack surges. |
+
 ## Known Failure Modes (Rule 16)
 
 ### 1. 502 Bad Gateway on `/auth/callback`

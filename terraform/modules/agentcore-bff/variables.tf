@@ -111,9 +111,19 @@ variable "reserved_concurrency" {
 }
 
 variable "waf_acl_arn" {
-  description = "ARN of the WAF Web ACL to associate with API Gateway"
+  description = "ARN of the WAF Web ACL to associate with API Gateway (REGIONAL scope)"
   type        = string
   default     = ""
+}
+
+variable "cloudfront_waf_acl_arn" {
+  description = "ARN of a WAFv2 Web ACL (CLOUDFRONT scope, must be in us-east-1) to associate with the CloudFront distribution. Leave empty to disable WAF on CloudFront (default). Required format: arn:aws:wafv2:us-east-1:<account>:global/webacl/<name>/<id>."
+  type        = string
+  default     = ""
+  validation {
+    condition     = var.cloudfront_waf_acl_arn == "" || can(regex("^arn:aws:wafv2:us-east-1:[0-9]{12}:global/webacl/[^/]+/[^/]+$", var.cloudfront_waf_acl_arn))
+    error_message = "cloudfront_waf_acl_arn must be empty or a valid WAFv2 CLOUDFRONT-scope ARN in us-east-1, e.g. arn:aws:wafv2:us-east-1:123456789012:global/webacl/my-acl/abc123."
+  }
 }
 
 variable "agentcore_runtime_role_arn" {
