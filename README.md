@@ -378,6 +378,8 @@ Notes:
 | `enable_observability` | `bool` | `true` | Enable CloudWatch log groups and metrics. |
 | `log_retention_days` | `number` | `30` | CloudWatch log retention period. |
 | `enable_xray` | `bool` | `true` | Enable X-Ray distributed tracing. |
+| `xray_sampling_priority` | `number` | `100` | X-Ray sampling rule priority (1–9999). Assign unique values per agent when multiple agents share an account to ensure deterministic sampling order. |
+| `manage_log_resource_policy` | `bool` | `true` | Create the account-level CloudWatch log resource policy for Bedrock AgentCore (AWS limit: 10 per account/region). Set `false` for every agent after the first in the same account/environment — the shared policy already covers all agents. |
 | `alarm_sns_topic_arn` | `string` | `""` | SNS topic for CloudWatch alarm notifications. |
 | `enable_agent_dashboards` | `bool` | `false` | Create an optional per-agent CloudWatch dashboard (Terraform-managed). |
 | `agent_dashboard_name` | `string` | `""` | Optional dashboard name override (defaults to `<agent_name>-dashboard` when empty). |

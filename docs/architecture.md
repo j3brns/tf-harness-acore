@@ -388,6 +388,13 @@ S3 Bucket (per environment)
 - Latency analysis
 - Error tracking
 
+### Shared-Account Observability Limits
+
+When deploying multiple agents to the same AWS account, two account-level limits apply:
+
+- **CloudWatch resource policies**: AWS hard limit of 10 per account/region. The module creates one policy per environment (`bedrock-agentcore-log-policy-{env}`) scoped to cover all agents. Set `manage_log_resource_policy = false` on all agent deployments after the first in the same account/environment.
+- **X-Ray sampling rule priority**: All agents default to priority `100`. Set unique `xray_sampling_priority` values (1–9999) per agent in shared accounts to ensure deterministic sampling order.
+
 ## Network Architecture
 
 ### Service Discovery (ADR 0010)
