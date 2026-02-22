@@ -391,6 +391,7 @@ plan:dev:
   script:
     - cd $TF_ROOT
     - !reference [.generate_backend, script]
+    - terraform init -backend=false -input=false
     - terraform plan
         -var-file="$REPO_ROOT/examples/${DEV_EXAMPLE}/terraform.tfvars"
         -input=false
