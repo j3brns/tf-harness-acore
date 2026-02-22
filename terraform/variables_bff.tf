@@ -6,6 +6,12 @@ variable "enable_bff" {
   default     = false
 }
 
+variable "enable_bff_audit_log_persistence" {
+  description = "Persist BFF proxy shadow audit logs to S3 and provision Athena/Glue query resources"
+  type        = bool
+  default     = false
+}
+
 variable "oidc_issuer" {
   description = "OIDC Issuer URL"
   type        = string

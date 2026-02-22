@@ -143,6 +143,15 @@ resource "aws_iam_role_policy" "proxy" {
           Resource = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/*"
         }
       ],
+      local.audit_logs_enabled ? [
+        {
+          Effect = "Allow"
+          Action = [
+            "s3:PutObject"
+          ]
+          Resource = "arn:aws:s3:::${var.logging_bucket_id}/${local.audit_logs_events_prefix}*"
+        }
+      ] : [],
       # Senior Move: Dynamic Session Policies
       var.agentcore_runtime_role_arn != "" ? [
         {

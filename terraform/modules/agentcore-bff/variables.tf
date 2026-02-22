@@ -56,6 +56,12 @@ variable "logging_bucket_id" {
   default     = ""
 }
 
+variable "enable_audit_log_persistence" {
+  description = "Persist BFF proxy audit shadow JSON to S3 and provision Athena/Glue metadata"
+  type        = bool
+  default     = false
+}
+
 variable "oidc_issuer" {
   description = "OIDC Issuer URL (e.g., https://login.microsoftonline.com/...)"
   type        = string

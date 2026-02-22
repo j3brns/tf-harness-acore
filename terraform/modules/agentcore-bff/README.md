@@ -27,6 +27,10 @@ module "agentcore_bff" {
   oidc_client_id         = var.oidc_client_id
   oidc_issuer            = "https://login.microsoftonline.com/..."
   oidc_client_secret_arn = "arn:aws:secretsmanager:..."
+
+  # Optional compliance feature (Issue #30)
+  logging_bucket_id             = module.agentcore_foundation.access_logs_bucket_id
+  enable_audit_log_persistence  = true
 }
 ```
 
@@ -40,6 +44,24 @@ module "agentcore_bff" {
 The proxy streams `application/x-ndjson` where each line is a JSON object:
 - `{"type":"meta","sessionId":"..."}`
 - `{"type":"delta","delta":"text chunk"}`
+
+## Audit Log Persistence (Issue #30)
+
+When `enable_audit_log_persistence = true` and `logging_bucket_id` is set, the proxy writes a per-request "shadow JSON" audit record to S3 under:
+
+- `audit/bff-proxy/events/{app_id}/{tenant_id}/year=YYYY/month=MM/day=DD/*.json`
+
+The module also provisions:
+
+- a Glue catalog database/table for the JSON records
+- an Athena workgroup with SSE-S3 query result encryption
+
+Useful outputs:
+
+- `audit_logs_s3_prefix`
+- `audit_logs_athena_database`
+- `audit_logs_athena_table`
+- `audit_logs_athena_workgroup`
 
 ## Known Failure Modes (Rule 16)
 
