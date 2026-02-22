@@ -1,56 +1,76 @@
-# Runbook: Segmented Terraform State Key Migration (`agentcore/{env}/terraform.tfstate`)
+# Runbook: Env-Only to Segmented Terraform State Key Migration
 
 ## Purpose
 
-This runbook defines the repo-standard strategy and migration procedure for moving Terraform S3 backend state keys from the legacy flat path:
+This runbook defines the migration procedure for moving Terraform S3 backend state keys from the
+current CI env-only pattern:
 
-- Legacy: `agentcore/terraform.tfstate`
+- Legacy (current CI): `agentcore/${CI_ENVIRONMENT_NAME}/terraform.tfstate`
 
-to the segmented path used by the current backend examples:
+to the E8A target segmented pattern (ADR 0013):
 
-- Target: `agentcore/{env}/terraform.tfstate`
+- Target: `agentcore/${CI_ENVIRONMENT_NAME}/${TF_STATE_APP_ID}/${TF_STATE_AGENT_NAME}/terraform.tfstate`
 
-This change keeps the same S3 backend bucket model (one bucket per environment) and only changes the object key path inside each bucket.
+The bucket model does not change (one backend bucket per environment/account). Only the object key path changes.
 
 ## Scope
 
 In scope:
-- S3 backend key migration within an existing environment bucket
+- S3 backend key migration within an existing environment bucket/account
 - Native S3 locking path changes (`.tflock`) that follow the key automatically
 - Dev/test/prod rollout sequencing and evidence capture
+- CI key-rendering validation and operator evidence requirements
 
 Out of scope:
 - Switching from separate backends to Terraform workspaces (forbidden by ADR 0006)
 - Changing bucket names/accounts/regions as part of the same change
 - Manual state JSON edits
+- Introducing Terragrunt (evaluated and deferred in ADR 0013 / Issue #73)
 
 ## Canonical Strategy (Design)
 
 ### Key Format
 
-Use this backend key format for all standard environments:
+Use this backend key format for the standard root Terraform stack:
 
 ```text
-agentcore/{env}/terraform.tfstate
+agentcore/{env}/{app_id}/{agent_name}/terraform.tfstate
 ```
 
 Examples:
-- `agentcore/dev/terraform.tfstate`
-- `agentcore/test/terraform.tfstate`
-- `agentcore/prod/terraform.tfstate`
+- `agentcore/dev/research-console/research-agent-core-a1b2/terraform.tfstate`
+- `agentcore/test/ops-assistant/ops-assistant-core-f9e1/terraform.tfstate`
 
-### Why Segment by `{env}` When Buckets Are Already Per-Environment?
+### Why Segment Beyond `{env}`?
 
-The bucket boundary remains the primary blast-radius control. The segmented key adds:
+The bucket boundary remains the primary blast-radius control. App/agent segmentation adds:
 - clearer operator visibility in S3 listings and recovery commands,
-- consistent pathing for lock files (`agentcore/{env}/terraform.tfstate.tflock`),
+- less lock contention within the same environment backend bucket,
+- consistent pathing for lock files tied to a specific deployment unit,
 - a stable convention for runbooks and CI templates,
-- safer migration from older docs/examples that referenced a flat key.
+- safer parallelism as the repo grows beyond one agent per environment.
+
+### CI Input Contract (Required Before `terraform init`)
+
+E8B (`#74`) must have these values available before backend initialization:
+
+- `CI_ENVIRONMENT_NAME`
+- `TF_STATE_BUCKET`
+- `AWS_DEFAULT_REGION`
+- `TF_STATE_APP_ID` (slug-safe)
+- `TF_STATE_AGENT_NAME` (slug-safe)
+
+Derived key:
+
+```text
+agentcore/${CI_ENVIRONMENT_NAME}/${TF_STATE_APP_ID}/${TF_STATE_AGENT_NAME}/terraform.tfstate
+```
 
 ### Non-Goals / Guardrails
 
 - Do not introduce branch-, PR-, or developer-specific keys in shared environment backends.
 - Do not mix backend bucket moves and key moves in one execution issue.
+- Do not silently change region defaults as part of the state-key migration.
 - Do not run concurrent Terraform operations during migration.
 
 ## Preconditions
@@ -60,6 +80,7 @@ The bucket boundary remains the primary blast-radius control. The segmented key 
 3. The target environment is known (`dev`, `test`, or `prod`) and matches the backend file being edited/generated.
 4. No concurrent CI/local Terraform operations are running against the same backend.
 5. S3 versioning is enabled on the state bucket (expected per ADR 0004).
+6. CI/job inputs for `app_id` and `agent_name` are known and can be rendered to backend-key-safe values.
 
 ## Pre-Flight Checklist (Mandatory)
 
@@ -82,8 +103,10 @@ mkdir -p .scratch/state-key-migration
 ```bash
 export ENV="<dev|test|prod>"
 export TF_STATE_BUCKET="terraform-state-${ENV}-<account-or-project-id>"
-export LEGACY_STATE_KEY="agentcore/terraform.tfstate"
-export SEGMENTED_STATE_KEY="agentcore/${ENV}/terraform.tfstate"
+export TF_STATE_APP_ID="<app-id-slug>"
+export TF_STATE_AGENT_NAME="<agent-name-slug>"
+export LEGACY_STATE_KEY="agentcore/${ENV}/terraform.tfstate"
+export SEGMENTED_STATE_KEY="agentcore/${ENV}/${TF_STATE_APP_ID}/${TF_STATE_AGENT_NAME}/terraform.tfstate"
 ```
 
 4. Capture a local state backup before backend migration
@@ -93,7 +116,13 @@ terraform -chdir=terraform state pull > .scratch/state-key-migration/$(date +%Y%
 sha256sum .scratch/state-key-migration/*-${ENV}-pre-key-migration.tfstate
 ```
 
-5. Confirm the current remote object exists (legacy key)
+5. Render and review the new backend key (evidence for E8A/E8B handoff)
+
+```bash
+printf 'legacy=%s\nnew=%s\n' "${LEGACY_STATE_KEY}" "${SEGMENTED_STATE_KEY}"
+```
+
+6. Confirm the current remote object exists (legacy key)
 
 ```bash
 aws s3api head-object \
@@ -101,7 +130,7 @@ aws s3api head-object \
   --key "${LEGACY_STATE_KEY}"
 ```
 
-6. Baseline plan (stop on unexpected drift)
+7. Baseline plan (stop on unexpected drift)
 
 ```bash
 terraform -chdir=terraform plan \
@@ -113,15 +142,11 @@ terraform -chdir=terraform plan \
 
 ### 1. Update Backend Config to the Segmented Key
 
-Use the repo examples as the source of truth:
-- `terraform/backend-dev.tf.example`
-- `terraform/backend-test.tf.example`
-- `terraform/backend-prod.tf.example`
-
-Ensure the backend config for the environment uses:
+E8B will update the CI-generated backend config in `.gitlab-ci.yml` (not this runbook issue).
+For manual/simulated migration rehearsal, ensure the backend config for the environment uses:
 
 ```hcl
-key = "agentcore/<env>/terraform.tfstate"
+key = "agentcore/<env>/<app-id>/<agent-name>/terraform.tfstate"
 ```
 
 ### 2. Migrate Backend State Using Terraform (Preferred)
@@ -177,8 +202,15 @@ Record:
 - backend config key before/after,
 - commands run,
 - `head-object` success for `agentcore/${ENV}/terraform.tfstate`,
+- `head-object` success for the new segmented key,
 - post-migration plan outcome,
 - CI links (if migration change is applied via pipeline).
+
+## E8A / E8B Handoff Notes
+
+- E8A (`#73`) produces the strategy/decision and this runbook only. It does not execute live backend migrations.
+- E8B (`#74`) implements CI backend key rendering and runs migrations per environment using this runbook.
+- Terragrunt adoption is explicitly deferred for E8B (see `docs/adr/0013-segmented-state-key-strategy.md`).
 
 ## Rollout Order (Recommended)
 
@@ -213,7 +245,6 @@ Never manually edit the state JSON.
 
 - `docs/adr/0004-state-management.md`
 - `docs/adr/0006-separate-backends-not-workspaces.md`
+- `docs/adr/0013-segmented-state-key-strategy.md`
 - `docs/runbooks/state-recovery.md`
-- `terraform/backend-dev.tf.example`
-- `terraform/backend-test.tf.example`
-- `terraform/backend-prod.tf.example`
+- `.gitlab-ci.yml` (backend generation template)
