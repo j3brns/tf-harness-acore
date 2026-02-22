@@ -15,7 +15,7 @@ variable "bedrock_region" {
 }
 
 variable "tags" {
-  description = "Tags to apply to resources"
+  description = "Tags to apply to all resources. The root module always merges canonical tags (AppID, Environment, AgentName, ManagedBy, Owner) before passing this value."
   type        = map(string)
   default     = {}
 }

@@ -490,6 +490,27 @@ Due to AWS provider gaps, the core Bedrock AgentCore suite uses AWS CLI:
 
 See `docs/adr/0002-cli-based-resources.md` for migration path when native resources become available.
 
+## Canonical Tag Taxonomy
+
+All managed resources carry a deterministic set of required tags. These are enforced via:
+1. **Provider `default_tags`** in `terraform/versions.tf` — applied automatically to every AWS resource.
+2. **`local.canonical_tags`** in `terraform/locals.tf` — merged into every module's `tags` input for explicit control and for non-AWS resources.
+3. **CI validation** — `terraform/tests/validation/tags_test.sh` confirms the taxonomy is intact on every run.
+
+| Tag Key | Source | Description |
+|---------|--------|-------------|
+| `AppID` | `var.app_id` (or `var.agent_name`) | Logical application/environment boundary (North Anchor). |
+| `Environment` | `var.environment` | Deployment stage: `dev`, `staging`, or `prod`. |
+| `AgentName` | `var.agent_name` | Physical compute resource name (South Anchor). |
+| `ManagedBy` | Static: `"terraform"` | Always set; indicates this resource is Terraform-managed. |
+| `Owner` | `var.owner` (or `var.app_id`) | Team or individual owner. Defaults to `app_id` if not set. |
+
+**Override policy**: Canonical keys always win. User-supplied `var.tags` can add supplementary keys but cannot override canonical values. Set `var.owner` to assign an explicit owner identifier.
+
+**Check date**: 2026-02-22. No AWS API dependency; this is a Terraform-level convention.
+
+---
+
 ## Architecture Decision Records
 
 | ADR | Decision |

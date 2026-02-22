@@ -50,9 +50,15 @@ variable "app_id" {
 }
 
 variable "tags" {
-  description = "Additional tags to apply to all resources"
+  description = "Additional tags to apply to all resources. Canonical tags (AppID, Environment, AgentName, ManagedBy, Owner) are always merged by the root module; values here supplement or override non-canonical keys only."
   type        = map(string)
   default     = {}
+}
+
+variable "owner" {
+  description = "Owner identifier for resource tagging (team name, individual, or app ID). Applied as the Owner canonical tag. Defaults to app_id (or agent_name) when empty."
+  type        = string
+  default     = ""
 }
 
 # ===== FOUNDATION MODULE VARIABLES =====
