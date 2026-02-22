@@ -103,6 +103,14 @@ check-openapi-client: ## Verify generated MCP Tools TypeScript client matches Op
 	python3 terraform/scripts/generate_mcp_typescript_client.py --check
 	@echo "✓ MCP Tools TypeScript client is in sync"
 
+openapi-contract-diff: ## Generate OpenAPI contract diff/changelog summary (OLD=path [NEW=path] [FORMAT=markdown|json] [FAIL_ON_BREAKING=1])
+	@test -n "$(OLD)" || { echo "ERROR: Usage: make openapi-contract-diff OLD=<baseline-openapi.json> [NEW=docs/api/mcp-tools-v1.openapi.json]"; exit 1; }
+	python3 terraform/scripts/openapi_contract_diff.py \
+		--old "$(OLD)" \
+		--new "$(if $(NEW),$(NEW),docs/api/mcp-tools-v1.openapi.json)" \
+		--format "$(if $(FORMAT),$(FORMAT),markdown)" \
+		$(if $(FAIL_ON_BREAKING),--fail-on-breaking,)
+
 # Module management
 module-list: ## List all modules
 	@echo "AgentCore Modules:"
