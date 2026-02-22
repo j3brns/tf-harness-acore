@@ -156,7 +156,6 @@ variables:
     key: terraform-providers-${TF_VERSION}
     paths:
       - terraform/.terraform/
-      - terraform/.terraform.lock.hcl
     policy: pull-push
 
 # =============================================================================
