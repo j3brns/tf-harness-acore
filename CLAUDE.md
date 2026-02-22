@@ -465,6 +465,7 @@ Every issue MUST define completion evidence:
 ```bash
 terraform -chdir=terraform fmt -check -recursive
 terraform -chdir=terraform validate
+make policy-report
 terraform -chdir=terraform plan -backend=false -var-file=../examples/research-agent.tfvars
 checkov -d terraform --framework terraform --compact --config-file terraform/.checkov.yaml
 tflint --chdir=terraform --recursive --config terraform/.tflint.hcl

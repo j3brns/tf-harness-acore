@@ -1,4 +1,4 @@
-.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both ci-status-both streaming-load-test
+.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both ci-status-both streaming-load-test policy-report
 
 # Variables
 ROOT_DIR := $(abspath .)
@@ -194,6 +194,11 @@ test-all: test test-python ## Run all tests (Terraform + Python)
 
 streaming-load-test: ## Run BFF/AgentCore streaming load tester (pass ARGS='...')
 	python3 terraform/scripts/streaming_load_tester.py $(ARGS)
+
+policy-report: ## Generate policy and tag conformance report
+	@echo "Generating policy and tag conformance report..."
+	python3 terraform/scripts/generate_policy_conformance_report.py
+	@echo "✓ Report generated to docs/POLICY_CONFORMANCE_REPORT.md"
 
 # Logging and monitoring
 logs-gateway: ## Tail gateway logs

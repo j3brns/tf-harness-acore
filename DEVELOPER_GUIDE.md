@@ -98,6 +98,9 @@ git push origin main
 cd terraform
 terraform fmt -check -recursive
 
+# Generate policy and tag conformance report (Inventory + Governance)
+make policy-report
+
 # Generate all documentation (including MCP Tools OpenAPI + typed client)
 make docs
 ```
@@ -176,8 +179,10 @@ checkov -d . --framework terraform --compact --config-file .checkov.yaml
 tflint --recursive
 
 # Governance conformance (tags + wildcard policy exceptions)
-bash tests/validation/tags_test.sh
-python3 tests/validation/policy_wildcard_exceptions_test.py
+make policy-report
+
+# Artifacts:
+# - docs/POLICY_CONFORMANCE_REPORT.md
 ```
 
 **Key Point**: You can validate everything locally without an AWS account!
