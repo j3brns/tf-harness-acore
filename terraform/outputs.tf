@@ -49,6 +49,12 @@ output "agentcore_runtime_arn" {
   sensitive   = true
 }
 
+output "agentcore_inference_profile_arn" {
+  description = "Bedrock application inference profile ARN for per-agent cost isolation"
+  value       = module.agentcore_runtime.inference_profile_arn
+  sensitive   = true
+}
+
 output "agentcore_gateway_arn" {
   description = "AgentCore gateway ARN (useful for cross-account target policies)"
   value       = module.agentcore_foundation.gateway_arn
@@ -59,4 +65,14 @@ output "agentcore_gateway_role_arn" {
   description = "AgentCore gateway service role ARN (useful for cross-account Lambda resource policies)"
   value       = module.agentcore_foundation.gateway_role_arn
   sensitive   = true
+}
+
+output "agentcore_dashboard_name" {
+  description = "CloudWatch dashboard name for per-agent observability"
+  value       = module.agentcore_foundation.agent_dashboard_name
+}
+
+output "agentcore_dashboard_console_url" {
+  description = "CloudWatch console URL for the per-agent dashboard"
+  value       = module.agentcore_foundation.agent_dashboard_console_url
 }

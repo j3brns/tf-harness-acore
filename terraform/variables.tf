@@ -165,6 +165,40 @@ variable "alarm_sns_topic_arn" {
   default     = ""
 }
 
+variable "enable_agent_dashboards" {
+  description = "Enable Terraform-managed per-agent CloudWatch dashboards"
+  type        = bool
+  default     = false
+}
+
+variable "agent_dashboard_name" {
+  description = "Optional CloudWatch dashboard name override (defaults to <agent_name>-dashboard when empty)"
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = length(trimspace(var.agent_dashboard_name)) <= 255
+    error_message = "agent_dashboard_name must be 255 characters or fewer."
+  }
+}
+
+variable "dashboard_region" {
+  description = "Optional dashboard widget/console region override (defaults to region when empty)"
+  type        = string
+  default     = ""
+}
+
+variable "dashboard_widgets_override" {
+  description = "Optional JSON array string of CloudWatch dashboard widgets to replace the default widget set"
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.dashboard_widgets_override == "" ? true : can(tolist(jsondecode(var.dashboard_widgets_override)))
+    error_message = "dashboard_widgets_override must be an empty string or a JSON array string of widget objects."
+  }
+}
+
 # ===== SECURITY BATCH 3 VARIABLES =====
 
 variable "enable_waf" {
@@ -324,7 +358,7 @@ variable "inference_profile_name" {
   default     = ""
 
   validation {
-    condition     = var.enable_inference_profile ? length(trim(var.inference_profile_name)) > 0 : true
+    condition     = var.enable_inference_profile ? length(trimspace(var.inference_profile_name)) > 0 : true
     error_message = "inference_profile_name must be set when enable_inference_profile is true."
   }
 }

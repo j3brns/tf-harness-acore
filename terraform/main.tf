@@ -23,11 +23,19 @@ module "agentcore_foundation" {
   oauth_return_urls = var.oauth_return_urls
 
   # Observability
-  enable_observability = var.enable_observability
-  log_retention_days   = var.log_retention_days
-  enable_xray          = var.enable_xray
-  alarm_sns_topic_arn  = var.alarm_sns_topic_arn
-  enable_waf           = var.enable_waf
+  enable_observability                    = var.enable_observability
+  log_retention_days                      = var.log_retention_days
+  enable_xray                             = var.enable_xray
+  alarm_sns_topic_arn                     = var.alarm_sns_topic_arn
+  enable_agent_dashboards                 = var.enable_agent_dashboards
+  agent_dashboard_name                    = var.agent_dashboard_name
+  dashboard_region                        = var.dashboard_region != "" ? var.dashboard_region : var.region
+  dashboard_widgets_override              = var.dashboard_widgets_override
+  dashboard_include_runtime_logs          = var.enable_runtime
+  dashboard_include_code_interpreter_logs = var.enable_code_interpreter
+  dashboard_include_browser_logs          = var.enable_browser
+  dashboard_include_evaluator_logs        = var.enable_evaluations
+  enable_waf                              = var.enable_waf
 
   # Encryption
   enable_kms  = var.enable_kms

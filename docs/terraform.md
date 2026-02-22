@@ -13,8 +13,8 @@
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 6.33.0 |
-| <a name="provider_http"></a> [http](#provider\_http) | ~> 3.4 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.33.0 |
+| <a name="provider_http"></a> [http](#provider\_http) | 3.5.0 |
 
 ## Modules
 
@@ -37,12 +37,16 @@
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
+| <a name="input_agent_dashboard_name"></a> [agent\_dashboard\_name](#input\_agent\_dashboard\_name) | Optional CloudWatch dashboard name override (defaults to <agent\_name>-dashboard when empty) | `string` | `""` | no |
 | <a name="input_agent_name"></a> [agent\_name](#input\_agent\_name) | Name of the agent | `string` | n/a | yes |
 | <a name="input_agentcore_region"></a> [agentcore\_region](#input\_agentcore\_region) | Optional AgentCore control-plane region override (defaults to region) | `string` | `""` | no |
 | <a name="input_alarm_sns_topic_arn"></a> [alarm\_sns\_topic\_arn](#input\_alarm\_sns\_topic\_arn) | Optional SNS topic ARN for CloudWatch alarm notifications | `string` | `""` | no |
 | <a name="input_app_id"></a> [app\_id](#input\_app\_id) | Application ID for multi-tenant isolation (North anchor). Defaults to agent\_name. | `string` | `""` | no |
 | <a name="input_bedrock_region"></a> [bedrock\_region](#input\_bedrock\_region) | Optional Bedrock region override for model-related resources (defaults to agentcore\_region) | `string` | `""` | no |
+| <a name="input_bff_acm_certificate_arn"></a> [bff\_acm\_certificate\_arn](#input\_bff\_acm\_certificate\_arn) | ARN of the ACM certificate for the custom domain. Must be in us-east-1 for CloudFront. | `string` | `""` | no |
 | <a name="input_bff_agentcore_runtime_arn"></a> [bff\_agentcore\_runtime\_arn](#input\_bff\_agentcore\_runtime\_arn) | AgentCore runtime ARN for the BFF proxy (required if enable\_bff is true and enable\_runtime is false) | `string` | `""` | no |
+| <a name="input_bff_agentcore_runtime_role_arn"></a> [bff\_agentcore\_runtime\_role\_arn](#input\_bff\_agentcore\_runtime\_role\_arn) | Optional runtime IAM role ARN for the BFF proxy to assume (set for cross-account runtime identity propagation) | `string` | `""` | no |
+| <a name="input_bff_custom_domain_name"></a> [bff\_custom\_domain\_name](#input\_bff\_custom\_domain\_name) | Custom domain name for the BFF CloudFront distribution (e.g., agent.example.com). Requires bff\_acm\_certificate\_arn. | `string` | `""` | no |
 | <a name="input_bff_region"></a> [bff\_region](#input\_bff\_region) | Optional BFF/API Gateway region override (defaults to agentcore\_region) | `string` | `""` | no |
 | <a name="input_browser_network_mode"></a> [browser\_network\_mode](#input\_browser\_network\_mode) | Network mode for browser (PUBLIC, SANDBOX, VPC) | `string` | `"SANDBOX"` | no |
 | <a name="input_browser_recording_s3_bucket"></a> [browser\_recording\_s3\_bucket](#input\_browser\_recording\_s3\_bucket) | S3 bucket for browser session recordings | `string` | `""` | no |
@@ -50,8 +54,12 @@
 | <a name="input_cedar_policy_files"></a> [cedar\_policy\_files](#input\_cedar\_policy\_files) | Map of policy names to Cedar policy file paths | `map(string)` | `{}` | no |
 | <a name="input_code_interpreter_network_mode"></a> [code\_interpreter\_network\_mode](#input\_code\_interpreter\_network\_mode) | Network mode for code interpreter (PUBLIC, SANDBOX, VPC) | `string` | `"SANDBOX"` | no |
 | <a name="input_code_interpreter_vpc_config"></a> [code\_interpreter\_vpc\_config](#input\_code\_interpreter\_vpc\_config) | VPC configuration for code interpreter | <pre>object({<br/>    subnet_ids          = list(string)<br/>    security_group_ids  = list(string)<br/>    associate_public_ip = optional(bool, false)<br/>  })</pre> | `null` | no |
+| <a name="input_dashboard_region"></a> [dashboard\_region](#input\_dashboard\_region) | Optional dashboard widget/console region override (defaults to region when empty) | `string` | `""` | no |
+| <a name="input_dashboard_widgets_override"></a> [dashboard\_widgets\_override](#input\_dashboard\_widgets\_override) | Optional JSON array string of CloudWatch dashboard widgets to replace the default widget set | `string` | `""` | no |
 | <a name="input_deployment_bucket_name"></a> [deployment\_bucket\_name](#input\_deployment\_bucket\_name) | S3 bucket name for deployment artifacts | `string` | `""` | no |
+| <a name="input_enable_agent_dashboards"></a> [enable\_agent\_dashboards](#input\_enable\_agent\_dashboards) | Enable Terraform-managed per-agent CloudWatch dashboards | `bool` | `false` | no |
 | <a name="input_enable_bff"></a> [enable\_bff](#input\_enable\_bff) | Enable the Serverless SPA/BFF module | `bool` | `false` | no |
+| <a name="input_enable_bff_audit_log_persistence"></a> [enable\_bff\_audit\_log\_persistence](#input\_enable\_bff\_audit\_log\_persistence) | Persist BFF proxy shadow audit logs to S3 and provision Athena/Glue query resources | `bool` | `false` | no |
 | <a name="input_enable_browser"></a> [enable\_browser](#input\_enable\_browser) | Enable web browser tool | `bool` | `false` | no |
 | <a name="input_enable_browser_recording"></a> [enable\_browser\_recording](#input\_enable\_browser\_recording) | Enable session recording for browser | `bool` | `false` | no |
 | <a name="input_enable_code_interpreter"></a> [enable\_code\_interpreter](#input\_enable\_code\_interpreter) | Enable Python code interpreter | `bool` | `true` | no |
@@ -119,8 +127,17 @@
 | Name | Description |
 |------|-------------|
 | <a name="output_agentcore_bff_api_url"></a> [agentcore\_bff\_api\_url](#output\_agentcore\_bff\_api\_url) | BFF API URL |
+| <a name="output_agentcore_bff_audit_logs_athena_database"></a> [agentcore\_bff\_audit\_logs\_athena\_database](#output\_agentcore\_bff\_audit\_logs\_athena\_database) | Athena/Glue database for BFF proxy audit logs |
+| <a name="output_agentcore_bff_audit_logs_athena_table"></a> [agentcore\_bff\_audit\_logs\_athena\_table](#output\_agentcore\_bff\_audit\_logs\_athena\_table) | Athena/Glue table for BFF proxy audit logs |
+| <a name="output_agentcore_bff_audit_logs_athena_workgroup"></a> [agentcore\_bff\_audit\_logs\_athena\_workgroup](#output\_agentcore\_bff\_audit\_logs\_athena\_workgroup) | Athena workgroup for BFF proxy audit logs |
+| <a name="output_agentcore_bff_audit_logs_s3_prefix"></a> [agentcore\_bff\_audit\_logs\_s3\_prefix](#output\_agentcore\_bff\_audit\_logs\_s3\_prefix) | S3 prefix for BFF proxy audit shadow JSON logs |
 | <a name="output_agentcore_bff_authorizer_id"></a> [agentcore\_bff\_authorizer\_id](#output\_agentcore\_bff\_authorizer\_id) | Authorizer ID |
 | <a name="output_agentcore_bff_rest_api_id"></a> [agentcore\_bff\_rest\_api\_id](#output\_agentcore\_bff\_rest\_api\_id) | REST API ID |
 | <a name="output_agentcore_bff_session_table_name"></a> [agentcore\_bff\_session\_table\_name](#output\_agentcore\_bff\_session\_table\_name) | DynamoDB Session Table |
 | <a name="output_agentcore_bff_spa_url"></a> [agentcore\_bff\_spa\_url](#output\_agentcore\_bff\_spa\_url) | SPA URL |
+| <a name="output_agentcore_dashboard_console_url"></a> [agentcore\_dashboard\_console\_url](#output\_agentcore\_dashboard\_console\_url) | CloudWatch console URL for the per-agent dashboard |
+| <a name="output_agentcore_dashboard_name"></a> [agentcore\_dashboard\_name](#output\_agentcore\_dashboard\_name) | CloudWatch dashboard name for per-agent observability |
+| <a name="output_agentcore_gateway_arn"></a> [agentcore\_gateway\_arn](#output\_agentcore\_gateway\_arn) | AgentCore gateway ARN (useful for cross-account target policies) |
+| <a name="output_agentcore_gateway_role_arn"></a> [agentcore\_gateway\_role\_arn](#output\_agentcore\_gateway\_role\_arn) | AgentCore gateway service role ARN (useful for cross-account Lambda resource policies) |
+| <a name="output_agentcore_inference_profile_arn"></a> [agentcore\_inference\_profile\_arn](#output\_agentcore\_inference\_profile\_arn) | Bedrock application inference profile ARN for per-agent cost isolation |
 | <a name="output_agentcore_runtime_arn"></a> [agentcore\_runtime\_arn](#output\_agentcore\_runtime\_arn) | AgentCore runtime ARN |

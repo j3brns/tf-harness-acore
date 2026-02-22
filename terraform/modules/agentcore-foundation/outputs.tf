@@ -60,3 +60,18 @@ output "gateway_targets" {
   description = "Map of gateway target names (IDs available in .terraform/target_*.json)"
   value       = var.enable_gateway ? keys(var.mcp_targets) : []
 }
+
+output "agent_dashboard_name" {
+  description = "CloudWatch dashboard name for per-agent observability"
+  value       = var.enable_observability && var.enable_agent_dashboards ? aws_cloudwatch_dashboard.agent[0].dashboard_name : null
+}
+
+output "agent_dashboard_console_url" {
+  description = "CloudWatch console URL for the per-agent dashboard"
+  value = var.enable_observability && var.enable_agent_dashboards ? format(
+    "https://%s.console.aws.amazon.com/cloudwatch/home?region=%s#dashboards:name=%s",
+    local.dashboard_region_effective,
+    local.dashboard_region_effective,
+    urlencode(local.agent_dashboard_name_effective)
+  ) : null
+}
