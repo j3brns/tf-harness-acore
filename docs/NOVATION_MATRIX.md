@@ -13,8 +13,8 @@ This document tracks the migration of Bedrock AgentCore resources from CLI-manag
 
 | CLI Resource | Module | Terraform Native Resource | Status | Notes |
 | :--- | :--- | :--- | :--- | :--- |
-| `null_resource.gateway` | Foundation | `aws_bedrockagentcore_gateway` | **pilot-complete** | Pilot in v6.33.0+ (Issue #18) |
-| `null_resource.gateway_target` | Foundation | `aws_bedrockagentcore_gateway_target` | **pilot-complete** | Pilot in v6.33.0+ (Issue #18) |
+| `null_resource.gateway` | Foundation | `aws_bedrockagentcore_gateway` | **native-now** | Native path stabilized; legacy CLI branch decommissioned (Issue #21) |
+| `null_resource.gateway_target` | Foundation | `aws_bedrockagentcore_gateway_target` | **native-now** | Native path stabilized; legacy CLI branch decommissioned (Issue #21) |
 | `null_resource.workload_identity` | Foundation | (part of `aws_bedrockagentcore_*`) | **native-now** | Implicit or nested in Gateway/Runtime |
 | `null_resource.agent_runtime` | Runtime | `aws_bedrockagentcore_agent_runtime` | **native-now** | Full support in v6.32+ |
 | `null_resource.agent_memory` | Runtime | `aws_bedrockagentcore_memory` | **native-now** | Full support in v6.33+ |
@@ -53,3 +53,4 @@ aws = {
 ## 📅 Revision History
 
 - **2026-02-22**: Initial matrix creation (Issue #17).
+- **2026-02-22**: Gateway and gateway target moved from `pilot-complete` to `native-now` after legacy CLI decommission (Issue #21).

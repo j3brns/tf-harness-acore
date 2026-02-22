@@ -13,7 +13,6 @@ module "agentcore_foundation" {
 
   # Gateway configuration
   enable_gateway      = var.enable_gateway
-  use_native_gateway  = var.use_native_gateway
   gateway_name        = var.gateway_name
   gateway_role_arn    = var.gateway_role_arn
   mcp_targets         = var.mcp_targets

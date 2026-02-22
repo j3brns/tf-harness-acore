@@ -54,7 +54,7 @@ resource "aws_cloudwatch_metric_alarm" "gateway_errors" {
   alarm_actions       = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
 
   dimensions = {
-    GatewayId = var.enable_gateway ? data.aws_ssm_parameter.gateway_id[0].value : ""
+    GatewayId = local.gateway_id
   }
 
   tags = var.tags
@@ -77,7 +77,7 @@ resource "aws_cloudwatch_metric_alarm" "target_duration" {
   alarm_actions       = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
 
   dimensions = {
-    GatewayId = var.enable_gateway ? data.aws_ssm_parameter.gateway_id[0].value : ""
+    GatewayId = local.gateway_id
   }
 
   tags = var.tags

@@ -87,11 +87,11 @@ Architecture-aware binary fetching means you can target ARM64/Graviton by flippi
 
 ### Stateful CLI Bridge
 
-> Ten distinct AgentCore resource types -- Gateway, Workload Identity, Browser, Code Interpreter, Runtime, Memory, Policy Engine, Cedar Policies, Evaluators, and OAuth2 Credential Providers -- have no Terraform provider representation.
+> The remaining CLI-managed AgentCore resource families are those without stable native coverage in this repo's migration matrix (for example Workload Identity, Browser, Code Interpreter, Policy Engine, Cedar Policies, Evaluators, and OAuth2 Credential Providers).
 
-The framework wraps each in a `null_resource` with a `local-exec` provisioner that calls the `bedrock-agentcore-control` CLI, captures JSON output, and surfaces resource IDs through `data.external` sources. SHA256-based triggers on the resource configuration ensure idempotency: if the configuration has not changed, Terraform does not re-create the resource.
+Where native resources are not yet adopted, the framework uses a `null_resource` + `local-exec` CLI bridge (`bedrock-agentcore-control`) with SHA256-based triggers for idempotent behavior.
 
-Resource IDs persist in SSM Parameter Store, which means they survive CI/CD runner destruction, local state corruption, and team member rotation. When HashiCorp ships `aws_bedrockagentcore_*` resources, migration is a single `terraform import` per resource followed by a swap from `null_resource` to the native type. The framework was designed for this transition from day one.
+CLI-managed resource IDs persist in SSM Parameter Store, which means they survive CI/CD runner destruction, local state corruption, and team member rotation. When native resources are adopted, migration is a `terraform import` transition from `null_resource` to the native type. The framework was designed for this transition from day one.
 
 ---
 
@@ -658,7 +658,7 @@ S3 Bucket (per environment)
 | Decision | Rationale | ADR |
 |----------|-----------|-----|
 | Four-module architecture (Foundation, Tools, Runtime, Governance) + BFF | Semantic separation of concerns without over-fragmentation. Each module maps to a distinct operational domain. | 0001 |
-| CLI-based resources via `null_resource` | The `hashicorp/aws` provider does not support AgentCore resources (validated through v5.100.0). CLI bridge with SSM persistence provides IaC semantics today. | 0002 |
+| CLI-based resources via `null_resource` | CLI bridge is retained only for resource families not yet stabilized on native provider paths; SSM persistence preserves IaC semantics during migration. | 0002 |
 | GitLab CI with Web Identity Federation | Eliminates long-lived AWS access keys. JWT-to-STS exchange scoped per environment. | 0003 |
 | S3 backend with native locking | `use_lockfile = true` (Terraform >= 1.10.0) replaces DynamoDB lock tables. Simpler, fewer resources. | 0004 |
 | Separate backends per environment | Blast radius containment. Wrong-workspace accidents physically cannot affect production. | 0006 |
