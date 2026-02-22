@@ -2,52 +2,7 @@
 
 ## Welcome
 
-This guide will get you from zero to deploying agents in under 30 minutes.
-
-## Prerequisites
-
-### Required
-- Git installed
-- Terraform >= 1.5.0 (use `terraform/.terraform-version` with tfenv)
-- AWS CLI configured
-- Python 3.12+
-- Text editor (VS Code recommended)
-
-### Optional
-- Docker (for local testing)
-- Go 1.20+ (for Terratest)
-- pre-commit (`uv tool install pre-commit` recommended on Windows)
-- TFLint
-- Checkov
-
-## Quick Start (5 Minutes)
-
-```bash
-# 1. Clone repository
-git clone <repo-url>
-cd <repo-name>
-cd terraform
-
-# 2. Install pre-commit hooks (optional but recommended)
-uv tool install pre-commit
-pre-commit install
-
-# 3. Validate everything works
-terraform init -backend=false
-terraform validate
-terraform fmt -check
-
-# 4. Run security scan
-checkov -d . --framework terraform --compact --config-file .checkov.yaml
-
-# 5. Test with example
-terraform plan \
-  -var-file=../examples/1-hello-world/terraform.tfvars \
-  -var="app_id=dev-sandbox" \
-  -var="lambda_architecture=arm64"
-```
-
-If all commands succeed, you're ready to develop!
+This guide covers the development workflow for contributors. For initial account setup and first deployment, see [SETUP.md](SETUP.md).
 
 ## Versioning
 

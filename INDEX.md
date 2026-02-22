@@ -28,7 +28,6 @@ A comprehensive, production-ready Terraform implementation of AWS Bedrock AgentC
 | `docs/archive/IMPLEMENTATION_PLAN.md` | Historical test & validation plan |
 | `docs/archive/README.old.md` | Legacy README snapshot |
 | `docs/archive/README_IMPROVEMENT_PLAN.md` | Historical README improvement notes |
-| `docs/archive/README_SUGGESTIONS_V2.md` | Historical README suggestions |
 | `docs/archive/DELIVERY_SUMMARY.txt` | Historical delivery summary |
 
 ### Audit Reports
@@ -401,6 +400,6 @@ This implementation provides a complete, modular, production-ready Terraform arc
 
 ---
 
-**Last Updated**: 2026-02-10
+**Last Updated**: 2026-02-22
 **Version**: 2.0.0
 **Status**: Production Ready ✅
