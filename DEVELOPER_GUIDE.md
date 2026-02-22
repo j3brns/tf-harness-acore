@@ -156,6 +156,10 @@ checkov -d . --framework terraform --compact --config-file .checkov.yaml
 
 # Lint
 tflint --recursive
+
+# Governance conformance (tags + wildcard policy exceptions)
+bash tests/validation/tags_test.sh
+python3 tests/validation/policy_wildcard_exceptions_test.py
 ```
 
 **Key Point**: You can validate everything locally without an AWS account!
