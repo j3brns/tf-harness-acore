@@ -68,12 +68,12 @@ output "agent_dashboard_name" {
 
 output "inference_profile_arn" {
   description = "ARN of the Bedrock application inference profile (null when enable_inference_profile = false)"
-  value       = var.enable_inference_profile ? aws_bedrock_inference_profile.agent[0].inference_profile_arn : null
+  value       = var.enable_inference_profile ? aws_bedrock_inference_profile.agent[0].arn : null
 }
 
 output "inference_profile_id" {
   description = "ID of the Bedrock application inference profile (null when enable_inference_profile = false)"
-  value       = var.enable_inference_profile ? aws_bedrock_inference_profile.agent[0].inference_profile_id : null
+  value       = var.enable_inference_profile ? aws_bedrock_inference_profile.agent[0].id : null
 }
 
 output "agent_dashboard_console_url" {

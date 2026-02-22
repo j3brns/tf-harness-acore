@@ -177,7 +177,7 @@ resource "aws_iam_role_policy" "workload_identity" {
             "bedrock:InvokeModelWithResponseStream",
             "bedrock:GetInferenceProfile"
           ]
-          Resource = aws_bedrock_inference_profile.agent[0].inference_profile_arn
+          Resource = aws_bedrock_inference_profile.agent[0].arn
         }
         ] : [
         {
