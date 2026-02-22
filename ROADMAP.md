@@ -28,7 +28,7 @@ This document outlines planned features and improvements for the Bedrock AgentCo
 
 ### Workstream A: Terraform Provider Novation (CLI -> Native)
 
-- [ ] **A0: Resource Coverage Matrix + Freeze Point**
+- [x] **A0: Resource Coverage Matrix + Freeze Point**
   * Build a source-of-truth matrix for each CLI-managed resource: `native-now`, `native-later`, `cli-required`.
   * Pin provider version and map migration candidates to exact resource names.
   * Record explicit non-goals (resources that must stay CLI for now).
