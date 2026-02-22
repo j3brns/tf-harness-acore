@@ -31,7 +31,7 @@ variable "agentcore_runtime_arn" {
 }
 
 variable "tags" {
-  description = "Common resource tags"
+  description = "Tags to apply to all resources. The root module always merges canonical tags (AppID, Environment, AgentName, ManagedBy, Owner) before passing this value."
   type        = map(string)
   default     = {}
 }

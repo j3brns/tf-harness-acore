@@ -33,8 +33,11 @@ provider "aws" {
       Terraform   = "true"
       Environment = var.environment
       Project     = "BedrockAgentCore"
-      # Note: Removed timestamp() as it causes non-idempotent plans
-      # Use lifecycle ignore_changes or external tagging if needed
+      # Canonical tag taxonomy (Issue #22) - applied to all AWS resources automatically.
+      AppID     = var.app_id != "" ? var.app_id : var.agent_name
+      AgentName = var.agent_name
+      ManagedBy = "terraform"
+      Owner     = var.owner != "" ? var.owner : (var.app_id != "" ? var.app_id : var.agent_name)
     }
   }
 }
@@ -48,6 +51,11 @@ provider "aws" {
       Terraform   = "true"
       Environment = var.environment
       Project     = "BedrockAgentCore"
+      # Canonical tag taxonomy (Issue #22) - applied to all AWS resources automatically.
+      AppID     = var.app_id != "" ? var.app_id : var.agent_name
+      AgentName = var.agent_name
+      ManagedBy = "terraform"
+      Owner     = var.owner != "" ? var.owner : (var.app_id != "" ? var.app_id : var.agent_name)
     }
   }
 }

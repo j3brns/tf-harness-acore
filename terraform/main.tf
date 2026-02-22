@@ -9,7 +9,7 @@ module "agentcore_foundation" {
   region         = local.agentcore_region
   bedrock_region = local.bedrock_region
   environment    = var.environment
-  tags           = var.tags
+  tags           = local.canonical_tags
 
   # Gateway configuration
   enable_gateway      = var.enable_gateway
@@ -40,7 +40,7 @@ module "agentcore_tools" {
 
   agent_name         = var.agent_name
   region             = local.agentcore_region
-  tags               = var.tags
+  tags               = local.canonical_tags
   log_retention_days = var.log_retention_days
 
   # Code interpreter
@@ -68,7 +68,7 @@ module "agentcore_runtime" {
   region         = local.agentcore_region
   bedrock_region = local.bedrock_region
   environment    = var.environment
-  tags           = var.tags
+  tags           = local.canonical_tags
 
   # Runtime configuration
   enable_runtime          = var.enable_runtime
@@ -88,7 +88,7 @@ module "agentcore_runtime" {
   inference_profile_name             = var.inference_profile_name
   inference_profile_model_source_arn = var.inference_profile_model_source_arn
   inference_profile_description      = var.inference_profile_description
-  inference_profile_tags             = var.inference_profile_tags
+  inference_profile_tags             = merge(local.canonical_tags, var.inference_profile_tags)
 
   # S3 deployment
   deployment_bucket_name = var.deployment_bucket_name
@@ -114,7 +114,7 @@ module "agentcore_governance" {
   agent_name     = var.agent_name
   region         = local.agentcore_region
   bedrock_region = local.bedrock_region
-  tags           = var.tags
+  tags           = local.canonical_tags
 
   # Policy engine
   enable_policy_engine   = var.enable_policy_engine
@@ -168,7 +168,7 @@ module "agentcore_bff" {
   region             = local.bff_region
   agentcore_region   = local.agentcore_region
   environment        = var.environment
-  tags               = var.tags
+  tags               = local.canonical_tags
   log_retention_days = var.log_retention_days
 
   # Auth Configuration
