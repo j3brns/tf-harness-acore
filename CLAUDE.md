@@ -386,6 +386,16 @@ For any Execution Issue, agents MUST complete the following finish sequence:
   - what is already complete,
   - exact next command(s) to advance the issue.
 
+### Rule 12.8.1: One Execution PR MUST Close One Execution Issue (MANDATORY)
+- Each Execution PR MUST map to exactly one Execution Issue as its primary closure target.
+- Execution PRs MUST include an explicit GitHub closing reference for that issue (for example `Closes #33`) in the PR body so merge closes the issue automatically when possible.
+- If a PR relates to additional issues, reference them without closing keywords unless they are intentionally being closed by the same PR.
+- After merge, agents MUST verify issue/PR state consistency:
+  - PR merged,
+  - target Execution Issue closed,
+  - issue status label transitioned to `done`.
+- If auto-close did not occur (for example missing closing keyword), agents MUST immediately close the issue and update labels/evidence in the same finish sequence.
+
 ### Rule 12.9: Tracker Issue Finish Protocol (MANDATORY)
 For Tracker Issues, agents are done when work is allocatable or fully coordinated:
 - child Execution Issues created/updated with Rule 12.1 structure,

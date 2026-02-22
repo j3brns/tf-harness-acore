@@ -684,6 +684,36 @@ suggest_next_worktree_name() {
   printf 'wt%d\n' "${max_num}"
 }
 
+suggest_worktree_name_for_issue() {
+  local issue_id="$1"
+  local base_dir="$2"
+  local preferred=""
+  local fallback=""
+
+  preferred="wt${issue_id}"
+  if [ ! -e "${base_dir%/}/${preferred}" ]; then
+    printf '%s\n' "${preferred}"
+    return 0
+  fi
+
+  # Fallback only when the issue-indexed folder already exists (for example, an
+  # existing worktree was already created for this issue).
+  fallback="$(suggest_next_worktree_name)"
+  printf '%s\n' "${fallback}"
+}
+
+suggest_next_ready_issue_number() {
+  # Best-effort convenience default for manual issue entry. Falls back silently
+  # when gh/repo/queue access is unavailable.
+  if ! refresh_ready_issue_queue "" >/dev/null 2>&1; then
+    return 1
+  fi
+  if [ "${#READY_ISSUE_NUMBERS[@]}" -eq 0 ]; then
+    return 1
+  fi
+  printf '%s\n' "${READY_ISSUE_NUMBERS[0]}"
+}
+
 validate_branch_parts() {
   local scope="$1"
   local issue_id="$2"
@@ -1056,14 +1086,13 @@ create_worktree() {
   local auto_claim="no"
   local ready_stream_label=""
   local derived_slug=""
+  local next_ready_issue_default=""
   local slug
   local branch_name
   local wt_path
   local start_ref
 
   base_dir="$(prompt_with_default "Base directory for linked worktrees" "${WORKTREE_BASE_DIR_DEFAULT}")"
-  suggested_name="$(suggest_next_worktree_name)"
-  worktree_name="$(prompt_with_default "Worktree folder name" "${suggested_name}")"
   issue_source="$(choose_issue_source)"
   if is_menu_back "${issue_source}"; then
     echo "Returning to menu."
@@ -1104,7 +1133,11 @@ create_worktree() {
       return 0
     fi
   else
-    issue_id="$(prompt_nonempty "GitHub issue number: ")"
+    if next_ready_issue_default="$(suggest_next_ready_issue_number)"; then
+      issue_id="$(prompt_with_default "GitHub issue number (default next ready)" "${next_ready_issue_default}")"
+    else
+      issue_id="$(prompt_nonempty "GitHub issue number: ")"
+    fi
     scope="$(choose_scope "task")"
     if is_menu_back "${scope}"; then
       echo "Returning to menu."
@@ -1116,6 +1149,9 @@ create_worktree() {
   if ! validate_branch_parts "${scope}" "${issue_id}" "${slug}"; then
     return 1
   fi
+
+  suggested_name="$(suggest_worktree_name_for_issue "${issue_id}" "${base_dir}")"
+  worktree_name="$(prompt_with_default "Worktree folder name (default wt${issue_id})" "${suggested_name}")"
 
   branch_name="wt/${scope}/${issue_id}-${slug}"
   if [[ ! "${branch_name}" =~ ${WORKTREE_BRANCH_REGEX} ]]; then
