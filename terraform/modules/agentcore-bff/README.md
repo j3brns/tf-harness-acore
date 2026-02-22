@@ -5,6 +5,7 @@ This module implements the **Serverless Token Handler Pattern** (ADR 0011) to se
 ## Architecture
 
 *   **Frontend**: S3 + CloudFront (SPA Hosting).
+    CloudFront rewrites extension-less SPA routes to `/index.html` at viewer-request time, while preserving `/api/*` and `/auth/*` origin status codes.
 *   **API**: Amazon API Gateway (REST).
 *   **Auth**: "Token Handler" Lambdas (Login/Callback) + DynamoDB Session Store.
     The request authorizer validates the session cookie against the stored session record and JWT tenant claims before allowing `/api/*` calls.
@@ -80,3 +81,7 @@ Useful outputs:
 ### 4. CORS Errors
 *   **Cause**: API Gateway not returning CORS headers.
 *   **Fix**: The module assumes CloudFront proxies everything (`/api/*`). Ensure you are accessing via the CloudFront URL, not the API Gateway URL directly (which has different origin).
+
+### 5. API 4xx Returning `index.html` (Regression Guard)
+*   **Cause**: Misconfigured CloudFront SPA fallback using distribution-wide `custom_error_response`.
+*   **Fix**: Keep SPA fallback on the default S3 behavior via the viewer-request CloudFront Function (`spa_route_rewrite`). Do not use distribution-wide `403/404 -> /index.html` rewrites.

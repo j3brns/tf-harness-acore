@@ -80,8 +80,25 @@ def test_apigw_access_logs():
     print("  PASS: APIGW Access Logging verified.")
 
 
+def test_cloudfront_spa_api_behavior_split():
+    print("[Senior Test 7] Verifying CloudFront SPA/API behavior split hardening...")
+    cf_tf_path = "terraform/modules/agentcore-bff/cloudfront.tf"
+    with open(cf_tf_path, "r") as f:
+        content = f.read()
+        if 'resource "aws_cloudfront_function" "spa_route_rewrite"' not in content:
+            raise Exception("FAILED: SPA route rewrite CloudFront Function missing")
+        if "function_association {" not in content or "event_type   = \"viewer-request\"" not in content:
+            raise Exception("FAILED: SPA viewer-request function association missing")
+        if "uri.indexOf(\"/api/\") === 0" not in content or "uri.indexOf(\"/auth/\") === 0" not in content:
+            raise Exception("FAILED: SPA rewrite function does not preserve /api or /auth paths")
+        if "custom_error_response {" in content:
+            raise Exception("FAILED: distribution-wide custom_error_response SPA fallback still present")
+
+    print("  PASS: CloudFront SPA/API behavior split hardening verified.")
+
+
 def test_s3_access_logging():
-    print("[Senior Test 7] Verifying Centralized S3 Access Logging...")
+    print("[Senior Test 8] Verifying Centralized S3 Access Logging...")
     foundation_s3_path = "terraform/modules/agentcore-foundation/s3.tf"
     runtime_s3_path = "terraform/modules/agentcore-runtime/s3.tf"
     bff_data_path = "terraform/modules/agentcore-bff/data.tf"
@@ -112,6 +129,7 @@ if __name__ == "__main__":
         test_alarm_actions()
         test_python_logging_hygiene()
         test_apigw_access_logs()
+        test_cloudfront_spa_api_behavior_split()
         test_s3_access_logging()
         print("\nAll Senior Engineer operational tests PASSED successfully.")
     except Exception as e:
