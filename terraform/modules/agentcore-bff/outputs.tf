@@ -1,6 +1,6 @@
 output "spa_url" {
-  description = "URL of the SPA (CloudFront)"
-  value       = var.enable_bff ? "https://${aws_cloudfront_distribution.bff[0].domain_name}" : ""
+  description = "URL of the SPA (CloudFront or Custom Domain)"
+  value       = var.enable_bff ? (var.custom_domain_name != "" ? "https://${var.custom_domain_name}" : "https://${aws_cloudfront_distribution.bff[0].domain_name}") : ""
 }
 
 output "api_url" {

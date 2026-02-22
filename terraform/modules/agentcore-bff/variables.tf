@@ -116,6 +116,18 @@ variable "waf_acl_arn" {
   default     = ""
 }
 
+variable "custom_domain_name" {
+  description = "Custom domain name for the CloudFront distribution"
+  type        = string
+  default     = ""
+}
+
+variable "acm_certificate_arn" {
+  description = "ACM Certificate ARN for the custom domain (must be in us-east-1)"
+  type        = string
+  default     = ""
+}
+
 variable "cloudfront_waf_acl_arn" {
   description = "ARN of a WAFv2 Web ACL (CLOUDFRONT scope, must be in us-east-1) to associate with the CloudFront distribution. Leave empty to disable WAF on CloudFront (default). Required format: arn:aws:wafv2:us-east-1:<account>:global/webacl/<name>/<id>."
   type        = string

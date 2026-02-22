@@ -77,6 +77,8 @@ resource "aws_cloudfront_distribution" "bff" {
   # Optional WAFv2 CLOUDFRONT-scope Web ACL association (must be in us-east-1)
   web_acl_id = var.cloudfront_waf_acl_arn != "" ? var.cloudfront_waf_acl_arn : null
 
+  aliases = var.custom_domain_name != "" ? [var.custom_domain_name] : []
+
   origin {
     domain_name              = aws_s3_bucket.spa[0].bucket_regional_domain_name
     origin_access_control_id = aws_cloudfront_origin_access_control.spa[0].id
@@ -184,7 +186,10 @@ resource "aws_cloudfront_distribution" "bff" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true
+    cloudfront_default_certificate = var.acm_certificate_arn == ""
+    acm_certificate_arn            = var.acm_certificate_arn != "" ? var.acm_certificate_arn : null
+    ssl_support_method             = var.acm_certificate_arn != "" ? "sni-only" : null
+    minimum_protocol_version       = var.acm_certificate_arn != "" ? "TLSv1.2_2021" : "TLSv1"
   }
 
   tags = var.tags
