@@ -70,8 +70,18 @@ else
     if [ "${ENFORCE_GH_ISSUE_LOOKUP}" = "true" ]; then
       if command -v gh >/dev/null 2>&1; then
         if [ -n "${GH_REPO}" ]; then
-          if ! gh api "repos/${GH_REPO}/issues/${ISSUE_ID}" >/dev/null 2>&1; then
-            ERRORS+=("branch issue id '${ISSUE_ID}' does not resolve via gh api for repo '${GH_REPO}'")
+          GH_API_ERR=""
+          if ! GH_API_ERR="$(gh api "repos/${GH_REPO}/issues/${ISSUE_ID}" 2>&1 >/dev/null)"; then
+            GH_API_ERR_LINE="$(printf '%s\n' "${GH_API_ERR}" | head -n 1)"
+            if [[ "${GH_API_ERR}" == *"Failed to log in"* ]] || [[ "${GH_API_ERR}" == *"token"*invalid* ]]; then
+              ERRORS+=("gh auth failed while validating branch issue id '${ISSUE_ID}' for repo '${GH_REPO}' (run 'gh auth login -h github.com')")
+            elif [[ "${GH_API_ERR}" == *"error connecting to api.github.com"* ]] || [[ "${GH_API_ERR}" == *"TLS handshake timeout"* ]] || [[ "${GH_API_ERR}" == *"timeout"* ]]; then
+              ERRORS+=("network error while validating branch issue id '${ISSUE_ID}' via gh api for repo '${GH_REPO}'")
+            elif [[ "${GH_API_ERR}" == *"HTTP 404"* ]] || [[ "${GH_API_ERR}" == *"Not Found"* ]]; then
+              ERRORS+=("branch issue id '${ISSUE_ID}' was not found via gh api for repo '${GH_REPO}'")
+            else
+              ERRORS+=("gh api validation failed for branch issue id '${ISSUE_ID}' in repo '${GH_REPO}': ${GH_API_ERR_LINE}")
+            fi
           fi
         else
           ERRORS+=("cannot resolve GitHub repo from origin URL; issue lookup could not be validated")

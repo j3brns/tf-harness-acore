@@ -1,4 +1,4 @@
-.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session push-main-both push-tag-both ci-status-both
+.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both ci-status-both
 
 # Variables
 ROOT_DIR := $(abspath .)
@@ -203,6 +203,9 @@ clean-outputs: ## Clean generated CLI output files
 # Development helpers
 preflight-session: ## Run startup preflight checks (worktree/branch/issue policy)
 	bash $(TERRAFORM_DIR)/scripts/session/preflight_startup.sh
+
+worktree: ## Interactive menu for linked worktree create/resume + preflight
+	bash $(TERRAFORM_DIR)/scripts/session/worktree.sh
 
 format-check: ## Check if files are properly formatted
 	terraform -chdir=$(TERRAFORM_DIR) fmt -check -recursive

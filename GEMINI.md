@@ -262,6 +262,11 @@ For all other resources, follow the decision framework (native provider first wh
 - Agents and humans MUST run `make preflight-session` at session start and before commit/push.
 - If preflight fails, do not proceed with edits/commits until resolved.
 
+### Rule 7.8: Worktree Finish & Cleanup
+- Do not remove a linked worktree until its branch is pushed and no local-only work remains.
+- After merge to `main`, agents SHOULD remove the linked worktree, delete the local branch, and run `git worktree prune`.
+- Worktree cleanup MUST NOT discard unmerged or unpushed changes.
+
 ---
 
 ## RULE 9: Discovery is EXPLICIT
@@ -312,6 +317,82 @@ AI Agents MUST create comprehensive GitHub issues. Every issue MUST include:
 - Every planned item in `ROADMAP.md` MUST have a corresponding GitHub Issue.
 - The Roadmap provides the **Strategic Vision**; Issues provide the **Execution Detail**.
 - When an issue is closed, the corresponding item in `ROADMAP.md` MUST be ticked.
+
+### Rule 12.3: Tracker Issues vs Execution Issues (MANDATORY)
+- A **Tracker Issue** coordinates a larger initiative (scope, sequencing, blockers, child issues, status rollup).
+- An **Execution Issue** is a single implementable work package assigned to one agent/worktree.
+- Agents MUST perform implementation work against an Execution Issue, not a Tracker Issue, unless the task is explicitly planning/docs-only.
+
+### Rule 12.4: Worktree Branch Issue ID MUST Match the Execution Issue
+- Linked worktree branch names (`wt/<scope>/<issue>-<slug>`) MUST use the **Execution Issue** number.
+- Tracker Issue numbers MUST NOT be used for implementation branches unless the work is planning/docs-only for the tracker itself.
+
+### Rule 12.5: One Agent / One Execution Issue / One Worktree
+- Each active coding agent MUST be assigned exactly one open Execution Issue at a time.
+- Each active Execution Issue MUST map to exactly one worktree and one branch.
+- Do not allocate parallel agents to tasks with high-overlap file paths unless explicitly coordinated.
+
+### Rule 12.6: Tracker-Agent Completion Criteria
+- An agent assigned to a Tracker Issue is done when the work is allocatable:
+  - child Execution Issues created/updated with full Rule 12.1 structure,
+  - dependencies and ordering documented,
+  - ready tasks labeled,
+  - active allocations recorded,
+  - blockers explicitly captured.
+- Tracker agents SHOULD stop after coordination outputs unless the tracker is explicitly a planning/docs implementation task.
+
+### Rule 12.7: Allocation Status Labels (Standard)
+- Use labels for execution state: `ready`, `in-progress`, `blocked`, `review`, `done`.
+- Optional stream labels (for example `a0`, `provider-matrix`, `freeze-point`) MAY be used for filtering and reporting.
+
+### Rule 12.8: Execution Issue Finish Protocol (MANDATORY)
+For any Execution Issue, agents MUST complete the following finish sequence:
+1. Run `make preflight-session`.
+2. Run issue-appropriate validation (and required repo checks for the touched scope).
+3. Commit focused changes with the issue number in the commit message.
+4. Push the worktree branch to `origin` (and other remotes only if required by team convention).
+5. Open or update a PR to `main`.
+6. Post a closeout comment on the issue including:
+   - summary of changes,
+   - validation commands run and outcomes,
+   - evidence links (PR, commit SHA, CI).
+7. Update issue labels/status (`in-progress` -> `review` or `done`).
+8. Close the issue only after merge unless the team workflow explicitly closes on PR creation.
+
+### Rule 12.9: Tracker Issue Finish Protocol (MANDATORY)
+For Tracker Issues, agents are done when work is allocatable or fully coordinated:
+- child Execution Issues created/updated with Rule 12.1 structure,
+- dependencies and ordering documented,
+- ready tasks labeled,
+- active allocations recorded,
+- blockers captured,
+- tracker checklist/status updated.
+Tracker agents SHOULD NOT perform implementation work unless the tracker is explicitly a planning/docs implementation task.
+
+### Rule 12.10: Definition of Done Must Be Explicit
+Every issue MUST define completion evidence:
+- required validation commands,
+- expected outcomes,
+- required docs updates,
+- closure condition (PR opened, PR merged, or release tag).
+
+### Rule 12.11: Label Hygiene for Queueing (MANDATORY)
+- The `ready` queue is a scheduling mechanism and MUST remain high-signal.
+- Issues used for agent allocation MUST maintain label hygiene before they are marked `ready`.
+- Every allocatable issue MUST have:
+  - exactly one issue-type label: `tracker` or `execution`,
+  - exactly one status label from: `ready`, `in-progress`, `blocked`, `review`, `done`.
+- Roadmap-planned issues MUST include a roadmap-aligned stream label (for example `a0`, `a1`, `b0`).
+- Priority labels are optional, but if used MUST be singular (for example one of `p0`, `p1`, `p2`, `p3`).
+- Do not use duplicate/synonym labels for the same meaning (for example multiple competing status labels).
+- Status transitions MUST remove the previous status label in the same update (for example `ready` -> `in-progress`).
+- An issue MUST NOT be labeled `ready` unless:
+  - Rule 12.1 structure is complete,
+  - dependencies/blockers are explicit,
+  - acceptance criteria are actionable,
+  - closure condition is stated,
+  - the issue is allocatable to one agent/worktree.
+- Trackers MAY be labeled `ready` only when they are ready for coordination work (not implementation execution) and the intended outcome is clear.
 
 ---
 

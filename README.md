@@ -244,6 +244,33 @@ make preflight-session
 
 The preflight source-of-truth is `terraform/scripts/session/preflight.policy`. It enforces branch/worktree guardrails and issue-linked worktree naming conventions.
 
+For an interactive linked-worktree helper (list/create/resume), use:
+
+```bash
+make worktree
+```
+
+The menu validates branch naming against the same policy regex, runs `make preflight-session` in the selected worktree, and can hand off into your selected agent/CLI in the correct worktree. For new worktrees, it can pull from the GitHub `ready` issue queue, order it by plan docs (default `ROADMAP.md` issue order), then by priority labels, then by creation time, auto-derive the branch slug from the selected issue title, suggest a branch `scope` namespace from issue labels/title (editable), and optionally auto-claim the selected issue (`ready` -> `in-progress`) after worktree creation and preflight pass. You can override queue plan sources with `WORKTREE_QUEUE_PLAN_FILES` (space-separated repo-relative files). On shell handoff, it lets you choose `gemini`, `claude`, or `codex`, choose `yolo`/equivalent mode or normal mode, choose `issue type` (execution or tracker), choose the expected `closure condition`, and choose `execute-now` or `print-only`. It then prints a boilerplate agent prompt plus the launch command (with selected worktree path and parsed issue number injected) and either executes it immediately or opens a shell without executing it.
+
+### Issue Queue Conventions (for `make worktree`)
+
+The `ready` queue is only useful when issue metadata is consistent. Recommended conventions:
+
+- **Issue type labels**: `tracker`, `execution`
+- **Status labels**: `ready`, `in-progress`, `blocked`, `review`, `done`
+- **Stream labels (roadmap-aligned)**: `a0`, `a1`, `b0`, etc.
+- **Domain labels (optional)**: `provider`, `docs`, `runtime`, `ci`, `release`
+- **Branch scope** (`wt/<scope>/<issue>-<slug>`): a branch namespace only; use the primary touched area (`provider`, `docs`, `runtime`, etc.). `make worktree` now suggests this from labels/title, and you can override it.
+- **Priority labels (optional)**: `p0`, `p1`, `p2`, `p3`
+
+Queue ordering for `make worktree` create flow:
+
+1. Plan-doc order (`ROADMAP.md` by default, or `WORKTREE_QUEUE_PLAN_FILES`)
+2. Priority labels (`p0` before `p1`, etc.)
+3. `createdAt` (fallback only)
+
+GitHub issue templates are provided for both tracker and execution issues under `.github/ISSUE_TEMPLATE/` and are aligned with Rule 12 requirements (Context, Technical Detail, Tasks, Acceptance Criteria, and closeout evidence).
+
 ### Windows Support
 
 Terraform pre-commit hooks require bash, which makes them hostile to native Windows development. `validate_windows.bat` provides an alternative: it locates your Terraform binary (checking PATH, then falling back to common install locations), runs `terraform fmt -check -recursive`, and then invokes pre-commit with the bash-dependent hooks skipped. Pass `--fix` to auto-format instead of just checking. The script finds pre-commit through multiple strategies -- `uv tool run`, standalone binary, `py -3.12 -m pre_commit` -- so it works regardless of how Python is installed.

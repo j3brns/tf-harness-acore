@@ -452,6 +452,7 @@ git push gitlab v0.1.0
 
 ### DO
 - Run `make preflight-session` at session start and before commit/push
+- Use `make worktree` to create/resume linked worktrees with enforced naming + preflight
 - Run `terraform validate` before every commit
 - Use pre-commit hooks
 - Test examples after module changes
