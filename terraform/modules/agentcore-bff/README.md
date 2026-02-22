@@ -7,6 +7,7 @@ This module implements the **Serverless Token Handler Pattern** (ADR 0011) to se
 *   **Frontend**: S3 + CloudFront (SPA Hosting).
 *   **API**: Amazon API Gateway (REST).
 *   **Auth**: "Token Handler" Lambdas (Login/Callback) + DynamoDB Session Store.
+    The request authorizer validates the session cookie against the stored session record and JWT tenant claims before allowing `/api/*` calls.
 *   **Proxy**: Lambda Proxy to AgentCore Runtime (`InvokeAgentRuntime`) with streaming response support (Node.js runtime).
 
 ## Usage
@@ -48,7 +49,7 @@ The proxy streams `application/x-ndjson` where each line is a JSON object:
 
 ### 2. 403 Forbidden on `/api/chat`
 *   **Cause**: Invalid or expired Session Cookie.
-*   **Fix**: Clear browser cookies. Check DynamoDB table for session existence and TTL. Check `agentcore-bff-authz-*` logs.
+*   **Fix**: Clear browser cookies. Check DynamoDB table for session existence and TTL. Check `agentcore-bff-authz-*` logs. The authorizer also denies if the cookie tenant/session does not match the stored session or JWT tenant claim.
 
 ### 3. SPA 403 Access Denied
 *   **Cause**: CloudFront OAC permission issue or S3 bucket policy sync delay.

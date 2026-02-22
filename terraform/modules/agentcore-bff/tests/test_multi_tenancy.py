@@ -76,6 +76,7 @@ def test_tenant_propagation_in_authorizer():
     event = {"methodArn": "arn:aws:execute-api:...", "headers": {"Cookie": "session_id=tenant-123:sess-123"}}
 
     # Mock DynamoDB lookup
+    mock_id_token = create_mock_jwt({"tid": "tenant-123", "sub": "user-456", "email": "test@example.com"})
     authorizer.table = MagicMock()
     authorizer.table.get_item.return_value = {
         "Item": {
@@ -83,7 +84,9 @@ def test_tenant_propagation_in_authorizer():
             "sk": "SESSION#sess-123",
             "app_id": "test-app",
             "tenant_id": "tenant-123",
+            "session_id": "sess-123",
             "access_token": "mock_access",
+            "id_token": mock_id_token,
             "expires_at": 9999999999,  # Far future
         }
     }
@@ -99,13 +102,44 @@ def test_tenant_propagation_in_authorizer():
         assert policy.get("context", {}).get("tenant_id") == "tenant-123"
         assert policy.get("context", {}).get("app_id") == "test-app"
         assert policy.get("context", {}).get("session_id") == "sess-123"
+        assert policy.get("context", {}).get("principal_sub") == "user-456"
+        assert policy.get("context", {}).get("principal_email") == "test@example.com"
         print("  PASS: authorizer performed composite PK lookup and propagated full context.")
+
+
+def test_authorizer_denies_tenant_claim_mismatch():
+    print("Testing authorizer denies cookie tenant mismatch with JWT tenant claim...")
+
+    event = {"methodArn": "arn:aws:execute-api:...", "headers": {"Cookie": "session_id=tenant-123:sess-123"}}
+
+    authorizer.table = MagicMock()
+    authorizer.table.get_item.return_value = {
+        "Item": {
+            "pk": "APP#test-app#TENANT#tenant-123",
+            "sk": "SESSION#sess-123",
+            "app_id": "test-app",
+            "tenant_id": "tenant-123",
+            "session_id": "sess-123",
+            "access_token": "mock_access",
+            "id_token": create_mock_jwt({"tid": "tenant-999", "sub": "user-456"}),
+            "expires_at": 9999999999,
+        }
+    }
+
+    with patch("authorizer.APP_ID", "test-app"):
+        policy = authorizer.lambda_handler(event, None)
+
+        statement = policy["policyDocument"]["Statement"][0]
+        assert statement["Effect"] == "Deny"
+        assert "context" not in policy
+        print("  PASS: authorizer denied request when JWT tenant claim mismatched cookie/session tenant.")
 
 
 if __name__ == "__main__":
     try:
         test_tenant_extraction_in_callback()
         test_tenant_propagation_in_authorizer()
+        test_authorizer_denies_tenant_claim_mismatch()
         print("\nMulti-tenancy North-South Join tests passed successfully.")
     except Exception as e:
         print(f"\nUNIT TEST FAILED: {e}")
