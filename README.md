@@ -11,9 +11,9 @@ A hardened Terraform framework for deploying enterprise AI agents on AWS Bedrock
 
 The North-South Join is a hierarchical identity model that anchors every request to three coordinates.
 
--**North** is the entry point: the AppID, materialized as an API Gateway.
--**Middle** is the identity layer: the TenantID, extracted from the OIDC token and validated by a Lambda Authorizer against DynamoDB.
--**South** is the compute layer: the AgentName, where the Bedrock Runtime Engine executes agent logic.
+- **North** is the entry point: the AppID, materialized as an API Gateway.
+- **Middle** is the identity layer: the TenantID, extracted from the OIDC token and validated by a Lambda Authorizer against DynamoDB.
+- **South** is the compute layer: the AgentName, where the Bedrock Runtime Engine executes agent logic.
 
 Data partitioning follows the same hierarchy -- DynamoDB composite keys use `APP#{app_id}#TENANT#{tenant_id}`, S3 paths use `{app_id}/{tenant_id}/{agent_name}/memory/`, and CloudWatch log groups nest under `/aws/bedrock/agentcore/{resource-type}/{agent-name}`.
 
@@ -60,7 +60,7 @@ graph TD
     Middle -.-> CW
 ```
 
-> The `hashicorp/aws` provider does not yet support AgentCore resources -- verified through v5.100.0.
+> The `hashicorp/aws` provider is pinned to `~> 6.33.0` (freeze point for Workstream A). The MCP gateway and gateway targets use native `aws_bedrockagentcore_*` resources. Workload identity, runtime, memory, browser, code interpreter, policy engine, evaluators, and credential providers use the CLI bridge pattern pending stable native coverage.
 
 This framework bridges that gap with a stateful CLI bridge pattern that wraps every AgentCore control-plane operation in a lifecycle manager backed by SSM Parameter Store, giving you full infrastructure-as-code semantics today and a clean `terraform import` migration path when native resources arrive.
 
@@ -119,9 +119,9 @@ graph TD
 
 | Module | Domain | Key Resources | Feature Toggles |
 |--------|--------|---------------|-----------------|
-| `agentcore-foundation` | Gateway, Identity, Observability, WAF | MCP Gateway, Gateway Targets, Workload Identity, CloudWatch Log Groups, X-Ray Sampling Rules, WAF Web ACL, IAM Roles | `enable_gateway`, `enable_identity`, `enable_observability`, `enable_xray`, `enable_waf` |
+| `agentcore-foundation` | Gateway, Identity, Observability, WAF | MCP Gateway, Gateway Targets, Workload Identity, CloudWatch Log Groups, X-Ray Sampling Rules, WAF Web ACL, IAM Roles | `enable_gateway`, `enable_identity`, `enable_observability`, `enable_xray`, `enable_waf`, `enable_inference_profile` |
 | `agentcore-tools` | Code Interpreter, Browser | Python sandbox (PUBLIC/SANDBOX/VPC modes), Web browser with optional session recording to S3 | `enable_code_interpreter`, `enable_browser`, `enable_browser_recording` |
-| `agentcore-runtime` | Runtime, Memory, Packaging | Agent execution runtime, S3 deployment artifacts bucket, OCDS two-stage build, short-term and long-term memory, application inference profiles | `enable_runtime`, `enable_memory`, `enable_packaging`, `enable_inference_profile` |
+| `agentcore-runtime` | Runtime, Memory, Packaging | Agent execution runtime, S3 deployment artifacts bucket, OCDS two-stage build, short-term and long-term memory | `enable_runtime`, `enable_memory`, `enable_packaging` |
 | `agentcore-governance` | Policy Engine, Guardrails, Evaluations | Cedar policy enforcement, Bedrock Guardrails (content/PII filters), model-based evaluation (TOOL_CALL/REASONING/RESPONSE) | `enable_policy_engine`, `enable_guardrails`, `enable_evaluations` |
 | `agentcore-bff` | Token Handler, SPA Hosting, Streaming Proxy | API Gateway REST, Lambda Authorizer, OIDC Handler Lambda, DynamoDB session store, CloudFront distribution, SigV4 streaming proxy (15-min timeout), optional S3 shadow audit logs with Athena/Glue query metadata | `enable_bff`, `enable_bff_audit_log_persistence` |
 
@@ -388,6 +388,11 @@ Notes:
 | `enable_waf` | `bool` | `false` | Enable WAF protection for API Gateway. |
 | `enable_kms` | `bool` | `false` | Enable customer-managed KMS encryption. |
 | `kms_key_arn` | `string` | `""` | KMS key ARN (required when `enable_kms` is true). |
+| `enable_inference_profile` | `bool` | `false` | Create a Bedrock application inference profile and scope gateway and workload identity IAM to its ARN. |
+| `inference_profile_name` | `string` | `""` | Name for the inference profile (required when `enable_inference_profile = true`). |
+| `inference_profile_model_source_arn` | `string` | `""` | Foundation model or system-defined inference profile ARN that the application profile wraps. |
+| `inference_profile_description` | `string` | `""` | Optional description (max 200 chars). |
+| `inference_profile_tags` | `map(string)` | `{}` | Additional tags applied to the profile (merged with `var.tags`). |
 
 ### Tools
 

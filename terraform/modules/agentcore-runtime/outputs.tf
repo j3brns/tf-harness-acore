@@ -48,8 +48,8 @@ output "packaging_log_group_name" {
 }
 
 output "inference_profile_arn" {
-  description = "Bedrock application inference profile ARN"
-  value       = var.enable_inference_profile ? try(data.external.inference_profile_output[0].result.inferenceProfileArn, null) : null
+  description = "Bedrock application inference profile ARN (passed through from agentcore-foundation)"
+  value       = var.inference_profile_arn != "" ? var.inference_profile_arn : null
   sensitive   = true
 }
 

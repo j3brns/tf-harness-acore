@@ -51,7 +51,7 @@ output "agentcore_runtime_arn" {
 
 output "agentcore_inference_profile_arn" {
   description = "Bedrock application inference profile ARN for per-agent cost isolation"
-  value       = module.agentcore_runtime.inference_profile_arn
+  value       = module.agentcore_foundation.inference_profile_arn
   sensitive   = true
 }
 

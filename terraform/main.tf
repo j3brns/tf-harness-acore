@@ -42,6 +42,13 @@ module "agentcore_foundation" {
   # Encryption
   enable_kms  = var.enable_kms
   kms_key_arn = var.kms_key_arn
+
+  # Inference profile (created here for IAM policy scoping; ARN passed to runtime)
+  enable_inference_profile           = var.enable_inference_profile
+  inference_profile_name             = var.inference_profile_name
+  inference_profile_model_source_arn = var.inference_profile_model_source_arn
+  inference_profile_description      = var.inference_profile_description
+  inference_profile_tags             = merge(local.canonical_tags, var.inference_profile_tags)
 }
 
 module "agentcore_tools" {
@@ -92,12 +99,8 @@ module "agentcore_runtime" {
   enable_memory = var.enable_memory
   memory_type   = var.memory_type
 
-  # Inference profile (Bedrock)
-  enable_inference_profile           = var.enable_inference_profile
-  inference_profile_name             = var.inference_profile_name
-  inference_profile_model_source_arn = var.inference_profile_model_source_arn
-  inference_profile_description      = var.inference_profile_description
-  inference_profile_tags             = merge(local.canonical_tags, var.inference_profile_tags)
+  # Inference profile ARN (profile is created in agentcore_foundation; passed here for SSM persistence)
+  inference_profile_arn = module.agentcore_foundation.inference_profile_arn
 
   # S3 deployment
   deployment_bucket_name = var.deployment_bucket_name
