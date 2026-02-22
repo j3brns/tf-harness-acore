@@ -1,0 +1,14 @@
+{
+  "name": "agentcore-frontend-tests",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test:accessibility": "playwright test",
+    "test:accessibility:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.1",
+    "@playwright/test": "^1.49.0",
+    "http-server": "^14.1.1"
+  }
+}

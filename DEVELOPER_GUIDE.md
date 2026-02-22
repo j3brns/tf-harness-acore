@@ -413,6 +413,7 @@ make test-all
 # Or individually:
 make test-validate
 make test-security
+make test-frontend
 ```
 
 ## Debugging
