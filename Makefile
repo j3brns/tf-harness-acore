@@ -105,6 +105,36 @@ check-openapi-client: ## Verify generated MCP Tools TypeScript client matches Op
 
 # Module management
 module-list: ## List all modules
+docs: generate-openapi generate-openapi-client ## Generate all documentation (Terraform + OpenAPI + TS client)
+	@echo "Generating Terraform documentation..."
+	terraform-docs markdown $(TERRAFORM_DIR) > docs/terraform.md
+	@echo "✓ Documentation generated to docs/terraform.md"
+
+generate-openapi: ## Generate OpenAPI spec from MCP tools registry
+	@echo "Generating OpenAPI spec..."
+	python3 terraform/scripts/generate_mcp_openapi.py
+	@echo "✓ OpenAPI spec generated to docs/api/mcp-tools-v1.openapi.json"
+
+generate-openapi-client: ## Generate typed TypeScript client from MCP Tools OpenAPI spec
+	@echo "Generating typed MCP Tools TypeScript client..."
+	python3 terraform/scripts/generate_mcp_typescript_client.py
+	@echo "✓ Typed client generated to docs/api/mcp-tools-v1.client.ts"
+
+check-openapi-client: ## Verify generated MCP Tools TypeScript client matches OpenAPI spec
+	@echo "Checking MCP Tools TypeScript client drift..."
+	python3 terraform/scripts/generate_mcp_typescript_client.py --check
+	@echo "✓ MCP Tools TypeScript client is in sync"
+
+openapi-contract-diff: ## Generate OpenAPI contract diff/changelog summary (OLD=path [NEW=path] [FORMAT=markdown|json] [FAIL_ON_BREAKING=1])
+	@test -n "$(OLD)" || { echo "ERROR: Usage: make openapi-contract-diff OLD=<baseline-openapi.json> [NEW=docs/api/mcp-tools-v1.openapi.json]"; exit 1; }
+	python3 terraform/scripts/openapi_contract_diff.py \
+		--old "$(OLD)" \
+		--new "$(if $(NEW),$(NEW),docs/api/mcp-tools-v1.openapi.json)" \
+		--format "$(if $(FORMAT),$(FORMAT),markdown)" \
+		$(if $(FAIL_ON_BREAKING),--fail-on-breaking,)
+
+# Module management
+module-list: ## List all modules
 	@echo "AgentCore Modules:"
 	@for module in $(MODULES); do \
 		echo "  - terraform/modules/$$module"; \

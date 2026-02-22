@@ -60,6 +60,79 @@ jobs:
       - name: Ensure generated OpenAPI artifact is committed
         run: git diff --exit-code -- docs/api/mcp-tools-v1.openapi.json
 
+  openapi-contract-changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: OpenAPI contract diff classifier unit test
+        run: python3 -m unittest terraform/tests/validation/test_openapi_contract_diff.py
+      - name: Resolve OpenAPI diff baseline
+        id: openapi-baseline
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          REF_NAME: ${{ github.ref_name }}
+          REF: ${{ github.ref }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          SPEC_PATH="docs/api/mcp-tools-v1.openapi.json"
+          BASE_SPEC="${RUNNER_TEMP}/openapi-contract-base.json"
+          BASELINE_LABEL=""
+
+          if [ "$EVENT_NAME" = "pull_request" ] && [ -n "$BASE_REF" ]; then
+            git fetch origin "$BASE_REF" --depth=1
+            if git cat-file -e "origin/$BASE_REF:$SPEC_PATH" 2>/dev/null; then
+              git show "origin/$BASE_REF:$SPEC_PATH" > "$BASE_SPEC"
+              BASELINE_LABEL="origin/$BASE_REF:$SPEC_PATH"
+            fi
+          elif [[ "$REF" == refs/tags/* ]]; then
+            PREV_TAG="$(git describe --tags --abbrev=0 "${SHA}^" 2>/dev/null || true)"
+            if [ -n "$PREV_TAG" ] && git cat-file -e "$PREV_TAG:$SPEC_PATH" 2>/dev/null; then
+              git show "$PREV_TAG:$SPEC_PATH" > "$BASE_SPEC"
+              BASELINE_LABEL="$PREV_TAG:$SPEC_PATH"
+            fi
+          else
+            if git rev-parse --verify HEAD^ >/dev/null 2>&1 && git cat-file -e "HEAD^:$SPEC_PATH" 2>/dev/null; then
+              git show "HEAD^:$SPEC_PATH" > "$BASE_SPEC"
+              BASELINE_LABEL="HEAD^:$SPEC_PATH"
+            fi
+          fi
+
+          if [ -n "$BASELINE_LABEL" ]; then
+            echo "has_baseline=true" >> "$GITHUB_OUTPUT"
+            echo "baseline_path=$BASE_SPEC" >> "$GITHUB_OUTPUT"
+            echo "baseline_label=$BASELINE_LABEL" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_baseline=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Generate OpenAPI contract diff summary
+        if: steps.openapi-baseline.outputs.has_baseline == 'true'
+        env:
+          BASELINE_PATH: ${{ steps.openapi-baseline.outputs.baseline_path }}
+          BASELINE_LABEL: ${{ steps.openapi-baseline.outputs.baseline_label }}
+          CANDIDATE_LABEL: ${{ github.sha }}:docs/api/mcp-tools-v1.openapi.json
+        run: |
+          set -euo pipefail
+          python3 terraform/scripts/openapi_contract_diff.py \
+            --old "$BASELINE_PATH" \
+            --new docs/api/mcp-tools-v1.openapi.json \
+            --old-label "$BASELINE_LABEL" \
+            --new-label "$CANDIDATE_LABEL" \
+            --format markdown \
+            > "${RUNNER_TEMP}/openapi-contract-diff.md"
+          cat "${RUNNER_TEMP}/openapi-contract-diff.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: OpenAPI contract diff summary skipped
+        if: steps.openapi-baseline.outputs.has_baseline != 'true'
+        run: |
+          {
+            echo "## OpenAPI Contract Diff Summary"
+            echo
+            echo "No baseline spec was available for comparison in this run."
+          } >> "$GITHUB_STEP_SUMMARY"
+
   governance-conformance:
     runs-on: ubuntu-latest
     steps:

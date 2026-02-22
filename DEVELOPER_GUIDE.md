@@ -153,6 +153,52 @@ Notes:
 - If Terraform outputs are unavailable in the current worktree, pass `--url https://.../chat` explicitly.
 
 #### Frontend Component Library (React + Tailwind, No Bundler)
+To verify the committed typed client matches the current OpenAPI spec (drift check used in CI):
+
+```bash
+make check-openapi-client
+```
+
+To generate a human-readable OpenAPI contract diff/changelog summary against a baseline spec (for PR review or release notes prep):
+
+```bash
+# Compare current committed spec to the default branch version
+git show origin/main:docs/api/mcp-tools-v1.openapi.json > .scratch/mcp-tools-v1.openapi.base.json
+make openapi-contract-diff OLD=.scratch/mcp-tools-v1.openapi.base.json
+```
+
+Classification rules used by the diff summary:
+- **Potentially breaking**: removed paths/operations, removed request properties, new required properties, type/response schema changes, operationId changes
+- **Additive / relaxed**: new paths/operations, new optional request properties, newly optional fields, added responses
+- **Documentation-only**: summary/description/tag metadata wording changes
+
+Generated artifacts:
+- `docs/api/mcp-tools-v1.openapi.json`
+- `docs/api/mcp-tools-v1.client.ts`
+
+The OpenAPI contract diff/changelog summary is generated on demand (local via `make openapi-contract-diff`) and in CI as a job summary for PR/tag review. It is not committed as a static artifact.
+
+These artifacts can be used by the Web UI and integrators to consume a consistent tool-calling contract without ad hoc request code.
+
+#### Streaming Load Tester (Issue #32)
+
+For deployed BFF environments, use the automated streaming load tester to validate the 15-minute (900s) response-streaming path and capture evidence for issue/PR closeout:
+
+```bash
+# Direct API Gateway invoke URL (terraform output agentcore_bff_api_url + /chat)
+make streaming-load-test ARGS='--session-cookie tenant-a:session-123 --duration-seconds 900 --json-summary --verbose'
+
+# CloudFront path (/api/chat) instead of direct API Gateway
+make streaming-load-test ARGS='--use-spa-url --session-cookie tenant-a:session-123 --duration-seconds 900'
+```
+
+Notes:
+- The tester sends a default prompt that instructs a long-running mock tool to emit heartbeat updates.
+- Override with `--prompt "..."` if your test agent uses a different mock tool contract.
+- PASS criteria are configurable (`--min-stream-seconds`, `--min-delta-events`, `--allow-non-ndjson`).
+- If Terraform outputs are unavailable in the current worktree, pass `--url https://.../chat` explicitly.
+
+#### Frontend Component Library (React + Tailwind, No Bundler)
 
 The SPA template and the integrated example now ship with a reusable frontend component library:
 
