@@ -236,9 +236,26 @@ make watch   # auto-restart on file changes (inotifywait)
 
 ### The Makefile
 
-The root Makefile exposes the full development surface through forty-odd targets. `make quickstart` gets a new team member from clone to validated in under a minute. `make plan-dev` through `make plan-research` let you plan against any example configuration without remembering tfvars paths. `make test-all` runs every Terraform and Python validation in sequence. `make security-scan` runs Checkov. `make logs-gateway` through `make logs-evaluator` tail CloudWatch logs per component. `make docs` regenerates terraform-docs plus MCP OpenAPI/typed-client artifacts, `make generate-openapi-client` regenerates the TypeScript SDK from the MCP OpenAPI spec, and `make check-openapi-client` validates generated-client drift. `make debug` runs a plan with `TF_LOG=DEBUG` for when things go sideways.
+The root Makefile exposes the full development surface through forty-odd targets. `make quickstart` gets a new team member from clone to validated in under a minute. `make plan-dev` through `make plan-research` let you plan against any example configuration without remembering tfvars paths. `make test-all` runs every Terraform and Python validation in sequence. `make security-scan` runs Checkov. `make logs-gateway` through `make logs-evaluator` tail CloudWatch logs per component. `make docs` regenerates terraform-docs plus MCP OpenAPI/typed-client artifacts, `make generate-openapi-client` regenerates the TypeScript SDK from the MCP OpenAPI spec, and `make check-openapi-client` validates generated-client drift. `make streaming-load-test` runs the automated NDJSON streaming connectivity/load tester for validating the 15-minute (900s) streaming wall through the BFF proxy. `make debug` runs a plan with `TF_LOG=DEBUG` for when things go sideways.
 
 No target requires AWS credentials except those that explicitly deploy or read live infrastructure. Formatting, validation, security scanning, linting, and Python unit tests all run locally and offline.
+
+### Streaming Wall Verification (Issue #32)
+
+To validate long-lived response streaming through the BFF proxy, use the automated CLI tester:
+
+```bash
+# Uses terraform output agentcore_bff_api_url and appends /chat
+make streaming-load-test ARGS='--session-cookie tenant-a:session-123 --duration-seconds 900 --verbose'
+```
+
+The tester validates:
+- HTTP `200` response status
+- NDJSON streaming content type (`application/x-ndjson`)
+- minimum stream duration (defaults to `--duration-seconds`)
+- minimum delta event count (defaults to `1`)
+
+Use `--use-spa-url` when targeting CloudFront (`/api/chat`) instead of the direct API Gateway invoke URL, and `--json-summary` for evidence artifacts in issue/PR closeout comments.
 
 ### Pre-commit Enforcement
 

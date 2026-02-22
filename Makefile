@@ -1,4 +1,4 @@
-.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both ci-status-both
+.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both ci-status-both streaming-load-test
 
 # Variables
 ROOT_DIR := $(abspath .)
@@ -191,6 +191,9 @@ test-python-coverage: ## Run Python tests with coverage
 
 test-all: test test-python ## Run all tests (Terraform + Python)
 	@echo "✓ All tests passed"
+
+streaming-load-test: ## Run BFF/AgentCore streaming load tester (pass ARGS='...')
+	python3 terraform/scripts/streaming_load_tester.py $(ARGS)
 
 # Logging and monitoring
 logs-gateway: ## Tail gateway logs
