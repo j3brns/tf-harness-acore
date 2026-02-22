@@ -1,17 +1,17 @@
 output "gateway_id" {
   description = "ID of the MCP gateway"
-  value       = var.enable_gateway ? data.aws_ssm_parameter.gateway_id[0].value : null
+  value       = local.gateway_id
 }
 
 output "gateway_arn" {
   description = "ARN of the MCP gateway"
-  value       = var.enable_gateway ? data.aws_ssm_parameter.gateway_arn[0].value : null
+  value       = local.gateway_arn
   sensitive   = true
 }
 
 output "gateway_endpoint" {
   description = "Endpoint URL of the MCP gateway"
-  value       = var.enable_gateway ? data.aws_ssm_parameter.gateway_endpoint[0].value : null
+  value       = local.gateway_endpoint
 }
 
 output "gateway_role_arn" {

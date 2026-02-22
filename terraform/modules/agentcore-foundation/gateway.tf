@@ -1,9 +1,65 @@
 # Note: Using AWS-managed encryption (SSE-S3/AES256) instead of customer-managed KMS
 # This simplifies operations while maintaining security through AWS's default encryption
 
-# MCP Gateway - CLI-based provisioning with SSM Persistence Pattern (Rule 5)
+# MCP Gateway - Pilot Native Resource (Workstream A)
+resource "aws_bedrockagentcore_gateway" "this" {
+  count = var.use_native_gateway && var.enable_gateway ? 1 : 0
+
+  name            = var.gateway_name != "" ? var.gateway_name : "${var.agent_name}-gateway"
+  role_arn        = aws_iam_role.gateway[0].arn
+  protocol_type   = "MCP"
+  authorizer_type = "AWS_IAM"
+
+  protocol_configuration {
+    mcp {
+      search_type        = var.gateway_search_type
+      supported_versions = var.gateway_mcp_versions
+    }
+  }
+
+  tags = var.tags
+
+  depends_on = [
+    aws_iam_role.gateway,
+    aws_iam_role_policy.gateway
+  ]
+}
+
+# MCP Gateway Targets - Pilot Native Resource (Workstream A)
+resource "aws_bedrockagentcore_gateway_target" "this" {
+  for_each = var.use_native_gateway && var.enable_gateway ? var.mcp_targets : {}
+
+  name               = each.value.name
+  gateway_identifier = aws_bedrockagentcore_gateway.this[0].gateway_id
+
+  target_configuration {
+    mcp {
+      lambda {
+        lambda_arn = each.value.lambda_arn
+        tool_schema {
+          inline_payload {
+            name        = "mcp_server"
+            description = "MCP Protocol Server"
+            input_schema {
+              type = "object"
+            }
+          }
+        }
+      }
+    }
+  }
+
+  # Use Gateway IAM role by default
+  credential_provider_configuration {
+    gateway_iam_role {}
+  }
+
+  depends_on = [aws_bedrockagentcore_gateway.this]
+}
+
+# MCP Gateway - Legacy CLI-based provisioning (deprecated)
 resource "null_resource" "gateway" {
-  count = var.enable_gateway ? 1 : 0
+  count = !var.use_native_gateway && var.enable_gateway ? 1 : 0
 
   triggers = {
     agent_name    = var.agent_name
@@ -82,31 +138,31 @@ resource "null_resource" "gateway" {
   ]
 }
 
-# Data source to read the ID from SSM (Rule 5.1)
+# Data source to read the ID from SSM (Legacy CLI Bridge)
 data "aws_ssm_parameter" "gateway_id" {
-  count = var.enable_gateway ? 1 : 0
+  count = !var.use_native_gateway && var.enable_gateway ? 1 : 0
   name  = "/agentcore/${var.agent_name}/gateway/id"
 
   depends_on = [null_resource.gateway]
 }
 
 data "aws_ssm_parameter" "gateway_arn" {
-  count = var.enable_gateway ? 1 : 0
+  count = !var.use_native_gateway && var.enable_gateway ? 1 : 0
   name  = "/agentcore/${var.agent_name}/gateway/arn"
 
   depends_on = [null_resource.gateway]
 }
 
 data "aws_ssm_parameter" "gateway_endpoint" {
-  count = var.enable_gateway ? 1 : 0
+  count = !var.use_native_gateway && var.enable_gateway ? 1 : 0
   name  = "/agentcore/${var.agent_name}/gateway/endpoint"
 
   depends_on = [null_resource.gateway]
 }
 
-# Gateway MCP Targets - CLI-based provisioning
+# Gateway MCP Targets - Legacy CLI-based provisioning (deprecated)
 resource "null_resource" "gateway_target" {
-  for_each = var.enable_gateway ? var.mcp_targets : {}
+  for_each = !var.use_native_gateway && var.enable_gateway ? var.mcp_targets : {}
 
   triggers = {
     agent_name = var.agent_name
