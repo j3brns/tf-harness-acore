@@ -172,14 +172,15 @@ resource "aws_iam_role_policy" "workload_identity" {
           # No wildcard resource; profile tags carry cost/quota attribution.
           Sid    = "InvokeViaInferenceProfile"
           Effect = "Allow"
-          Action = [
+          Action = tolist([
             "bedrock:InvokeModel",
             "bedrock:InvokeModelWithResponseStream",
             "bedrock:GetInferenceProfile"
-          ]
+          ])
           Resource = aws_bedrock_inference_profile.agent[0].arn
         }
-        ] : [
+      ] : [],
+      var.enable_inference_profile ? [] : [
         {
           # Fallback path (enable_inference_profile = false): broad ABAC-scoped grant.
           # Rule 14.3 ABAC: StringEqualsIfExists is required because AWS-managed resources
@@ -188,7 +189,7 @@ resource "aws_iam_role_policy" "workload_identity" {
           # (runtimes, gateways, memory) the condition enforces agent-level isolation.
           Sid      = "BedrockABACFallback"
           Effect   = "Allow"
-          Action   = ["bedrock:*"]
+          Action   = tolist(["bedrock:*"])
           Resource = "*"
           Condition = {
             StringEqualsIfExists = {
