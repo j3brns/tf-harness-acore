@@ -90,6 +90,31 @@ module "agentcore_bff" {
 
 The harness default is `cloudfront_waf_acl_arn = ""` (WAF disabled on CloudFront).
 
+## Custom Domains & SSL (Issue #53)
+
+Enterprise deployments can configure a custom domain name (e.g., `agent.example.com`) for the BFF CloudFront distribution. This requires providing an ACM certificate ARN.
+
+### Constraints
+
+- The ACM certificate **must** be created in `us-east-1`. CloudFront only accepts certificates from this region for global distributions.
+- You must separately configure a DNS record (e.g., CNAME in Route 53 or your DNS provider) pointing the custom domain to the CloudFront distribution's domain name.
+- The `spa_url` output will reflect the custom domain if configured.
+
+### Usage
+
+```hcl
+module "agentcore_bff" {
+  source = "./modules/agentcore-bff"
+
+  enable_bff = true
+  # ... other required variables ...
+
+  # Optional: custom domain and ACM certificate
+  custom_domain_name  = "agent.example.com"
+  acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/abc12345-def6-7890-ghij-klmnopqrstuv"
+}
+```
+
 ### Operational Considerations
 
 | Topic | Guidance |

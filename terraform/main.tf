@@ -181,6 +181,8 @@ module "agentcore_bff" {
 
   oidc_client_id             = var.oidc_client_id
   oidc_client_secret_arn     = var.oidc_client_secret_arn
+  custom_domain_name         = var.bff_custom_domain_name
+  acm_certificate_arn        = var.bff_acm_certificate_arn
   logging_bucket_id          = module.agentcore_foundation.access_logs_bucket_id
   reserved_concurrency       = var.proxy_reserved_concurrency
   waf_acl_arn                = module.agentcore_foundation.waf_acl_arn

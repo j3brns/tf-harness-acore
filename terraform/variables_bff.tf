@@ -42,6 +42,22 @@ variable "oidc_client_secret_arn" {
   default     = ""
 }
 
+variable "bff_custom_domain_name" {
+  description = "Custom domain name for the BFF CloudFront distribution (e.g., agent.example.com). Requires bff_acm_certificate_arn."
+  type        = string
+  default     = ""
+}
+
+variable "bff_acm_certificate_arn" {
+  description = "ARN of the ACM certificate for the custom domain. Must be in us-east-1 for CloudFront."
+  type        = string
+  default     = ""
+  validation {
+    condition     = var.bff_acm_certificate_arn == "" || can(regex("^arn:aws:acm:us-east-1:[0-9]{12}:certificate/[a-f0-9-]+$", var.bff_acm_certificate_arn))
+    error_message = "bff_acm_certificate_arn must be in us-east-1 for CloudFront."
+  }
+}
+
 variable "bff_agentcore_runtime_arn" {
   description = "AgentCore runtime ARN for the BFF proxy (required if enable_bff is true and enable_runtime is false)"
   type        = string
