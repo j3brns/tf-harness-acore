@@ -170,7 +170,8 @@ bash terraform/scripts/bootstrap_wif.sh
 Create a `terraform.tfvars` file or use one of the provided examples.
 
 ```hcl
-agent_name  = "my-agent"
+agent_name  = "my-agent-core-a1b2"
+app_id      = "my-agent"
 region      = "eu-west-2"
 environment = "dev"
 
@@ -327,7 +328,7 @@ Non-interactive flow (repeatable in automation):
 
 ```bash
 copier copy --force --trust \
-  --data agent_name=my-agent \
+  --data agent_name=my-agent-core-a1b2 \
   --data app_id=my-agent \
   --data region=us-east-1 \
   --data environment=dev \
@@ -336,7 +337,9 @@ copier copy --force --trust \
 ```
 
 Notes:
+- `agent_name` is the internal immutable identity for physical AWS resource names. Use a low-collision suffix pattern such as `word-word-word-a1b2`.
 - `app_id` is the logical app boundary for multi-tenant partitioning; keep it stable across related agents.
+- `allow_legacy_agent_name = true` is a temporary migration escape hatch for existing deployed names that cannot be safely renamed yet.
 - If `enable_bff=true`, replace OIDC placeholder values in generated `terraform/main.tf` before deploy.
 - Copier templates project files only; repository permissions/branch protection are managed in GitLab project/group settings.
 - CI validates template generation and generated `terraform validate` so scaffolding drift is caught early.
@@ -349,14 +352,15 @@ Notes:
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `agent_name` | `string` | -- (required) | Physical name of the agent resource. Alphanumeric and hyphens, 1-64 characters. |
-| `app_id` | `string` | `agent_name` | Application ID for multi-tenant isolation (North anchor). |
+| `agent_name` | `string` | -- (required) | Internal physical agent identity (immutable). Lowercase pattern: `word-word-word-xxxx` or `word-word-word-env-xxxx` (4-6 char suffix). |
+| `app_id` | `string` | `agent_name` | Human-facing application alias for routing and multi-tenant isolation (North anchor). |
+| `allow_legacy_agent_name` | `bool` | `false` | Temporary migration escape hatch to keep an existing legacy `agent_name` without forced rename. |
 | `region` | `string` | `us-east-1` | Default AWS region for all resources. |
 | `agentcore_region` | `string` | `region` | AgentCore control-plane region override. |
 | `bedrock_region` | `string` | `agentcore_region` | Bedrock model region override. |
 | `bff_region` | `string` | `agentcore_region` | BFF/API Gateway region override. |
 | `environment` | `string` | `dev` | Deployment stage: `dev`, `staging`, or `prod`. |
-| `tags` | `map(string)` | `{}` | Additional tags applied to all resources. |
+| `tags` | `map(string)` | `{}` | Additional tags applied to all resources (canonical tags `AppID`, `AgentAlias`, `Environment`, `AgentName`, `ManagedBy`, `Owner` are merged automatically). |
 
 ### Foundation
 

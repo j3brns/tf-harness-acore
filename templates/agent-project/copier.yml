@@ -4,12 +4,12 @@ _min_copier_version: "9.0.0"
 # Questions
 agent_name:
   type: str
-  help: "Physical name of the agent resources (alphanumeric + hyphen)"
-  default: "my-agent"
+  help: "Internal agent identity for physical AWS resources (immutable; use 3+ words plus 4-6 char suffix, e.g. my-agent-core-a1b2)"
+  default: "my-agent-core-a1b2"
 
 app_id:
   type: str
-  help: "Logical application ID for multi-tenant partitioning"
+  help: "Human-facing application alias for routing/tenancy (can stay stable if agent_name rotates)"
   default: "{{ agent_name }}"
 
 description:

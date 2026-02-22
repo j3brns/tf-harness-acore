@@ -499,12 +499,14 @@ All managed resources carry a deterministic set of required tags. These are enfo
 | Tag Key | Source | Description |
 |---------|--------|-------------|
 | `AppID` | `var.app_id` (or `var.agent_name`) | Logical application/environment boundary (North Anchor). |
+| `AgentAlias` | `var.app_id` (or `var.agent_name`) | Human-facing alias mirrored into tags for console visibility and policy/reporting joins. |
 | `Environment` | `var.environment` | Deployment stage: `dev`, `staging`, or `prod`. |
 | `AgentName` | `var.agent_name` | Physical compute resource name (South Anchor). |
 | `ManagedBy` | Static: `"terraform"` | Always set; indicates this resource is Terraform-managed. |
 | `Owner` | `var.owner` (or `var.app_id`) | Team or individual owner. Defaults to `app_id` if not set. |
 
 **Override policy**: Canonical keys always win. User-supplied `var.tags` can add supplementary keys but cannot override canonical values. Set `var.owner` to assign an explicit owner identifier.
+`AgentName` is the internal immutable identity; `AgentAlias` mirrors `app_id` for the human-facing label.
 
 **Check date**: 2026-02-22. No AWS API dependency; this is a Terraform-level convention.
 

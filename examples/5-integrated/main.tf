@@ -50,7 +50,21 @@ variable "environment" {
 }
 
 variable "agent_name" {
-  description = "Agent name"
+  description = "Internal agent identity used in physical AWS resource names (immutable)"
+  type        = string
+  default     = "integrated-demo-agent-a1b2"
+
+  validation {
+    condition = (
+      length(var.agent_name) <= 64 &&
+      can(regex("^[a-z0-9]+-[a-z0-9]+-[a-z0-9]+(?:-[a-z0-9]+)?-[a-z0-9]{4,6}$", var.agent_name))
+    )
+    error_message = "agent_name must be lowercase and include a 4-6 char suffix (e.g. integrated-demo-agent-a1b2)."
+  }
+}
+
+variable "app_id" {
+  description = "Human-facing application alias"
   type        = string
   default     = "integrated-demo"
 }
@@ -68,7 +82,7 @@ module "mcp_servers" {
   deploy_titanic_data = true
 
   tags = {
-    Agent = var.agent_name
+    Agent = var.app_id
   }
 }
 
@@ -83,6 +97,7 @@ module "agentcore" {
   source = "../../terraform" # Main terraform directory
 
   agent_name  = var.agent_name
+  app_id      = var.app_id
   region      = var.region
   environment = var.environment
 

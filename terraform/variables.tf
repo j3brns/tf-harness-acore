@@ -34,23 +34,38 @@ variable "environment" {
 }
 
 variable "agent_name" {
-  description = "Name of the agent"
+  description = "Internal agent identity used in physical AWS resource names (immutable). Use app_id for the human-facing alias."
   type        = string
 
   validation {
-    condition     = can(regex("^[a-zA-Z0-9-]{1,64}$", var.agent_name))
-    error_message = "Agent name must be 1-64 characters, alphanumeric and hyphens only."
+    condition = (
+      length(var.agent_name) <= 64 &&
+      (
+        can(regex("^[a-z0-9]+-[a-z0-9]+-[a-z0-9]+(?:-[a-z0-9]+)?-[a-z0-9]{4,6}$", var.agent_name)) ||
+        (
+          var.allow_legacy_agent_name &&
+          can(regex("^[A-Za-z0-9-]{1,64}$", var.agent_name))
+        )
+      )
+    )
+    error_message = "agent_name must be lowercase and follow '<word>-<word>-<word>-<suffix>' or '<word>-<word>-<word>-<env>-<suffix>' (suffix 4-6 chars), e.g. 'research-agent-core-a1b2'. Set allow_legacy_agent_name=true only to preserve an existing deployed name. Use app_id for the human-facing alias."
   }
 }
 
 variable "app_id" {
-  description = "Application ID for multi-tenant isolation (North anchor). Defaults to agent_name."
+  description = "Human-facing application alias for routing and multi-tenant isolation (North anchor). Defaults to agent_name."
   type        = string
   default     = ""
 }
 
+variable "allow_legacy_agent_name" {
+  description = "Temporary migration escape hatch. Set true only to preserve an already-deployed legacy agent_name during transition to the ADR 0012 naming convention."
+  type        = bool
+  default     = false
+}
+
 variable "tags" {
-  description = "Additional tags to apply to all resources. Canonical tags (AppID, Environment, AgentName, ManagedBy, Owner) are always merged by the root module; values here supplement or override non-canonical keys only."
+  description = "Additional tags to apply to all resources. Canonical tags (AppID, AgentAlias, Environment, AgentName, ManagedBy, Owner) are always merged by the root module; values here supplement or override non-canonical keys only."
   type        = map(string)
   default     = {}
 }

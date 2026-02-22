@@ -1,7 +1,8 @@
 # Research Agent (Simple Example)
 # Basic research agent demonstrating gateway and code interpreter
 
-agent_name  = "research-agent"
+agent_name  = "research-agent-core-g7h8"
+app_id      = "research-agent"
 region      = "us-east-1"
 environment = "dev"
 
