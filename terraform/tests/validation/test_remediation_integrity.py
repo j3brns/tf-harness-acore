@@ -68,12 +68,24 @@ def test_cli_output_dir_creation():
     print("  PASS: CLI module local output directory creation is enforced.")
 
 
+def test_provider_freeze_point_pin():
+    print("[Test 5] Verifying AWS provider freeze-point pin...")
+    with open("terraform/versions.tf", "r") as f:
+        content = f.read()
+        if 'source  = "hashicorp/aws"' not in content:
+            raise Exception('FAILED: hashicorp/aws provider source not found in terraform/versions.tf')
+        if 'version = "~> 6.33.0"' not in content:
+            raise Exception('FAILED: AWS provider freeze-point pin (~> 6.33.0) missing in terraform/versions.tf')
+    print("  PASS: AWS provider freeze-point pin verified.")
+
+
 if __name__ == "__main__":
     try:
         test_ssm_durability()
         test_arch_logic()
         test_zip_exclusions()
         test_cli_output_dir_creation()
+        test_provider_freeze_point_pin()
         print("\nAll remediation integrity tests PASSED successfully.")
     except Exception as e:
         print("\nREMEDIATION TEST FAILED: " + str(e))

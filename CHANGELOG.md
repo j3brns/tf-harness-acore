@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Resource Coverage Matrix (`docs/NOVATION_MATRIX.md`) identifying migration candidates from CLI to native Terraform (Issue #17).
+- AWS Provider version pin to `~> 6.33.0` to support native Bedrock AgentCore resources (Issue #17).
+
 ### Fixed
 - CLI provisioners in foundation/tools/runtime/governance modules now create `${path.module}/.terraform` before writing local output artifacts, preventing deploy failures on clean CI runners.
 - Validation coverage now asserts this output-directory guard across all CLI-managed modules.

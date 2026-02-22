@@ -4,7 +4,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 5.80"
+      version = "~> 6.33.0" # Freeze Point for Workstream A (Novation Matrix, Issue #17)
     }
     null = {
       source  = "hashicorp/null"
