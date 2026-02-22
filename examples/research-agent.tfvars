@@ -3,7 +3,8 @@
 
 region      = "us-east-1"
 environment = "prod"
-agent_name  = "research-agent"
+agent_name  = "research-agent-core-prod-j9k0"
+app_id      = "research-agent"
 
 tags = {
   Team    = "Research"

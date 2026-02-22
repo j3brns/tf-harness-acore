@@ -48,6 +48,21 @@ oauth_return_urls    = []
 enable_observability = true
 enable_xray          = true
 log_retention_days   = 30
+enable_agent_dashboards = false
+# agent_dashboard_name = "my-research-agent-dashboard"
+# dashboard_region = "us-east-1" # Defaults to region when empty
+# dashboard_widgets_override = jsonencode([
+#   {
+#     type   = "text"
+#     x      = 0
+#     y      = 0
+#     width  = 24
+#     height = 3
+#     properties = {
+#       markdown = "# Custom dashboard override"
+#     }
+#   }
+# ])
 
 # Foundation - Encryption
 enable_kms           = true
@@ -81,6 +96,13 @@ enable_inference_profile = false
 # inference_profile_description = "Application inference profile for agent runtime"
 # inference_profile_tags = {
 #   Project = "bedrock-agentcore"
+# }
+# Cost isolation pattern (Issue #10):
+# Use the application inference profile ARN as modelId for runtime/evaluator calls
+# to attribute Bedrock usage/costs per agent.
+# Example runtime_config snippet:
+# runtime_config = {
+#   modelId = "arn:aws:bedrock:<REGION>:<ACCOUNT_ID>:inference-profile/<PROFILE_ID>"
 # }
 
 # Runtime - Packaging

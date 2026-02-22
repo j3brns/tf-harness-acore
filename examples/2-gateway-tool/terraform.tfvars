@@ -1,7 +1,8 @@
 # Gateway Tool Agent - Titanic Data Analysis
 # Demonstrates MCP gateway with code interpreter
 
-agent_name  = "titanic-analyzer"
+agent_name  = "titanic-data-analyzer-c3d4"
+app_id      = "titanic-analyzer"
 region      = "us-east-1"
 environment = "dev"
 

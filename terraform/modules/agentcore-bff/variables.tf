@@ -1,10 +1,10 @@
 variable "agent_name" {
-  description = "Unique name for the agent application"
+  description = "Internal agent identity used in physical AWS resource names (immutable)"
   type        = string
 }
 
 variable "app_id" {
-  description = "Application ID for multi-tenant isolation"
+  description = "Human-facing application alias for multi-tenant isolation"
   type        = string
 }
 

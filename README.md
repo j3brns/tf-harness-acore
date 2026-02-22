@@ -170,7 +170,8 @@ bash terraform/scripts/bootstrap_wif.sh
 Create a `terraform.tfvars` file or use one of the provided examples.
 
 ```hcl
-agent_name  = "my-agent"
+agent_name  = "my-agent-core-a1b2"
+app_id      = "my-agent"
 region      = "eu-west-2"
 environment = "dev"
 
@@ -328,7 +329,7 @@ Non-interactive flow (repeatable in automation):
 
 ```bash
 copier copy --force --trust \
-  --data agent_name=my-agent \
+  --data agent_name=my-agent-core-a1b2 \
   --data app_id=my-agent \
   --data region=us-east-1 \
   --data environment=dev \
@@ -337,7 +338,9 @@ copier copy --force --trust \
 ```
 
 Notes:
+- `agent_name` is the internal immutable identity for physical AWS resource names. Use a low-collision suffix pattern such as `word-word-word-a1b2`.
 - `app_id` is the logical app boundary for multi-tenant partitioning; keep it stable across related agents.
+- `allow_legacy_agent_name = true` is a temporary migration escape hatch for existing deployed names that cannot be safely renamed yet.
 - If `enable_bff=true`, replace OIDC placeholder values in generated `terraform/main.tf` before deploy.
 - Copier templates project files only; repository permissions/branch protection are managed in GitLab project/group settings.
 - CI validates template generation and generated `terraform validate` so scaffolding drift is caught early.
@@ -350,14 +353,15 @@ Notes:
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `agent_name` | `string` | -- (required) | Physical name of the agent resource. Alphanumeric and hyphens, 1-64 characters. |
-| `app_id` | `string` | `agent_name` | Application ID for multi-tenant isolation (North anchor). |
+| `agent_name` | `string` | -- (required) | Internal physical agent identity (immutable). Lowercase pattern: `word-word-word-xxxx` or `word-word-word-env-xxxx` (4-6 char suffix). |
+| `app_id` | `string` | `agent_name` | Human-facing application alias for routing and multi-tenant isolation (North anchor). |
+| `allow_legacy_agent_name` | `bool` | `false` | Temporary migration escape hatch to keep an existing legacy `agent_name` without forced rename. |
 | `region` | `string` | `us-east-1` | Default AWS region for all resources. |
 | `agentcore_region` | `string` | `region` | AgentCore control-plane region override. |
 | `bedrock_region` | `string` | `agentcore_region` | Bedrock model region override. |
 | `bff_region` | `string` | `agentcore_region` | BFF/API Gateway region override. |
 | `environment` | `string` | `dev` | Deployment stage: `dev`, `staging`, or `prod`. |
-| `tags` | `map(string)` | `{}` | Additional tags applied to all resources. |
+| `tags` | `map(string)` | `{}` | Additional tags applied to all resources (canonical tags `AppID`, `AgentAlias`, `Environment`, `AgentName`, `ManagedBy`, `Owner` are merged automatically). |
 
 ### Foundation
 
@@ -374,6 +378,10 @@ Notes:
 | `log_retention_days` | `number` | `30` | CloudWatch log retention period. |
 | `enable_xray` | `bool` | `true` | Enable X-Ray distributed tracing. |
 | `alarm_sns_topic_arn` | `string` | `""` | SNS topic for CloudWatch alarm notifications. |
+| `enable_agent_dashboards` | `bool` | `false` | Create an optional per-agent CloudWatch dashboard (Terraform-managed). |
+| `agent_dashboard_name` | `string` | `""` | Optional dashboard name override (defaults to `<agent_name>-dashboard` when empty). |
+| `dashboard_region` | `string` | `""` | Optional widget/console region override (defaults to `region` when empty). |
+| `dashboard_widgets_override` | `string` | `""` | Optional JSON array string of CloudWatch widget objects to replace the default dashboard layout. |
 | `enable_waf` | `bool` | `false` | Enable WAF protection for API Gateway. |
 | `enable_kms` | `bool` | `false` | Enable customer-managed KMS encryption. |
 | `kms_key_arn` | `string` | `""` | KMS key ARN (required when `enable_kms` is true). |
@@ -412,6 +420,33 @@ Notes:
 | `enable_inference_profile` | `bool` | `false` | Enable Bedrock application inference profile. |
 | `inference_profile_name` | `string` | `""` | Name for the inference profile. |
 | `inference_profile_model_source_arn` | `string` | `""` | Foundation model or system-defined inference profile ARN. |
+
+### Per-Agent Dashboards (Issue #10)
+
+Set `enable_agent_dashboards = true` to create a Terraform-managed CloudWatch dashboard in the foundation module. The default dashboard includes:
+
+- Gateway metrics (`Errors`, `TargetInvocationDuration`) when the gateway is enabled
+- Log widgets for gateway/runtime and optional component logs (code interpreter, browser, evaluator) based on enabled features
+
+If a service does not emit a stable CloudWatch metric for a desired panel (for example runtime/tool invocation counts in some deployments), the default dashboard omits that metric widget and relies on log widgets instead. Use `dashboard_widgets_override` for advanced custom layouts.
+
+### Inference Profile Cost Isolation (Per Agent)
+
+For Bedrock usage/cost attribution per agent, enable `enable_inference_profile` and use the created **application inference profile ARN as `modelId`** in runtime/evaluator calls.
+
+Example runtime config:
+
+```hcl
+runtime_config = {
+  modelId = module.agentcore_runtime.inference_profile_arn
+}
+```
+
+Operational verification points:
+
+- Terraform output `agentcore_inference_profile_arn` (or `module.agentcore_runtime.inference_profile_arn`) confirms the profile ARN to wire into `modelId`.
+- Terraform output `agentcore_dashboard_console_url` opens the per-agent CloudWatch dashboard for operational correlation (errors/latency/logs).
+- AWS billing/usage tooling (for example Cost Explorer and Bedrock usage reporting) should be inspected using the inference-profile-based calling pattern above to attribute usage to the agent-specific profile.
 
 ### Governance
 

@@ -34,10 +34,11 @@ provider "aws" {
       Environment = var.environment
       Project     = "BedrockAgentCore"
       # Canonical tag taxonomy (Issue #22) - applied to all AWS resources automatically.
-      AppID     = var.app_id != "" ? var.app_id : var.agent_name
-      AgentName = var.agent_name
-      ManagedBy = "terraform"
-      Owner     = var.owner != "" ? var.owner : (var.app_id != "" ? var.app_id : var.agent_name)
+      AppID      = var.app_id != "" ? var.app_id : var.agent_name
+      AgentAlias = var.app_id != "" ? var.app_id : var.agent_name
+      AgentName  = var.agent_name
+      ManagedBy  = "terraform"
+      Owner      = var.owner != "" ? var.owner : (var.app_id != "" ? var.app_id : var.agent_name)
     }
   }
 }
@@ -52,10 +53,11 @@ provider "aws" {
       Environment = var.environment
       Project     = "BedrockAgentCore"
       # Canonical tag taxonomy (Issue #22) - applied to all AWS resources automatically.
-      AppID     = var.app_id != "" ? var.app_id : var.agent_name
-      AgentName = var.agent_name
-      ManagedBy = "terraform"
-      Owner     = var.owner != "" ? var.owner : (var.app_id != "" ? var.app_id : var.agent_name)
+      AppID      = var.app_id != "" ? var.app_id : var.agent_name
+      AgentAlias = var.app_id != "" ? var.app_id : var.agent_name
+      AgentName  = var.agent_name
+      ManagedBy  = "terraform"
+      Owner      = var.owner != "" ? var.owner : (var.app_id != "" ? var.app_id : var.agent_name)
     }
   }
 }
