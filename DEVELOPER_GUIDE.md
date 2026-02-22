@@ -353,6 +353,11 @@ mcp_targets = {
 }
 ```
 
+Cross-account gateway target pattern (least privilege):
+- The foundation module scopes gateway-role `lambda:InvokeFunction` to the exact `mcp_targets[*].lambda_arn` values.
+- If the target Lambda is in another account, add a resource-based policy on that Lambda for the gateway service role ARN (`agentcore_gateway_role_arn` output from the root module).
+- If BFF invokes a runtime in another account, set both `bff_agentcore_runtime_arn` and `bff_agentcore_runtime_role_arn`.
+
 ### Tools Module
 
 Controls: Code Interpreter, Browser

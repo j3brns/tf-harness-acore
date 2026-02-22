@@ -48,3 +48,15 @@ output "agentcore_runtime_arn" {
   value       = module.agentcore_runtime.runtime_arn
   sensitive   = true
 }
+
+output "agentcore_gateway_arn" {
+  description = "AgentCore gateway ARN (useful for cross-account target policies)"
+  value       = module.agentcore_foundation.gateway_arn
+  sensitive   = true
+}
+
+output "agentcore_gateway_role_arn" {
+  description = "AgentCore gateway service role ARN (useful for cross-account Lambda resource policies)"
+  value       = module.agentcore_foundation.gateway_role_arn
+  sensitive   = true
+}

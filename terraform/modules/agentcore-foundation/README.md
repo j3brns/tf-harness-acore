@@ -12,6 +12,12 @@ This module manages the base infrastructure for a Bedrock Agent, including the M
 - `region`: AgentCore control-plane region for gateway/identity/observability resources.
 - `bedrock_region`: Optional Bedrock region override for model invocation permissions (defaults to `region`).
 
+## Cross-Account Lambda Targets (Gateway)
+
+- The gateway service role policy includes least-privilege `lambda:InvokeFunction` access scoped to configured `mcp_targets[*].lambda_arn`.
+- For Lambda targets in a different AWS account, add a resource-based policy on the target Lambda that allows the gateway service role ARN to invoke it.
+- `gateway_role_arn` output returns the effective gateway role ARN (created role or the externally supplied `gateway_role_arn`) so it can be used when wiring target-account policies.
+
 ## Known Failure Modes (Rule 16)
 
 ### 1. Partial Provisioning (CLI Timeout)
