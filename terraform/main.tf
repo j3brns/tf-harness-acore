@@ -26,6 +26,8 @@ module "agentcore_foundation" {
   enable_observability                    = var.enable_observability
   log_retention_days                      = var.log_retention_days
   enable_xray                             = var.enable_xray
+  xray_sampling_priority                  = var.xray_sampling_priority
+  manage_log_resource_policy              = var.manage_log_resource_policy
   alarm_sns_topic_arn                     = var.alarm_sns_topic_arn
   enable_agent_dashboards                 = var.enable_agent_dashboards
   agent_dashboard_name                    = var.agent_dashboard_name
@@ -199,7 +201,8 @@ module "agentcore_bff" {
   )
 
   # Integration
-  agentcore_runtime_arn = var.bff_agentcore_runtime_arn != "" ? var.bff_agentcore_runtime_arn : module.agentcore_runtime.runtime_arn
+  agentcore_runtime_arn  = var.bff_agentcore_runtime_arn != "" ? var.bff_agentcore_runtime_arn : module.agentcore_runtime.runtime_arn
+  deployment_bucket_name = module.agentcore_runtime.deployment_bucket_name
 
   providers = {
     aws = aws.bff

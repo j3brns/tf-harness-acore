@@ -144,4 +144,10 @@ variable "agentcore_runtime_role_arn" {
   default     = ""
 }
 
+variable "deployment_bucket_name" {
+  description = "Name of the agent runtime deployment S3 bucket. Used to scope the session policy in the proxy Lambda so it references the specific bucket rather than a wildcard pattern."
+  type        = string
+  default     = ""
+}
+
 # --- Integration ---

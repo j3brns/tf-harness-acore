@@ -110,6 +110,7 @@ resource "aws_lambda_function" "proxy" {
       AGENTCORE_RUNTIME_ARN      = var.agentcore_runtime_arn
       AGENTCORE_REGION           = local.agentcore_region
       AGENTCORE_RUNTIME_ROLE_ARN = var.agentcore_runtime_role_arn
+      DEPLOYMENT_BUCKET_NAME     = var.deployment_bucket_name
       AGENT_NAME                 = var.agent_name
       ENVIRONMENT                = var.environment
       AUDIT_LOGS_ENABLED         = tostring(local.audit_logs_enabled)

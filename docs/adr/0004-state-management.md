@@ -33,7 +33,7 @@ Reference: [AWS Prescriptive Guidance - Backend Best Practices](https://docs.aws
 terraform {
   backend "s3" {
     bucket       = "terraform-state-dev-12345"
-    key          = "agentcore/terraform.tfstate"
+    key          = "agentcore/dev/terraform.tfstate"
     region       = "us-east-1"
     encrypt      = true
     use_lockfile = true  # Native S3 locking (Terraform 1.10.0+)
@@ -41,14 +41,19 @@ terraform {
 }
 ```
 
+> **Note**: CI generates the backend key as `agentcore/${CI_ENVIRONMENT_NAME}/terraform.tfstate`.
+> ADR 0013 documents a planned further segmentation (`agentcore/{env}/{app_id}/{agent_name}/terraform.tfstate`)
+> and the migration runbook is in `docs/runbooks/segmented-terraform-state-key-migration.md`.
+
 ## State Structure
 
 ```
 s3://terraform-state-dev-12345/
 ├── agentcore/
-│   ├── terraform.tfstate        (current state)
-│   ├── terraform.tfstate.tflock (lock file - created during operations)
-│   └── [versioned snapshots]    (via S3 versioning)
+│   └── dev/
+│       ├── terraform.tfstate        (current state)
+│       ├── terraform.tfstate.tflock (lock file - created during operations)
+│       └── [versioned snapshots]    (via S3 versioning)
 ```
 
 ## Rationale
@@ -142,16 +147,16 @@ aws dynamodb delete-table --table-name terraform-state-lock-dev
 
 ### Corrupted State
 ```bash
-# List versions
+# List versions (replace key with your actual backend key)
 aws s3api list-object-versions \
   --bucket terraform-state-dev-12345 \
-  --prefix agentcore/terraform.tfstate
+  --prefix agentcore/dev/terraform.tfstate
 
 # Restore specific version
 aws s3api copy-object \
   --bucket terraform-state-dev-12345 \
-  --copy-source "terraform-state-dev-12345/agentcore/terraform.tfstate?versionId=VERSION_ID" \
-  --key agentcore/terraform.tfstate
+  --copy-source "terraform-state-dev-12345/agentcore/dev/terraform.tfstate?versionId=VERSION_ID" \
+  --key agentcore/dev/terraform.tfstate
 ```
 
 ### Stuck Lock
