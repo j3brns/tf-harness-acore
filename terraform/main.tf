@@ -161,14 +161,15 @@ locals {
 module "agentcore_bff" {
   source = "./modules/agentcore-bff"
 
-  enable_bff         = var.enable_bff
-  agent_name         = var.agent_name
-  app_id             = local.app_id
-  region             = local.bff_region
-  agentcore_region   = local.agentcore_region
-  environment        = var.environment
-  tags               = local.canonical_tags
-  log_retention_days = var.log_retention_days
+  enable_bff                   = var.enable_bff
+  agent_name                   = var.agent_name
+  app_id                       = local.app_id
+  region                       = local.bff_region
+  agentcore_region             = local.agentcore_region
+  environment                  = var.environment
+  tags                         = local.canonical_tags
+  log_retention_days           = var.log_retention_days
+  enable_audit_log_persistence = var.enable_bff_audit_log_persistence
 
   # Auth Configuration
 

@@ -110,6 +110,11 @@ resource "aws_lambda_function" "proxy" {
       AGENTCORE_RUNTIME_ARN      = var.agentcore_runtime_arn
       AGENTCORE_REGION           = local.agentcore_region
       AGENTCORE_RUNTIME_ROLE_ARN = var.agentcore_runtime_role_arn
+      AGENT_NAME                 = var.agent_name
+      ENVIRONMENT                = var.environment
+      AUDIT_LOGS_ENABLED         = tostring(local.audit_logs_enabled)
+      AUDIT_LOGS_BUCKET          = local.audit_logs_enabled ? var.logging_bucket_id : ""
+      AUDIT_LOGS_PREFIX          = local.audit_logs_events_prefix
     }
   }
 }

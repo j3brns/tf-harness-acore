@@ -23,6 +23,26 @@ output "agentcore_bff_authorizer_id" {
   value       = module.agentcore_bff.authorizer_id
 }
 
+output "agentcore_bff_audit_logs_s3_prefix" {
+  description = "S3 prefix for BFF proxy audit shadow JSON logs"
+  value       = module.agentcore_bff.audit_logs_s3_prefix
+}
+
+output "agentcore_bff_audit_logs_athena_database" {
+  description = "Athena/Glue database for BFF proxy audit logs"
+  value       = module.agentcore_bff.audit_logs_athena_database
+}
+
+output "agentcore_bff_audit_logs_athena_table" {
+  description = "Athena/Glue table for BFF proxy audit logs"
+  value       = module.agentcore_bff.audit_logs_athena_table
+}
+
+output "agentcore_bff_audit_logs_athena_workgroup" {
+  description = "Athena workgroup for BFF proxy audit logs"
+  value       = module.agentcore_bff.audit_logs_athena_workgroup
+}
+
 output "agentcore_runtime_arn" {
   description = "AgentCore runtime ARN"
   value       = module.agentcore_runtime.runtime_arn
