@@ -440,6 +440,7 @@ Notes:
 | `oidc_authorization_endpoint` | `string` | `""` | Override authorization endpoint (auto-discovered if empty). |
 | `oidc_token_endpoint` | `string` | `""` | Override token endpoint (auto-discovered if empty). |
 | `bff_agentcore_runtime_arn` | `string` | `""` | AgentCore runtime ARN for the proxy (required if `enable_bff=true` and `enable_runtime=false`). |
+| `bff_agentcore_runtime_role_arn` | `string` | `""` | Optional runtime IAM role ARN for BFF to assume (set for cross-account runtime identity propagation). |
 | `proxy_reserved_concurrency` | `number` | `10` | Reserved concurrent executions for the BFF proxy Lambda. |
 
 ---
@@ -459,6 +460,24 @@ Deploy any example with a single command:
 cd terraform
 terraform init -backend=false
 terraform plan -var-file=../examples/3-deepresearch/terraform.tfvars
+```
+
+---
+
+## Cross-Account Invocation (Gateway + BFF)
+
+- **Gateway -> Lambda targets**: The foundation module gateway service role now gets least-privilege `lambda:InvokeFunction` permissions scoped to the exact `mcp_targets[*].lambda_arn` values (no wildcard invoke).
+- **Cross-account Lambda targets**: If a target Lambda lives in another account, add a resource-based policy on that Lambda allowing the gateway service role ARN to invoke it. The root module now exposes `agentcore_gateway_role_arn` and `agentcore_gateway_arn` outputs to wire this cleanly.
+- **BFF -> Runtime (cross-account)**: Set both `bff_agentcore_runtime_arn` and `bff_agentcore_runtime_role_arn` so the proxy can invoke the external runtime and (when configured) assume the runtime role for identity propagation.
+
+Example (root module inputs):
+
+```hcl
+enable_bff = true
+
+# External runtime (different account)
+bff_agentcore_runtime_arn      = "arn:aws:bedrock-agentcore:us-east-1:222222222222:runtime/my-runtime"
+bff_agentcore_runtime_role_arn = "arn:aws:iam::222222222222:role/my-runtime-role"
 ```
 
 ---

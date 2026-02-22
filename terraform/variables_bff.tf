@@ -68,3 +68,16 @@ variable "bff_agentcore_runtime_arn" {
     error_message = "bff_agentcore_runtime_arn must be set when enable_bff is true and enable_runtime is false."
   }
 }
+
+variable "bff_agentcore_runtime_role_arn" {
+  description = "Optional runtime IAM role ARN for the BFF proxy to assume (set for cross-account runtime identity propagation)"
+  type        = string
+  default     = ""
+
+  validation {
+    condition = var.bff_agentcore_runtime_role_arn == "" || can(
+      regex("^arn:aws:iam::[0-9]{12}:role/.+$", var.bff_agentcore_runtime_role_arn)
+    )
+    error_message = "bff_agentcore_runtime_role_arn must be empty or a valid IAM role ARN."
+  }
+}

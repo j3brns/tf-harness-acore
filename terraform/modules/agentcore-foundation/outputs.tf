@@ -16,7 +16,7 @@ output "gateway_endpoint" {
 
 output "gateway_role_arn" {
   description = "IAM role ARN for the gateway"
-  value       = var.enable_gateway ? aws_iam_role.gateway[0].arn : null
+  value       = var.enable_gateway ? (var.gateway_role_arn != "" ? var.gateway_role_arn : aws_iam_role.gateway[0].arn) : null
   sensitive   = true
 }
 

@@ -1,6 +1,7 @@
 locals {
-  project_tag    = lookup(var.tags, "Project", "AgentCore")
-  bedrock_region = var.bedrock_region != "" ? var.bedrock_region : var.region
+  project_tag                = lookup(var.tags, "Project", "AgentCore")
+  bedrock_region             = var.bedrock_region != "" ? var.bedrock_region : var.region
+  gateway_target_lambda_arns = sort(distinct([for _, target in var.mcp_targets : target.lambda_arn]))
 }
 
 # IAM Role for Bedrock AgentCore Gateway
@@ -56,6 +57,15 @@ resource "aws_iam_role_policy" "gateway" {
           Resource = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/gateway/*"
         }
       ],
+      length(local.gateway_target_lambda_arns) > 0 ? [
+        {
+          Effect = "Allow"
+          Action = [
+            "lambda:InvokeFunction"
+          ]
+          Resource = local.gateway_target_lambda_arns
+        }
+      ] : [],
       var.enable_kms ? [
         {
           Effect = "Allow"
