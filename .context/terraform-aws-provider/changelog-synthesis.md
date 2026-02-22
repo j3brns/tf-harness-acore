@@ -52,4 +52,3 @@ Changelog includes:
 1. Native support exists for more AgentCore resources than the local novation matrix currently advertises (notably Browser and Code Interpreter).
 2. Repo policy/workstream decisions can still choose CLI bridge paths for risk control; this is a migration strategy decision, not only a provider availability question.
 3. If Browser/Code Interpreter remain `cli-required`, update `docs/NOVATION_MATRIX.md` wording to reflect "deferred by repo policy" rather than "no native support yet".
-

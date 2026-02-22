@@ -382,6 +382,51 @@ describe("proxy.js", () => {
     });
   });
 
+  describe("ABAC claim mismatch paths (Rule 14)", () => {
+    test("does not call AssumeRole when tenant_id is absent from authorizer context", async () => {
+      process.env.AGENTCORE_RUNTIME_ROLE_ARN = "arn:aws:iam::123456789012:role/runtime";
+      setupMockRequest(200, {}, ["ok"]);
+
+      const stream = mockResponseStream();
+      // app_id is present but tenant_id is missing — AssumeRole requires both
+      await handler(
+        makeEvent({ prompt: "hello" }, { authorizer: { app_id: "app-A" } }),
+        stream
+      );
+
+      expect(mockStsSend).not.toHaveBeenCalled();
+
+      delete process.env.AGENTCORE_RUNTIME_ROLE_ARN;
+    });
+
+    test("does not call AssumeRole when app_id is absent from authorizer context", async () => {
+      process.env.AGENTCORE_RUNTIME_ROLE_ARN = "arn:aws:iam::123456789012:role/runtime";
+      setupMockRequest(200, {}, ["ok"]);
+
+      const stream = mockResponseStream();
+      // tenant_id is present but app_id is missing — AssumeRole requires both
+      await handler(
+        makeEvent({ prompt: "hello" }, { authorizer: { tenant_id: "tenant-A" } }),
+        stream
+      );
+
+      expect(mockStsSend).not.toHaveBeenCalled();
+
+      delete process.env.AGENTCORE_RUNTIME_ROLE_ARN;
+    });
+
+    test("does not set x-tenant-id header when tenant_id is absent from authorizer context", async () => {
+      setupMockRequest(200, {}, ["ok"]);
+
+      const stream = mockResponseStream();
+      await handler(makeEvent({ prompt: "hello" }, { authorizer: { app_id: "app-A" } }), stream);
+
+      const instance = SignatureV4.mock.results[SignatureV4.mock.results.length - 1].value;
+      const signCall = instance.sign.mock.calls[0][0];
+      expect(signCall.headers["x-tenant-id"]).toBeUndefined();
+    });
+  });
+
   describe("writeError helper", () => {
     test("writes structured JSON error to response stream", () => {
       const stream = mockResponseStream();

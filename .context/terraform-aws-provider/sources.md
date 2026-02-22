@@ -42,4 +42,3 @@ Human-facing registry paths (same resources, versioned provider docs):
 
 - AWS Knowledge MCP was available and used for AgentCore documentation cross-checks in this synthesis.
 - Terraform Registry pages are JS-rendered in some tooling contexts; raw provider repo docs were used for deterministic extraction.
-
