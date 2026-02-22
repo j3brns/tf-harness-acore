@@ -1,0 +1,9 @@
+{
+  "tenantId": "acme-finance",
+  "appId": "portal-prod",
+  "status": "SUSPENDED",
+  "suspendedAt": "2026-02-22T12:15:05Z",
+  "effectiveAt": "2026-02-22T12:15:00Z",
+  "invalidateSessions": true,
+  "auditEventId": "evt-02-suspend"
+}

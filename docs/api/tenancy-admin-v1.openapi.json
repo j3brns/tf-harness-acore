@@ -1,0 +1,805 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Tenancy Admin API",
+    "version": "v1",
+    "summary": "Versioned contract for tenant onboarding, lifecycle, credentials, and audit operations.",
+    "description": "Contract-first API for tenancy administration. This API follows ADR 0009/0010/0011 and Rule 14 multi-tenant isolation requirements. App scope and operator identity are derived from the authenticated session/authorizer context; clients must not provide app_id authority in request bodies.",
+    "x-issue": "#26"
+  },
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "servers": [
+    {
+      "url": "https://{host}",
+      "variables": {
+        "host": {
+          "default": "example.execute-api.us-east-1.amazonaws.com"
+        }
+      }
+    }
+  ],
+  "tags": [
+    {
+      "name": "TenancyAdmin",
+      "description": "Tenant onboarding and administration operations"
+    }
+  ],
+  "security": [
+    {
+      "SessionCookieAuth": []
+    }
+  ],
+  "paths": {
+    "/api/tenancy/v1/admin/tenants": {
+      "post": {
+        "tags": [
+          "TenancyAdmin"
+        ],
+        "operationId": "createTenant",
+        "summary": "Create a tenant and start onboarding",
+        "description": "Creates a tenant within the caller's authenticated app scope. The service derives operator identity and app scope from the session cookie and authorizer context. Tenant identifiers in the body are treated as desired aliases only and must be validated server-side.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CorrelationIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTenantRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tenant created and onboarding initiated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateTenantResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Tenant alias already exists in app scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenancy/v1/admin/tenants/{tenantId}:suspend": {
+      "post": {
+        "tags": [
+          "TenancyAdmin"
+        ],
+        "operationId": "suspendTenant",
+        "summary": "Suspend a tenant",
+        "description": "Suspends tenant access. The path tenantId is subject to claim-based authorization and app scope checks. The service must verify the tenant belongs to the authenticated app and that the operator is authorized for the action.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TenantIdPath"
+          },
+          {
+            "$ref": "#/components/parameters/CorrelationIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuspendTenantRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tenant suspension recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuspendTenantResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tenant not found in caller scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenancy/v1/admin/tenants/{tenantId}:rotate-credentials": {
+      "post": {
+        "tags": [
+          "TenancyAdmin"
+        ],
+        "operationId": "rotateTenantCredentials",
+        "summary": "Rotate tenant credentials",
+        "description": "Rotates tenant credentials within authenticated app scope. The API request does not accept app_id or authority claims in the body. Rotation eligibility is enforced by policy and authorizer claims.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TenantIdPath"
+          },
+          {
+            "$ref": "#/components/parameters/CorrelationIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RotateTenantCredentialsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rotation accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RotateTenantCredentialsResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Rotation already in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenancy/v1/admin/tenants/{tenantId}/audit-summary": {
+      "get": {
+        "tags": [
+          "TenancyAdmin"
+        ],
+        "operationId": "fetchTenantAuditSummary",
+        "summary": "Fetch tenant audit summary",
+        "description": "Returns a bounded audit summary for the tenant within the caller's app scope. Tenant and app scope must be verified from authorizer context before reading audit data.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TenantIdPath"
+          },
+          {
+            "$ref": "#/components/parameters/CorrelationIdHeader"
+          },
+          {
+            "name": "windowHours",
+            "in": "query",
+            "required": false,
+            "description": "Audit summary window size in hours (1-168)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 168,
+              "default": 24
+            }
+          },
+          {
+            "name": "includeActors",
+            "in": "query",
+            "required": false,
+            "description": "Include actor breakdown in the summary",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant audit summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantAuditSummaryResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tenant not found in caller scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "SessionCookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "session_id",
+        "description": "Server-side session cookie (ADR 0011). Tokens remain server-side."
+      }
+    },
+    "parameters": {
+      "TenantIdPath": {
+        "name": "tenantId",
+        "in": "path",
+        "required": true,
+        "description": "Tenant identifier. Server must verify membership in authenticated app scope and operator authority before performing any action.",
+        "schema": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{2,62}$"
+        }
+      },
+      "CorrelationIdHeader": {
+        "name": "x-correlation-id",
+        "in": "header",
+        "required": false,
+        "description": "Caller-supplied correlation identifier for tracing and audit joins.",
+        "schema": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 128
+        }
+      },
+      "IdempotencyKeyHeader": {
+        "name": "x-idempotency-key",
+        "in": "header",
+        "required": false,
+        "description": "Recommended for mutating operations to ensure retry-safe behavior.",
+        "schema": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 128
+        }
+      }
+    },
+    "schemas": {
+      "TenantStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "SUSPENDED",
+          "PENDING_ONBOARDING",
+          "DELETING"
+        ]
+      },
+      "AuditEventSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "eventId",
+          "occurredAt",
+          "action",
+          "result"
+        ],
+        "properties": {
+          "eventId": {
+            "type": "string"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "TENANT_CREATED",
+              "TENANT_SUSPENDED",
+              "CREDENTIALS_ROTATED",
+              "ACCESS_POLICY_UPDATED"
+            ]
+          },
+          "result": {
+            "type": "string",
+            "enum": [
+              "SUCCESS",
+              "FAILURE"
+            ]
+          },
+          "actorType": {
+            "type": "string",
+            "enum": [
+              "HUMAN",
+              "SERVICE"
+            ]
+          },
+          "actorId": {
+            "type": "string"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "code",
+          "requestId"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "field",
+                "message"
+              ],
+              "properties": {
+                "field": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "CreateTenantRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tenantSlug",
+          "displayName",
+          "owner",
+          "credentialProfile"
+        ],
+        "properties": {
+          "tenantSlug": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{2,62}$",
+            "description": "Desired tenant identifier within the authenticated app scope. Final authority is server-validated."
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "owner": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "email",
+              "displayName"
+            ],
+            "properties": {
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "displayName": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "identityProviderSubject": {
+                "type": "string",
+                "description": "Optional subject hint for downstream entitlement mapping."
+              }
+            }
+          },
+          "credentialProfile": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "mode",
+              "rotationIntervalDays"
+            ],
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "WORKLOAD_IDENTITY",
+                  "PORTAL_CLIENT_SECRET"
+                ]
+              },
+              "rotationIntervalDays": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 365
+              },
+              "notifyOnRotation": {
+                "type": "boolean",
+                "default": true
+              }
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Non-authoritative labels only. Access control is derived from session claims/policy, not request body metadata.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CreateTenantResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tenantId",
+          "appId",
+          "status",
+          "onboardingState",
+          "createdAt",
+          "auditEventId"
+        ],
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "appId": {
+            "type": "string",
+            "description": "Server-derived app scope identifier for the authenticated session."
+          },
+          "status": {
+            "$ref": "#/components/schemas/TenantStatus"
+          },
+          "onboardingState": {
+            "type": "string",
+            "enum": [
+              "QUEUED",
+              "IN_PROGRESS",
+              "READY",
+              "FAILED"
+            ]
+          },
+          "credentials": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "mode",
+              "nextRotationDueAt"
+            ],
+            "properties": {
+              "mode": {
+                "type": "string"
+              },
+              "nextRotationDueAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "auditEventId": {
+            "type": "string"
+          }
+        }
+      },
+      "SuspendTenantRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reasonCode",
+          "reason"
+        ],
+        "properties": {
+          "reasonCode": {
+            "type": "string",
+            "enum": [
+              "SECURITY",
+              "BILLING",
+              "LEGAL",
+              "ADMINISTRATIVE"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          },
+          "effectiveAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "invalidateSessions": {
+            "type": "boolean",
+            "default": true
+          },
+          "ticketRef": {
+            "type": "string",
+            "maxLength": 128
+          }
+        }
+      },
+      "SuspendTenantResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tenantId",
+          "appId",
+          "status",
+          "suspendedAt",
+          "auditEventId"
+        ],
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "appId": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TenantStatus"
+          },
+          "suspendedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "effectiveAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "invalidateSessions": {
+            "type": "boolean"
+          },
+          "auditEventId": {
+            "type": "string"
+          }
+        }
+      },
+      "RotateTenantCredentialsRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "credentialType",
+          "rotationMode"
+        ],
+        "properties": {
+          "credentialType": {
+            "type": "string",
+            "enum": [
+              "PORTAL_CLIENT_SECRET",
+              "WORKLOAD_TRUST"
+            ]
+          },
+          "rotationMode": {
+            "type": "string",
+            "enum": [
+              "IMMEDIATE",
+              "GRACEFUL"
+            ]
+          },
+          "invalidatePreviousAfterSeconds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 86400
+          },
+          "ticketRef": {
+            "type": "string",
+            "maxLength": 128
+          }
+        }
+      },
+      "RotateTenantCredentialsResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tenantId",
+          "appId",
+          "rotationId",
+          "status",
+          "requestedAt",
+          "auditEventId"
+        ],
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "appId": {
+            "type": "string"
+          },
+          "rotationId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACCEPTED",
+              "IN_PROGRESS",
+              "COMPLETE",
+              "FAILED"
+            ]
+          },
+          "previousCredentialValidUntil": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "auditEventId": {
+            "type": "string"
+          }
+        }
+      },
+      "TenantAuditSummaryResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tenantId",
+          "appId",
+          "window",
+          "summary",
+          "lastEvents",
+          "generatedAt"
+        ],
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "appId": {
+            "type": "string"
+          },
+          "window": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "hours",
+              "from",
+              "to"
+            ],
+            "properties": {
+              "hours": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 168
+              },
+              "from": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "to": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          },
+          "summary": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "totalEvents",
+              "successCount",
+              "failureCount",
+              "credentialRotations",
+              "suspensions"
+            ],
+            "properties": {
+              "totalEvents": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "successCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "failureCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "credentialRotations": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "suspensions": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "actorBreakdown": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "actorId",
+                "actorType",
+                "count"
+              ],
+              "properties": {
+                "actorId": {
+                  "type": "string"
+                },
+                "actorType": {
+                  "type": "string",
+                  "enum": [
+                    "HUMAN",
+                    "SERVICE"
+                  ]
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "lastEvents": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/AuditEventSummary"
+            }
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  },
+  "x-contract-rules": {
+    "tenantAuthority": "Server verifies tenantId membership and action authority from authenticated app/tenant claims before any read/write.",
+    "noBodyAuthority": "Request bodies are non-authoritative for app scope and operator identity.",
+    "sessionHandling": "Session cookie only; no browser token storage (ADR 0011 / Rule 11)."
+  }
+}

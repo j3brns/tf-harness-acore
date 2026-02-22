@@ -1,0 +1,7 @@
+{
+  "reasonCode": "SECURITY",
+  "reason": "Suspicious credential activity detected by portal guardrails.",
+  "effectiveAt": "2026-02-22T12:15:00Z",
+  "invalidateSessions": true,
+  "ticketRef": "SEC-1042"
+}

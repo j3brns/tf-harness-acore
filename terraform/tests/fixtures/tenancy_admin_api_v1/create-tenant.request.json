@@ -1,0 +1,18 @@
+{
+  "tenantSlug": "acme-finance",
+  "displayName": "Acme Finance",
+  "owner": {
+    "email": "owner@acme.example",
+    "displayName": "A. Owner",
+    "identityProviderSubject": "entra-92f8c1"
+  },
+  "credentialProfile": {
+    "mode": "PORTAL_CLIENT_SECRET",
+    "rotationIntervalDays": 30,
+    "notifyOnRotation": true
+  },
+  "metadata": {
+    "businessUnit": "finance",
+    "regionHint": "eu-west-2"
+  }
+}
