@@ -51,4 +51,3 @@ Repo alignment:
 - Use `resource-synthesis-v6.33.0.md` to quickly inspect native resource schema shape and import formats.
 - Use `changelog-synthesis.md` when deciding whether a provider pin bump is needed for additional migration work.
 - If the repo policy conflicts with a newly-available native resource, treat this pack as evidence for review, not as an automatic migration decision.
-

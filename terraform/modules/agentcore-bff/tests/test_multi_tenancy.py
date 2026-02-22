@@ -135,11 +135,88 @@ def test_authorizer_denies_tenant_claim_mismatch():
         print("  PASS: authorizer denied request when JWT tenant claim mismatched cookie/session tenant.")
 
 
+def test_cross_tenant_session_forgery_denied():
+    """Negative test: forged cookie with tenant-B prefix but only tenant-A session exists.
+    The authorizer must deny access (Rule 14.1 - no implicit tenant trust)."""
+    print("Testing cross-tenant session forgery is denied (Rule 14.1)...")
+
+    # Attacker forges a cookie claiming tenant-B prefix with a session ID from tenant-A
+    event = {"methodArn": "arn:aws:execute-api:...", "headers": {"Cookie": "session_id=tenant-B:sess-A"}}
+
+    authorizer.table = MagicMock()
+    # DDB returns nothing because the composite PK APP#test-app#TENANT#tenant-B/SESSION#sess-A does not exist
+    authorizer.table.get_item.return_value = {}
+
+    with patch("authorizer.APP_ID", "test-app"):
+        policy = authorizer.lambda_handler(event, None)
+
+        # Verify denial
+        effect = policy["policyDocument"]["Statement"][0]["Effect"]
+        assert effect == "Deny", f"Expected Deny, got {effect}"
+
+        # Verify lookup was for the FORGED tenant prefix (not tenant-A)
+        authorizer.table.get_item.assert_called_with(
+            Key={"pk": "APP#test-app#TENANT#tenant-B", "sk": "SESSION#sess-A"}
+        )
+        print("  PASS: cross-tenant session forgery correctly denied.")
+
+
+def test_expired_session_denied():
+    """Negative test: valid composite cookie but session is expired and has no refresh token.
+    The authorizer must deny access (Rule 14.1 - claim mismatch via stale session)."""
+    print("Testing expired session (no refresh token) is denied...")
+
+    event = {"methodArn": "arn:aws:execute-api:...", "headers": {"Cookie": "session_id=tenant-123:sess-exp"}}
+
+    authorizer.table = MagicMock()
+    authorizer.table.get_item.return_value = {
+        "Item": {
+            "pk": "APP#test-app#TENANT#tenant-123",
+            "sk": "SESSION#sess-exp",
+            "app_id": "test-app",
+            "tenant_id": "tenant-123",
+            "access_token": "expired_token",
+            "expires_at": 1,  # Unix epoch 1 = far in the past
+            # No refresh_token key
+        }
+    }
+
+    with patch("authorizer.APP_ID", "test-app"):
+        policy = authorizer.lambda_handler(event, None)
+
+        effect = policy["policyDocument"]["Statement"][0]["Effect"]
+        assert effect == "Deny", f"Expected Deny for expired session, got {effect}"
+        print("  PASS: expired session with no refresh token correctly denied.")
+
+
+def test_malformed_cookie_denied():
+    """Negative test: cookie value is missing the tenant_id:session_id composite separator.
+    The authorizer must deny access (claim structure mismatch)."""
+    print("Testing malformed cookie (no ':' separator) is denied...")
+
+    event = {"methodArn": "arn:aws:execute-api:...", "headers": {"Cookie": "session_id=noseparatorhere"}}
+
+    authorizer.table = MagicMock()
+
+    with patch("authorizer.APP_ID", "test-app"):
+        policy = authorizer.lambda_handler(event, None)
+
+        effect = policy["policyDocument"]["Statement"][0]["Effect"]
+        assert effect == "Deny", f"Expected Deny for malformed cookie, got {effect}"
+
+        # DDB should NOT have been called since parsing failed
+        authorizer.table.get_item.assert_not_called()
+        print("  PASS: malformed cookie without composite separator correctly denied.")
+
+
 if __name__ == "__main__":
     try:
         test_tenant_extraction_in_callback()
         test_tenant_propagation_in_authorizer()
         test_authorizer_denies_tenant_claim_mismatch()
+        test_cross_tenant_session_forgery_denied()
+        test_expired_session_denied()
+        test_malformed_cookie_denied()
         print("\nMulti-tenancy North-South Join tests passed successfully.")
     except Exception as e:
         print(f"\nUNIT TEST FAILED: {e}")

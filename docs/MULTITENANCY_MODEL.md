@@ -36,7 +36,8 @@ This ensures that:
 
 ### 2.1 Identity-Based Isolation (Logical)
 *   **Mechanism**: Attribute-Based Access Control (ABAC).
-*   **Enforcement**: The **BFF Proxy** validates every request. It ensures `session.tenant_id == token.tenant_id` before invoking the runtime.
+*   **Enforcement (Proxy layer)**: The **BFF Proxy** validates every request. It ensures `session.tenant_id == token.tenant_id` before invoking the runtime. Requests with a mismatched or absent `session_id` are rejected with HTTP 403.
+*   **Enforcement (Cedar layer)**: Cedar policies in the governance module (`tenant-isolation.cedar`) enforce `principal.tenant_id == resource.tenant_id`. Cross-tenant access is explicitly denied. Principals with a `tenant_id` claim cannot access resources that lack a `tenant_id` tag.
 *   **Propagation**: The `x-tenant-id` and `x-app-id` headers are injected into every downstream request.
 
 ### 2.2 Physical Isolation (Credential-Level)
@@ -94,7 +95,7 @@ This ensures that:
 ### 5.2 Cross-Tenant Access
 *   **Default**: **DENY ALL**.
 *   **Exception**: "System" or "Admin" tenants defined in a specific policy override table.
-*   **Enforcement**: Cedar Policies evaluated at the Proxy layer.
+*   **Enforcement**: Cedar Policies (`tenant-isolation.cedar`) evaluated at the governance layer. The policy requires `principal.tenant_id == resource.tenant_id` and explicitly denies mismatches. IAM dynamic session policies (proxy layer) further restrict credentials to the tenant's S3 prefix at the AWS API level.
 
 ---
 

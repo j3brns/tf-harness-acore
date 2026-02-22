@@ -7,6 +7,9 @@ All notable changes to this project are documented in this file.
 ### Added
 - Resource Coverage Matrix (`docs/NOVATION_MATRIX.md`) identifying migration candidates from CLI to native Terraform (Issue #17).
 - AWS Provider version pin to `~> 6.33.0` to support native Bedrock AgentCore resources (Issue #17).
+- Cedar tenant isolation policy (`tenant-isolation.cedar`) enforcing `principal.tenant_id == resource.tenant_id` and explicitly denying cross-tenant access (Issue #24, Rule 14.3).
+- Negative automated tests for cross-tenant session forgery, expired sessions, and malformed composite cookies in the BFF authorizer (Issue #24, Rule 14.1).
+- Claim-mismatch tests in the BFF proxy verifying that `AssumeRole` is not called when `tenant_id` or `app_id` is absent from the authorizer context (Issue #24, Rule 14.3).
 
 ### Fixed
 - CLI provisioners in foundation/tools/runtime/governance modules now create `${path.module}/.terraform` before writing local output artifacts, preventing deploy failures on clean CI runners.

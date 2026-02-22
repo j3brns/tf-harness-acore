@@ -16,11 +16,11 @@ def test_ssm_durability():
     with open("terraform/modules/agentcore-foundation/gateway.tf", "r") as f:
         content = f.read()
         if 'resource "null_resource" "gateway"' in content:
-            raise Exception('FAILED: legacy CLI gateway null_resource still exists in gateway.tf')
+            raise Exception("FAILED: legacy CLI gateway null_resource still exists in gateway.tf")
         if 'resource "null_resource" "gateway_target"' in content:
-            raise Exception('FAILED: legacy CLI gateway_target null_resource still exists in gateway.tf')
+            raise Exception("FAILED: legacy CLI gateway_target null_resource still exists in gateway.tf")
         if 'data "aws_ssm_parameter" "gateway_id"' in content:
-            raise Exception('FAILED: legacy gateway SSM bridge data source still exists in gateway.tf')
+            raise Exception("FAILED: legacy gateway SSM bridge data source still exists in gateway.tf")
 
     with open("terraform/modules/agentcore-foundation/identity.tf", "r") as f:
         content = f.read()
@@ -81,9 +81,9 @@ def test_provider_freeze_point_pin():
     with open("terraform/versions.tf", "r") as f:
         content = f.read()
         if 'source  = "hashicorp/aws"' not in content:
-            raise Exception('FAILED: hashicorp/aws provider source not found in terraform/versions.tf')
+            raise Exception("FAILED: hashicorp/aws provider source not found in terraform/versions.tf")
         if 'version = "~> 6.33.0"' not in content:
-            raise Exception('FAILED: AWS provider freeze-point pin (~> 6.33.0) missing in terraform/versions.tf')
+            raise Exception("FAILED: AWS provider freeze-point pin (~> 6.33.0) missing in terraform/versions.tf")
     print("  PASS: AWS provider freeze-point pin verified.")
 
 
@@ -100,12 +100,16 @@ def test_native_gateway_decommission():
     with open("terraform/modules/agentcore-foundation/variables.tf", "r") as f:
         content = f.read()
         if 'variable "use_native_gateway"' in content:
-            raise Exception('FAILED: deprecated module variable "use_native_gateway" still present in foundation variables.tf')
+            raise Exception(
+                'FAILED: deprecated module variable "use_native_gateway" still present in foundation variables.tf'
+            )
 
     with open("terraform/variables.tf", "r") as f:
         content = f.read()
         if 'variable "use_native_gateway"' in content:
-            raise Exception('FAILED: deprecated root variable "use_native_gateway" still present in terraform/variables.tf')
+            raise Exception(
+                'FAILED: deprecated root variable "use_native_gateway" still present in terraform/variables.tf'
+            )
 
     print("  PASS: Gateway legacy CLI path removed and pilot toggle decommissioned.")
 
