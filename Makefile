@@ -83,10 +83,15 @@ tflint: ## Run TFLint for style checking
 	tflint --chdir=$(TERRAFORM_DIR) --format compact --config $(TERRAFORM_DIR)/.tflint.hcl
 
 # Documentation
-docs: ## Generate Terraform documentation
-	@echo "Generating documentation..."
+docs: generate-openapi ## Generate all documentation (Terraform + OpenAPI)
+	@echo "Generating Terraform documentation..."
 	terraform-docs markdown $(TERRAFORM_DIR) > docs/terraform.md
 	@echo "✓ Documentation generated to docs/terraform.md"
+
+generate-openapi: ## Generate OpenAPI spec from MCP tools registry
+	@echo "Generating OpenAPI spec..."
+	python3 terraform/scripts/generate_mcp_openapi.py
+	@echo "✓ OpenAPI spec generated to docs/api/mcp-tools-v1.openapi.json"
 
 # Module management
 module-list: ## List all modules

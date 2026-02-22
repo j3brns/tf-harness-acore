@@ -98,6 +98,22 @@ git push origin main
 cd terraform
 terraform fmt -check -recursive
 
+# Generate all documentation (including MCP Tools OpenAPI)
+make docs
+```
+
+#### MCP Tools OpenAPI Generation
+
+The project includes a script to automatically generate an OpenAPI 3.1.0 specification from the MCP tools registry defined in `examples/mcp-servers/*/handler.py`.
+
+To generate or update the OpenAPI spec:
+
+```bash
+make generate-openapi
+```
+
+The generated file will be saved to `docs/api/mcp-tools-v1.openapi.json`. This spec can be used by the Web UI to dynamically build tool-calling interfaces or for testing.
+
 # Syntax validation
 terraform validate
 

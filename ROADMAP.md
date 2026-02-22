@@ -120,7 +120,7 @@ This document outlines planned features and improvements for the Bedrock AgentCo
 
 ## 🛠️ Developer Experience (DX)
 
-- [ ] **Native Swagger/OpenAPI Generation**
+- [x] **Native Swagger/OpenAPI Generation**
   * **Problem:** MCP tools are defined in code but not documented for the frontend.
   * **Solution:** Automatically generate an OpenAPI spec from the MCP tools registry for use in the Web UI.
   * **Issue:** #33
