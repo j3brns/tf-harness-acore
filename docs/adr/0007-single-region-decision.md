@@ -98,6 +98,12 @@ bff_region       = ""          # API Gateway/BFF (defaults to agentcore_region)
 bedrock_region   = ""          # Bedrock models/guardrails/inference profiles (defaults to agentcore_region)
 ```
 
+### E8A Clarification (Issue #73)
+
+State-key strategy work (E8A/E8B) does not change the region model. In current repo operations, CI may run with
+`AWS_DEFAULT_REGION=eu-west-2` for backend generation/general job context while AgentCore placement is still an explicit
+deploy input via `agentcore_region` (for example `eu-central-1` in EU split deployments).
+
 ### State Backup (Recommended)
 
 Enable cross-region replication for state bucket:

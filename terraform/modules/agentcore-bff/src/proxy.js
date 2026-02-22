@@ -15,6 +15,7 @@ const AGENTCORE_SERVICE = "bedrock-agentcore";
 
 const AGENT_NAME = process.env.AGENT_NAME || "";
 const ENVIRONMENT = process.env.ENVIRONMENT || "";
+const DEPLOYMENT_BUCKET_NAME = process.env.DEPLOYMENT_BUCKET_NAME || "";
 const AUDIT_LOGS_ENABLED = process.env.AUDIT_LOGS_ENABLED === "true";
 const AUDIT_LOGS_BUCKET = process.env.AUDIT_LOGS_BUCKET || "";
 const AUDIT_LOGS_PREFIX = process.env.AUDIT_LOGS_PREFIX || "audit/bff-proxy/events/";
@@ -405,9 +406,13 @@ exports.handler = awslambda.streamifyResponse(async (event, responseStream) => {
               Effect: "Allow",
               Action: ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
               Resource: [
-                "arn:aws:s3:::*-deployment-*",
+                // Scope to the specific deployment bucket when known; fall back to a
+                // named pattern only if the env var is absent (degraded but bounded).
+                ...(DEPLOYMENT_BUCKET_NAME
+                  ? [`arn:aws:s3:::${DEPLOYMENT_BUCKET_NAME}`, `arn:aws:s3:::${DEPLOYMENT_BUCKET_NAME}/*`]
+                  : ["arn:aws:s3:::*-deployment-*"]),
                 `arn:aws:s3:::*-memory-*/${appId}/${tenantId}/*`,
-                `arn:aws:s3:::*-memory-*/${appId}/${tenantId}`,
+                `arn:aws:s3:::${appId}-*-memory-*/${appId}/${tenantId}`,
               ],
             },
             {

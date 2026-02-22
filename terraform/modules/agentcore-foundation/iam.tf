@@ -172,10 +172,14 @@ resource "aws_iam_role_policy" "workload_identity" {
           "bedrock:*"
         ]
         Resource = "*"
-        # Rule 7.2: Resource-level ABAC
+        # Rule 14.3 ABAC: scope to this agent's tagged resources.
+        # StringEqualsIfExists is required because AWS-managed resources (e.g. Bedrock
+        # foundation models) cannot carry customer tags — a strict StringEquals would
+        # deny model invocation. For user-taggable AgentCore resources (runtimes,
+        # gateways, memory) the condition enforces agent-level isolation.
         Condition = {
-          StringEquals = {
-            "aws:ResourceTag/Project" = local.project_tag
+          StringEqualsIfExists = {
+            "aws:ResourceTag/AgentName" = var.agent_name
           }
         }
       },

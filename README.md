@@ -378,6 +378,8 @@ Notes:
 | `enable_observability` | `bool` | `true` | Enable CloudWatch log groups and metrics. |
 | `log_retention_days` | `number` | `30` | CloudWatch log retention period. |
 | `enable_xray` | `bool` | `true` | Enable X-Ray distributed tracing. |
+| `xray_sampling_priority` | `number` | `100` | X-Ray sampling rule priority (1–9999). Assign unique values per agent when multiple agents share an account to ensure deterministic sampling order. |
+| `manage_log_resource_policy` | `bool` | `true` | Create the account-level CloudWatch log resource policy for Bedrock AgentCore (AWS limit: 10 per account/region). Set `false` for every agent after the first in the same account/environment — the shared policy already covers all agents. |
 | `alarm_sns_topic_arn` | `string` | `""` | SNS topic for CloudWatch alarm notifications. |
 | `enable_agent_dashboards` | `bool` | `false` | Create an optional per-agent CloudWatch dashboard (Terraform-managed). |
 | `agent_dashboard_name` | `string` | `""` | Optional dashboard name override (defaults to `<agent_name>-dashboard` when empty). |
@@ -724,13 +726,14 @@ GitLab CI is the deployment pipeline. It runs validation/lint/test stages and th
 
 ## State Management
 
-Terraform state lives in S3 with native S3 locking enabled via `use_lockfile = true`, which requires Terraform 1.10.0 or later. The framework uses separate S3 buckets per environment rather than Terraform workspaces. This is a deliberate blast-radius decision: if the dev state bucket is compromised or corrupted, test and prod are physically unaffected. Switching environments requires a `terraform init -backend-config=backend-{env}.tf` rather than a `terraform workspace select`, which makes the active environment explicit and impossible to confuse. No DynamoDB lock table is required -- native S3 locking handles concurrency.
+Terraform state lives in S3 with native S3 locking enabled via `use_lockfile = true`, which requires Terraform 1.10.0 or later. The framework uses separate S3 buckets per environment rather than Terraform workspaces. This is a deliberate blast-radius decision: if the dev state bucket is compromised or corrupted, test and prod are physically unaffected. Switching environments requires a `terraform init -backend-config=backend-{env}.tf` rather than a `terraform workspace select`, which makes the active environment explicit and impossible to confuse. No DynamoDB lock table is required -- native S3 locking handles concurrency. Current backend examples and CI templates use the env-only key pattern `agentcore/{env}/terraform.tfstate`; E8A documents the planned finer-grained strategy and migration runbook in `docs/adr/0013-segmented-state-key-strategy.md` and `docs/runbooks/segmented-terraform-state-key-migration.md`.
 
 ```
 S3 Bucket (per environment)
   agentcore/
-    terraform.tfstate
-    terraform.tfstate.tflock    # lock file during operations
+    {env}/
+      terraform.tfstate
+      terraform.tfstate.tflock  # lock file during operations
     [versioned snapshots]       # via S3 versioning
 ```
 

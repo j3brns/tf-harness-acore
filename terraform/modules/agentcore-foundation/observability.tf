@@ -123,7 +123,7 @@ resource "aws_xray_sampling_rule" "agentcore" {
   count = var.enable_observability && var.enable_xray ? 1 : 0
 
   rule_name      = "${var.agent_name}-sampling"
-  priority       = 100
+  priority       = var.xray_sampling_priority
   fixed_rate     = var.xray_sampling_rate
   reservoir_size = 1
   service_type   = "AWS::BedrockAgentCore"

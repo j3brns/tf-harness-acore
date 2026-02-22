@@ -199,6 +199,25 @@ variable "dashboard_widgets_override" {
   }
 }
 
+# ===== OBSERVABILITY SCALING VARIABLES =====
+
+variable "xray_sampling_priority" {
+  description = "X-Ray sampling rule priority (1-9999). Assign unique values per agent when multiple agents share an account to ensure deterministic sampling order."
+  type        = number
+  default     = 100
+
+  validation {
+    condition     = var.xray_sampling_priority >= 1 && var.xray_sampling_priority <= 9999
+    error_message = "xray_sampling_priority must be between 1 and 9999."
+  }
+}
+
+variable "manage_log_resource_policy" {
+  description = "Create the account-level CloudWatch log resource policy for Bedrock AgentCore. AWS allows a maximum of 10 per account/region. Set to false for every agent after the first in the same account/environment — the shared policy covers all agents."
+  type        = bool
+  default     = true
+}
+
 # ===== SECURITY BATCH 3 VARIABLES =====
 
 variable "enable_waf" {

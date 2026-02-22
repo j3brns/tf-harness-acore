@@ -78,9 +78,12 @@ resource "aws_cloudwatch_log_resource_policy" "bedrock_agentcore" {
   # checkov:skip=CKV_AWS_109: PutResourcePolicy requires wildcard
   # checkov:skip=CKV_AWS_110: PutResourcePolicy requires wildcard
   # checkov:skip=CKV_AWS_111: PutResourcePolicy requires wildcard
-  count = var.enable_observability ? 1 : 0
+  # AWS limit: 10 CloudWatch resource policies per account/region.
+  # This policy covers all agents (Resource = *), so one per environment is correct.
+  # Set manage_log_resource_policy = false on subsequent agent deployments in the same account.
+  count = var.enable_observability && var.manage_log_resource_policy ? 1 : 0
 
-  policy_name = "bedrock-agentcore-log-policy-${var.agent_name}"
+  policy_name = "bedrock-agentcore-log-policy-${var.environment}"
 
   policy_document = jsonencode({
     Version = "2012-10-17"
