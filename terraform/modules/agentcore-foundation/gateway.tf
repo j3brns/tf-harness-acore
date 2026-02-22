@@ -12,7 +12,10 @@ resource "aws_bedrockagentcore_gateway" "this" {
 
   protocol_configuration {
     mcp {
-      search_type        = var.gateway_search_type
+      # Provider v6.33.0 native gateway currently validates search_type as SEMANTIC.
+      # Preserve existing module input compatibility while forcing a provider-supported
+      # value for the native pilot path.
+      search_type        = var.gateway_search_type == "HYBRID" ? "SEMANTIC" : var.gateway_search_type
       supported_versions = var.gateway_mcp_versions
     }
   }
