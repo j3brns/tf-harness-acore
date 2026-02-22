@@ -49,6 +49,17 @@ jobs:
             printf '%s\n' "$CHANGED" | grep -qE '^(terraform/tests/|terraform/scripts/validate_examples\.sh|examples/.*/agent-code/tests/|examples/.*/tests/)' || { echo "ERROR: Terraform changed without tests"; exit 1; }
           fi
 
+  openapi-client-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Regenerate MCP OpenAPI spec
+        run: make generate-openapi
+      - name: Verify typed client matches regenerated MCP OpenAPI spec
+        run: make check-openapi-client
+      - name: Ensure generated OpenAPI artifact is committed
+        run: git diff --exit-code -- docs/api/mcp-tools-v1.openapi.json
+
   terraform-validate:
     runs-on: ubuntu-latest
     steps:
