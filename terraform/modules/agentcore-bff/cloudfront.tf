@@ -29,6 +29,45 @@ resource "aws_cloudfront_response_headers_policy" "security" {
   }
 }
 
+resource "aws_cloudfront_function" "spa_route_rewrite" {
+  count   = var.enable_bff ? 1 : 0
+  name    = "agentcore-bff-spa-rewrite-${var.agent_name}"
+  runtime = "cloudfront-js-2.0"
+  publish = true
+  comment = "Rewrite SPA deep links to index.html without altering /api or /auth responses"
+
+  code = <<-EOF
+    function handler(event) {
+      var request = event.request;
+      var uri = request.uri || "/";
+
+      if (
+        uri === "/" ||
+        uri === "/api" ||
+        uri === "/auth" ||
+        uri.indexOf("/api/") === 0 ||
+        uri.indexOf("/auth/") === 0
+      ) {
+        return request;
+      }
+
+      if (uri.charAt(uri.length - 1) === "/") {
+        request.uri = "/index.html";
+        return request;
+      }
+
+      var lastSlash = uri.lastIndexOf("/");
+      var lastSegment = uri.substring(lastSlash + 1);
+
+      if (lastSegment.indexOf(".") === -1) {
+        request.uri = "/index.html";
+      }
+
+      return request;
+    }
+  EOF
+}
+
 resource "aws_cloudfront_distribution" "bff" {
   # checkov:skip=CKV2_AWS_47: WAF requires cost/complexity decision (out of scope for harness)
   # checkov:skip=CKV2_AWS_42: Custom SSL requires ACM cert (out of scope for harness default)
@@ -72,6 +111,13 @@ resource "aws_cloudfront_distribution" "bff" {
     }
 
     response_headers_policy_id = aws_cloudfront_response_headers_policy.security[0].id
+
+    # SPA deep-link fallback is handled on viewer-request so /api and /auth errors
+    # preserve their origin status codes instead of being rewritten to index.html.
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.spa_route_rewrite[0].arn
+    }
 
     viewer_protocol_policy = "redirect-to-https"
 
@@ -136,19 +182,6 @@ resource "aws_cloudfront_distribution" "bff" {
 
   viewer_certificate {
     cloudfront_default_certificate = true
-  }
-
-  # SPA Fallback
-  custom_error_response {
-    error_code         = 403 # S3 returns 403 for private objects
-    response_code      = 200
-    response_page_path = "/index.html"
-  }
-
-  custom_error_response {
-    error_code         = 404
-    response_code      = 200
-    response_page_path = "/index.html"
   }
 
   tags = var.tags
