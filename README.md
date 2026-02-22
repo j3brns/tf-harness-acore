@@ -724,13 +724,14 @@ GitLab CI is the deployment pipeline. It runs validation/lint/test stages and th
 
 ## State Management
 
-Terraform state lives in S3 with native S3 locking enabled via `use_lockfile = true`, which requires Terraform 1.10.0 or later. The framework uses separate S3 buckets per environment rather than Terraform workspaces. This is a deliberate blast-radius decision: if the dev state bucket is compromised or corrupted, test and prod are physically unaffected. Switching environments requires a `terraform init -backend-config=backend-{env}.tf` rather than a `terraform workspace select`, which makes the active environment explicit and impossible to confuse. No DynamoDB lock table is required -- native S3 locking handles concurrency.
+Terraform state lives in S3 with native S3 locking enabled via `use_lockfile = true`, which requires Terraform 1.10.0 or later. The framework uses separate S3 buckets per environment rather than Terraform workspaces. This is a deliberate blast-radius decision: if the dev state bucket is compromised or corrupted, test and prod are physically unaffected. Switching environments requires a `terraform init -backend-config=backend-{env}.tf` rather than a `terraform workspace select`, which makes the active environment explicit and impossible to confuse. No DynamoDB lock table is required -- native S3 locking handles concurrency. Backend examples use the canonical segmented key format `agentcore/{env}/terraform.tfstate`; see `docs/runbooks/segmented-terraform-state-key-migration.md` when migrating from the legacy flat key.
 
 ```
 S3 Bucket (per environment)
   agentcore/
-    terraform.tfstate
-    terraform.tfstate.tflock    # lock file during operations
+    {env}/
+      terraform.tfstate
+      terraform.tfstate.tflock  # lock file during operations
     [versioned snapshots]       # via S3 versioning
 ```
 

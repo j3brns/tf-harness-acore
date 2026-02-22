@@ -6,6 +6,15 @@ This runbook covers recovery procedures for Terraform state issues.
 
 ## Scenarios
 
+Set the state key variables for the environment you are recovering. The repo-standard backend key is segmented by environment (`agentcore/${ENV}/terraform.tfstate`).
+
+```bash
+export ENV="<dev|test|prod>"
+export PROJECT_ID="<project-or-account-suffix>"
+export STATE_BUCKET="terraform-state-${ENV}-${PROJECT_ID}"
+export STATE_KEY="agentcore/${ENV}/terraform.tfstate"
+```
+
 ### 1. State File Corruption
 
 **Symptoms:**
@@ -17,13 +26,13 @@ This runbook covers recovery procedures for Terraform state issues.
 ```bash
 # 1. List available state versions (S3 versioning)
 aws s3api list-object-versions \
-  --bucket terraform-state-${ENV}-${PROJECT_ID} \
-  --prefix agentcore/terraform.tfstate
+  --bucket "${STATE_BUCKET}" \
+  --prefix "${STATE_KEY}"
 
 # 2. Download a known-good version
 aws s3api get-object \
-  --bucket terraform-state-${ENV}-${PROJECT_ID} \
-  --key agentcore/terraform.tfstate \
+  --bucket "${STATE_BUCKET}" \
+  --key "${STATE_KEY}" \
   --version-id <VERSION_ID> \
   terraform.tfstate.recovered
 
@@ -32,7 +41,7 @@ terraform show terraform.tfstate.recovered
 
 # 4. Replace current state
 aws s3 cp terraform.tfstate.recovered \
-  s3://terraform-state-${ENV}-${PROJECT_ID}/agentcore/terraform.tfstate
+  "s3://${STATE_BUCKET}/${STATE_KEY}"
 
 # 5. Verify recovery
 terraform init
@@ -47,7 +56,7 @@ terraform plan
 
 **Recovery Steps:**
 
-Terraform 1.10+ uses **Native S3 locking**. A lock file is created at `agentcore/${ENV}/terraform.tfstate.tflock`.
+Terraform 1.10+ uses **Native S3 locking**. A lock file is created at `${STATE_KEY}.tflock` (for example `agentcore/dev/terraform.tfstate.tflock`).
 
 ```bash
 # 1. Identify the lock ID from the error message
@@ -57,7 +66,7 @@ Terraform 1.10+ uses **Native S3 locking**. A lock file is created at `agentcore
 terraform force-unlock <LOCK_ID>
 
 # 3. If S3 object remains, manually delete the .tflock file
-aws s3 rm s3://terraform-state-${ENV}-${PROJECT_ID}/agentcore/${ENV}/terraform.tfstate.tflock
+aws s3 rm "s3://${STATE_BUCKET}/${STATE_KEY}.tflock"
 ```
 
 ### 3. State Drift Detection
