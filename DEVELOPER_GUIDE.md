@@ -125,9 +125,24 @@ To verify the committed typed client matches the current OpenAPI spec (drift che
 make check-openapi-client
 ```
 
+To generate a human-readable OpenAPI contract diff/changelog summary against a baseline spec (for PR review or release notes prep):
+
+```bash
+# Compare current committed spec to the default branch version
+git show origin/main:docs/api/mcp-tools-v1.openapi.json > .scratch/mcp-tools-v1.openapi.base.json
+make openapi-contract-diff OLD=.scratch/mcp-tools-v1.openapi.base.json
+```
+
+Classification rules used by the diff summary:
+- **Potentially breaking**: removed paths/operations, removed request properties, new required properties, type/response schema changes, operationId changes
+- **Additive / relaxed**: new paths/operations, new optional request properties, newly optional fields, added responses
+- **Documentation-only**: summary/description/tag metadata wording changes
+
 Generated artifacts:
 - `docs/api/mcp-tools-v1.openapi.json`
 - `docs/api/mcp-tools-v1.client.ts`
+
+The OpenAPI contract diff/changelog summary is generated on demand (local via `make openapi-contract-diff`) and in CI as a job summary for PR/tag review. It is not committed as a static artifact.
 
 These artifacts can be used by the Web UI and integrators to consume a consistent tool-calling contract without ad hoc request code.
 
