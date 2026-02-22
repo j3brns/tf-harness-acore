@@ -1,0 +1,9 @@
+# Backend configuration for PROD environment (Segmented State)
+# Copy this to backend-prod.tfvars and update values.
+# Run 'terraform init -backend-config=backend-prod.tfvars' to initialize.
+
+bucket       = "terraform-state-prod-123456789012"
+key          = "state/my-app/research-agent-a1b2/terraform.tfstate"
+region       = "eu-west-2"
+encrypt      = true
+use_lockfile = true

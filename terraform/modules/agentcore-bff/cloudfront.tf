@@ -74,7 +74,7 @@ resource "aws_cloudfront_distribution" "bff" {
   # checkov:skip=CKV2_AWS_46: S3 Origin Access is enabled via OAC
   count = var.enable_bff ? 1 : 0
 
-  # Optional WAFv2 CLOUDFRONT-scope Web ACL association (must be in us-east-1)
+  # Optional WAFv2 CLOUDFRONT-scope Web ACL association (must be in eu-west-2)
   web_acl_id = var.cloudfront_waf_acl_arn != "" ? var.cloudfront_waf_acl_arn : null
 
   aliases = var.custom_domain_name != "" ? [var.custom_domain_name] : []

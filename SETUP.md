@@ -84,7 +84,7 @@ cp terraform.tfvars.example terraform.tfvars
 Create `terraform.tfvars`:
 
 ```hcl
-region      = "us-east-1"
+region      = "eu-west-2"
 environment = "dev"
 agent_name  = "my-first-agent"
 
@@ -132,7 +132,7 @@ runtime_source_path = "../research-agent"
 mcp_targets = {
   web_search = {
     name       = "web-search-tool"
-    lambda_arn = "arn:aws:lambda:us-east-1:123456789012:function:web-search-mcp"
+    lambda_arn = "arn:aws:lambda:eu-west-2:123456789012:function:web-search-mcp"
   }
 }
 
@@ -425,7 +425,7 @@ aws configure
 # Or use environment variables
 export AWS_ACCESS_KEY_ID=<your-key>
 export AWS_SECRET_ACCESS_KEY=<your-secret>
-export AWS_REGION=us-east-1
+export AWS_REGION=eu-west-2
 
 # Verify
 aws sts get-caller-identity

@@ -34,7 +34,7 @@ terraform {
   backend "s3" {
     bucket       = "terraform-state-dev-12345"
     key          = "agentcore/terraform.tfstate"
-    region       = "us-east-1"
+    region       = "eu-west-2"
     encrypt      = true
     use_lockfile = true  # Native S3 locking (Terraform 1.10.0+)
   }
@@ -92,7 +92,7 @@ Before first `terraform init`:
 
 ```bash
 # Create S3 bucket with versioning and encryption
-aws s3 mb s3://terraform-state-dev-12345 --region us-east-1
+aws s3 mb s3://terraform-state-dev-12345 --region eu-west-2
 
 aws s3api put-bucket-versioning \
   --bucket terraform-state-dev-12345 \
@@ -122,7 +122,7 @@ terraform {
   backend "s3" {
     bucket       = "terraform-state-dev-12345"
     key          = "agentcore/terraform.tfstate"
-    region       = "us-east-1"
+    region       = "eu-west-2"
     encrypt      = true
     use_lockfile = true  # Add this
     # dynamodb_table = "terraform-state-lock-dev"  # Remove this

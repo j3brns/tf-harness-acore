@@ -20,11 +20,13 @@ description:
 region:
   type: str
   help: "AWS Region"
-  default: "us-east-1"
+  default: "eu-west-2"
   choices:
-    - "us-east-1"
+    - "eu-west-2"
+    - "eu-west-2"
+    - "eu-central-1"
     - "us-west-2"
-    - "eu-west-1"
+    - "eu-west-2"
     - "eu-west-2"
     - "eu-central-1"
 

@@ -13,8 +13,8 @@
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.33.0 |
-| <a name="provider_http"></a> [http](#provider\_http) | 3.5.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 6.33.0 |
+| <a name="provider_http"></a> [http](#provider\_http) | ~> 3.4 |
 
 ## Modules
 
@@ -38,12 +38,13 @@
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_agent_dashboard_name"></a> [agent\_dashboard\_name](#input\_agent\_dashboard\_name) | Optional CloudWatch dashboard name override (defaults to <agent\_name>-dashboard when empty) | `string` | `""` | no |
-| <a name="input_agent_name"></a> [agent\_name](#input\_agent\_name) | Name of the agent | `string` | n/a | yes |
+| <a name="input_agent_name"></a> [agent\_name](#input\_agent\_name) | Internal agent identity used in physical AWS resource names (immutable). Use app\_id for the human-facing alias. | `string` | n/a | yes |
 | <a name="input_agentcore_region"></a> [agentcore\_region](#input\_agentcore\_region) | Optional AgentCore control-plane region override (defaults to region) | `string` | `""` | no |
 | <a name="input_alarm_sns_topic_arn"></a> [alarm\_sns\_topic\_arn](#input\_alarm\_sns\_topic\_arn) | Optional SNS topic ARN for CloudWatch alarm notifications | `string` | `""` | no |
-| <a name="input_app_id"></a> [app\_id](#input\_app\_id) | Application ID for multi-tenant isolation (North anchor). Defaults to agent\_name. | `string` | `""` | no |
+| <a name="input_allow_legacy_agent_name"></a> [allow\_legacy\_agent\_name](#input\_allow\_legacy\_agent\_name) | Temporary migration escape hatch. Set true only to preserve an already-deployed legacy agent\_name during transition to the ADR 0012 naming convention. | `bool` | `false` | no |
+| <a name="input_app_id"></a> [app\_id](#input\_app\_id) | Human-facing application alias for routing and multi-tenant isolation (North anchor). Defaults to agent\_name. | `string` | `""` | no |
 | <a name="input_bedrock_region"></a> [bedrock\_region](#input\_bedrock\_region) | Optional Bedrock region override for model-related resources (defaults to agentcore\_region) | `string` | `""` | no |
-| <a name="input_bff_acm_certificate_arn"></a> [bff\_acm\_certificate\_arn](#input\_bff\_acm\_certificate\_arn) | ARN of the ACM certificate for the custom domain. Must be in us-east-1 for CloudFront. | `string` | `""` | no |
+| <a name="input_bff_acm_certificate_arn"></a> [bff\_acm\_certificate\_arn](#input\_bff\_acm\_certificate\_arn) | ARN of the ACM certificate for the custom domain. Must be in eu-west-2 for CloudFront. | `string` | `""` | no |
 | <a name="input_bff_agentcore_runtime_arn"></a> [bff\_agentcore\_runtime\_arn](#input\_bff\_agentcore\_runtime\_arn) | AgentCore runtime ARN for the BFF proxy (required if enable\_bff is true and enable\_runtime is false) | `string` | `""` | no |
 | <a name="input_bff_agentcore_runtime_role_arn"></a> [bff\_agentcore\_runtime\_role\_arn](#input\_bff\_agentcore\_runtime\_role\_arn) | Optional runtime IAM role ARN for the BFF proxy to assume (set for cross-account runtime identity propagation) | `string` | `""` | no |
 | <a name="input_bff_custom_domain_name"></a> [bff\_custom\_domain\_name](#input\_bff\_custom\_domain\_name) | Custom domain name for the BFF CloudFront distribution (e.g., agent.example.com). Requires bff\_acm\_certificate\_arn. | `string` | `""` | no |
@@ -112,7 +113,7 @@
 | <a name="input_policy_engine_schema"></a> [policy\_engine\_schema](#input\_policy\_engine\_schema) | Cedar schema definition for policy engine | `string` | `""` | no |
 | <a name="input_proxy_reserved_concurrency"></a> [proxy\_reserved\_concurrency](#input\_proxy\_reserved\_concurrency) | Reserved concurrent executions for the BFF proxy Lambda | `number` | `10` | no |
 | <a name="input_python_version"></a> [python\_version](#input\_python\_version) | Python version for packaging | `string` | `"3.12"` | no |
-| <a name="input_region"></a> [region](#input\_region) | Default AWS region | `string` | `"us-east-1"` | no |
+| <a name="input_region"></a> [region](#input\_region) | Default AWS region | `string` | `"eu-west-2"` | no |
 | <a name="input_runtime_config"></a> [runtime\_config](#input\_runtime\_config) | Runtime configuration as JSON | `map(any)` | `{}` | no |
 | <a name="input_runtime_entry_file"></a> [runtime\_entry\_file](#input\_runtime\_entry\_file) | Entry point file for agent runtime | `string` | `"runtime.py"` | no |
 | <a name="input_runtime_inline_policies"></a> [runtime\_inline\_policies](#input\_runtime\_inline\_policies) | Inline policies to attach to runtime role | `map(string)` | `{}` | no |
@@ -120,7 +121,7 @@
 | <a name="input_runtime_reserved_concurrency"></a> [runtime\_reserved\_concurrency](#input\_runtime\_reserved\_concurrency) | Reserved concurrent executions for the agent runtime Lambda | `number` | `10` | no |
 | <a name="input_runtime_role_arn"></a> [runtime\_role\_arn](#input\_runtime\_role\_arn) | IAM role ARN for agent runtime | `string` | `""` | no |
 | <a name="input_runtime_source_path"></a> [runtime\_source\_path](#input\_runtime\_source\_path) | Path to agent source code directory | `string` | `"./agent-code"` | no |
-| <a name="input_tags"></a> [tags](#input\_tags) | Additional tags to apply to all resources. Canonical tags (AppID, Environment, AgentName, ManagedBy, Owner) are always merged by the root module; values here supplement or override non-canonical keys only. | `map(string)` | `{}` | no |
+| <a name="input_tags"></a> [tags](#input\_tags) | Additional tags to apply to all resources. Canonical tags (AppID, AgentAlias, Environment, AgentName, ManagedBy, Owner) are always merged by the root module; values here supplement or override non-canonical keys only. | `map(string)` | `{}` | no |
 
 ## Outputs
 

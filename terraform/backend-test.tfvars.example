@@ -1,0 +1,9 @@
+# Backend configuration for TEST environment (Segmented State)
+# Copy this to backend-test.tfvars and update values.
+# Run 'terraform init -backend-config=backend-test.tfvars' to initialize.
+
+bucket       = "terraform-state-test-123456789012"
+key          = "state/my-app/research-agent-a1b2/terraform.tfstate"
+region       = "eu-west-2"
+encrypt      = true
+use_lockfile = true

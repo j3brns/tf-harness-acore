@@ -43,13 +43,13 @@ class TestS3IntegrationWithMoto:
         monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "testing")
         monkeypatch.setenv("AWS_SECURITY_TOKEN", "testing")
         monkeypatch.setenv("AWS_SESSION_TOKEN", "testing")
-        monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
+        monkeypatch.setenv("AWS_DEFAULT_REGION", "eu-west-2")
 
     @pytest.fixture
     def s3_bucket(self, aws_credentials):
         """Create a mock S3 bucket."""
         with mock_aws():
-            s3 = boto3.client("s3", region_name="us-east-1")
+            s3 = boto3.client("s3", region_name="eu-west-2")
             bucket_name = "test-outputs-bucket"
             s3.create_bucket(Bucket=bucket_name)
             yield bucket_name
@@ -75,7 +75,7 @@ class TestS3IntegrationWithMoto:
     def test_upload_session_outputs_to_s3(self, aws_credentials, research_outputs):
         """Should upload all research outputs to S3."""
         # Create bucket inside the mock context
-        s3 = boto3.client("s3", region_name="us-east-1")
+        s3 = boto3.client("s3", region_name="eu-west-2")
         bucket_name = "test-outputs-bucket"
         s3.create_bucket(Bucket=bucket_name)
 
@@ -85,7 +85,7 @@ class TestS3IntegrationWithMoto:
             session_id="session-123",
             bucket_name=bucket_name,
             working_dir=research_outputs,
-            region_name="us-east-1",
+            region_name="eu-west-2",
         )
 
         # Verify uploads
@@ -100,7 +100,7 @@ class TestS3IntegrationWithMoto:
     def test_upload_single_file_to_s3(self, aws_credentials, tmp_path):
         """Should upload a single file to S3."""
         # Create bucket inside the mock context
-        s3 = boto3.client("s3", region_name="us-east-1")
+        s3 = boto3.client("s3", region_name="eu-west-2")
         bucket_name = "test-outputs-bucket"
         s3.create_bucket(Bucket=bucket_name)
 
@@ -115,7 +115,7 @@ class TestS3IntegrationWithMoto:
             bucket_name=bucket_name,
             file_path=test_file,
             output_type="final",
-            region_name="us-east-1",
+            region_name="eu-west-2",
         )
 
         assert result == f"s3://{bucket_name}/session-456/final/custom_report.md"
@@ -131,7 +131,7 @@ class TestS3IntegrationWithMoto:
     @mock_aws
     def test_uploaded_files_have_correct_structure(self, aws_credentials, research_outputs):
         """Should organize uploads with correct S3 key structure."""
-        s3 = boto3.client("s3", region_name="us-east-1")
+        s3 = boto3.client("s3", region_name="eu-west-2")
         bucket_name = "test-outputs-bucket"
         s3.create_bucket(Bucket=bucket_name)
 
@@ -141,7 +141,7 @@ class TestS3IntegrationWithMoto:
             session_id="session-789",
             bucket_name=bucket_name,
             working_dir=research_outputs,
-            region_name="us-east-1",
+            region_name="eu-west-2",
         )
 
         # List all objects
@@ -167,7 +167,7 @@ class TestSecretsManagerIntegration:
         """Set fake AWS credentials for moto."""
         monkeypatch.setenv("AWS_ACCESS_KEY_ID", "testing")
         monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "testing")
-        monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
+        monkeypatch.setenv("AWS_DEFAULT_REGION", "eu-west-2")
 
     @mock_aws
     def test_load_secrets_from_secrets_manager(self, aws_credentials, monkeypatch):
@@ -175,7 +175,7 @@ class TestSecretsManagerIntegration:
         import json
 
         # Create secret
-        sm = boto3.client("secretsmanager", region_name="us-east-1")
+        sm = boto3.client("secretsmanager", region_name="eu-west-2")
         secret_value = json.dumps(
             {
                 "LINKUP_API_KEY": "test-linkup-key",
@@ -190,7 +190,7 @@ class TestSecretsManagerIntegration:
         # Set the secret ARN
         monkeypatch.setenv(
             "SECRETS_ARN",
-            "arn:aws:secretsmanager:us-east-1:123456789012:secret:deepresearch/secrets",
+            "arn:aws:secretsmanager:eu-west-2:123456789012:secret:deepresearch/secrets",
         )
 
         # Clear the cache before testing

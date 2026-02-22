@@ -10,28 +10,28 @@ Always verify current regional availability before deciding to split.
 
 Common patterns:
 
-1. **AgentCore Dublin, Bedrock London, BFF London**
+1. **All resources in London (Primary Recommendation)**
 ```hcl
-region           = "eu-west-1"
-agentcore_region = "eu-west-1"
-bedrock_region   = "eu-west-2"
+region           = "eu-west-2"
+agentcore_region = ""
+bedrock_region   = ""
+bff_region       = ""
+```
+
+2. **AgentCore London, Bedrock Dublin (Split Pattern)**
+```hcl
+region           = "eu-west-2"
+agentcore_region = "eu-west-2"
+bedrock_region   = "eu-west-1"
 bff_region       = "eu-west-2"
 ```
 
-2. **AgentCore Frankfurt, Bedrock London, BFF London**
+3. **AgentCore Frankfurt, Bedrock London (Split Pattern)**
 ```hcl
 region           = "eu-central-1"
 agentcore_region = "eu-central-1"
 bedrock_region   = "eu-west-2"
 bff_region       = "eu-west-2"
-```
-
-3. **All resources in Dublin**
-```hcl
-region           = "eu-west-1"
-agentcore_region = ""
-bedrock_region   = ""
-bff_region       = ""
 ```
 
 ## Preconditions
@@ -73,6 +73,14 @@ aws apigateway get-rest-apis --region eu-west-2
 1. `ResourceNotFound` from proxy Lambda: check `AGENTCORE_REGION` environment variable and `agentcore_region` value.
 2. `AccessDenied` from Bedrock: ensure `bedrock_region` matches model availability and IAM policy scoping matches the region.
 3. Missing logs: check CloudWatch in the correct region for BFF (`bff_region`) and AgentCore (`agentcore_region`).
+
+## FAQ
+
+### Why do WAF and ACM need to be in `us-east-1`?
+CloudFront is a global service that is managed from the `us-east-1` (N. Virginia) control plane. AWS enforces the following strict requirements:
+- **ACM Certificates**: Must be issued in `us-east-1` to be attached to a CloudFront distribution.
+- **WAF Web ACLs**: Must be created in `us-east-1` with `scope="CLOUDFRONT"` to be associated with a distribution.
+This applies regardless of where your backend (API Gateway, Lambda) is deployed (e.g., London).
 
 ## Rollback
 

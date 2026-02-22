@@ -17,21 +17,17 @@ Two common patterns:
 Use separate backends (one per environment) instead of Terraform workspaces.
 
 ```hcl
-# backend-dev.tf
-terraform {
-  backend "s3" {
-    bucket = "terraform-state-dev-12345"
-    key    = "agentcore/terraform.tfstate"
-  }
-}
+# backend-dev.tfvars
+bucket = "terraform-state-dev-12345"
+key    = "state/my-app/agent-a1b2/terraform.tfstate"
+region = "eu-west-2"
+encrypt = true
 
-# backend-prod.tf
-terraform {
-  backend "s3" {
-    bucket = "terraform-state-prod-67890"
-    key    = "agentcore/terraform.tfstate"
-  }
-}
+# backend-prod.tfvars
+bucket = "terraform-state-prod-67890"
+key    = "state/my-app/agent-c3d4/terraform.tfstate"
+region = "eu-west-2"
+encrypt = true
 ```
 
 ## Rationale
@@ -83,9 +79,10 @@ terraform destroy  # Clear which environment
 ### Directory Structure
 ```
 terraform/
-+-- backend-dev.tf.example
-+-- backend-test.tf.example
-+-- backend-prod.tf.example
++-- backend-dev.tfvars.example
++-- backend-test.tfvars.example
++-- backend-prod.tfvars.example
++-- backend.tf
 +-- main.tf
 +-- variables.tf
 ```

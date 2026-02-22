@@ -10,8 +10,20 @@ help: ## Show this help message
 	@echo "Available targets:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-25s %s\n", $$1, $$2}'
 
-init: ## Initialize Terraform
+init: ## Initialize Terraform (legacy, may fail if partial backend configured)
 	terraform -chdir=$(TERRAFORM_DIR) init
+
+init-segmented: ## Initialize with segmented key (provide ENV, APP_ID, AGENT_NAME, BUCKET_ID)
+	@test -n "$(ENV)" || { echo "ERROR: Provide ENV (e.g., dev)"; exit 1; }
+	@test -n "$(APP_ID)" || { echo "ERROR: Provide APP_ID"; exit 1; }
+	@test -n "$(AGENT_NAME)" || { echo "ERROR: Provide AGENT_NAME"; exit 1; }
+	@test -n "$(BUCKET_ID)" || { echo "ERROR: Provide BUCKET_ID (AWS account or suffix)"; exit 1; }
+	terraform -chdir=$(TERRAFORM_DIR) init \
+		-backend-config="bucket=terraform-state-$(ENV)-$(BUCKET_ID)" \
+		-backend-config="key=state/$(APP_ID)/$(AGENT_NAME)/terraform.tfstate" \
+		-backend-config="region=eu-west-2" \
+		-backend-config="encrypt=true" \
+		-backend-config="use_lockfile=true"
 
 fmt: ## Format Terraform files
 	terraform -chdir=$(TERRAFORM_DIR) fmt -recursive

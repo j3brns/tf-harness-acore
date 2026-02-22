@@ -98,11 +98,11 @@ browser_network_mode = "SANDBOX"  # PUBLIC, SANDBOX, or VPC
 mcp_targets = {
   my_tool = {
     name       = "my-tool-display-name"
-    lambda_arn = "arn:aws:lambda:us-east-1:123456789012:function:my-tool-mcp"
+    lambda_arn = "arn:aws:lambda:eu-west-2:123456789012:function:my-tool-mcp"
   }
   another_tool = {
     name       = "another-tool"
-    lambda_arn = "arn:aws:lambda:us-east-1:123456789012:function:another-tool-mcp"
+    lambda_arn = "arn:aws:lambda:eu-west-2:123456789012:function:another-tool-mcp"
   }
 }
 ```
@@ -412,7 +412,7 @@ terraform {
   backend "s3" {
     bucket = "terraform-state"
     key    = "bedrock/agentcore/<env>/terraform.tfstate"
-    region = "us-east-1"
+    region = "eu-west-2"
   }
 }
 ```

@@ -9,7 +9,7 @@ import re
 
 # Mirrors the regex in variables.tf cloudfront_waf_acl_arn validation block.
 _CF_WAF_ARN_PATTERN = re.compile(
-    r"^arn:aws:wafv2:us-east-1:[0-9]{12}:global/webacl/[^/]+/[^/]+$"
+    r"^arn:aws:wafv2:eu-west-2:[0-9]{12}:global/webacl/[^/]+/[^/]+$"
 )
 
 
@@ -23,13 +23,13 @@ def _is_valid_cf_waf_arn(arn: str) -> bool:
 
 def test_accepts_well_formed_cf_waf_arn():
     """Standard CLOUDFRONT-scope ARN must be accepted."""
-    arn = "arn:aws:wafv2:us-east-1:123456789012:global/webacl/my-cf-acl/aabbccdd-1234-5678-abcd-ef1234567890"
+    arn = "arn:aws:wafv2:eu-west-2:123456789012:global/webacl/my-cf-acl/aabbccdd-1234-5678-abcd-ef1234567890"
     assert _is_valid_cf_waf_arn(arn), f"Expected valid, got invalid for: {arn}"
 
 
 def test_accepts_short_name_and_id():
     """Minimal name and UUID-style id must be accepted."""
-    arn = "arn:aws:wafv2:us-east-1:000000000001:global/webacl/x/y"
+    arn = "arn:aws:wafv2:eu-west-2:000000000001:global/webacl/x/y"
     assert _is_valid_cf_waf_arn(arn), f"Expected valid, got invalid for: {arn}"
 
 
@@ -42,13 +42,13 @@ def test_rejects_empty_string():
 
 
 def test_rejects_regional_scope_arn():
-    """REGIONAL-scope (non-us-east-1) WAFv2 ARN must be rejected for CloudFront."""
-    arn = "arn:aws:wafv2:eu-west-1:123456789012:regional/webacl/my-acl/abc123"
+    """REGIONAL-scope (non-eu-west-2) WAFv2 ARN must be rejected for CloudFront."""
+    arn = "arn:aws:wafv2:eu-west-2:123456789012:regional/webacl/my-acl/abc123"
     assert not _is_valid_cf_waf_arn(arn), f"Expected invalid REGIONAL ARN to be rejected: {arn}"
 
 
 def test_rejects_non_us_east_1_region():
-    """Only us-east-1 is valid for CLOUDFRONT-scope WAFv2."""
+    """Only eu-west-2 is valid for CLOUDFRONT-scope WAFv2."""
     arn = "arn:aws:wafv2:us-west-2:123456789012:global/webacl/my-acl/abc123"
     assert not _is_valid_cf_waf_arn(arn), f"Expected wrong region to be rejected: {arn}"
 
@@ -61,13 +61,13 @@ def test_rejects_wrong_service():
 
 def test_rejects_partial_arn():
     """Malformed ARN missing id segment must be rejected."""
-    arn = "arn:aws:wafv2:us-east-1:123456789012:global/webacl/no-id"
+    arn = "arn:aws:wafv2:eu-west-2:123456789012:global/webacl/no-id"
     assert not _is_valid_cf_waf_arn(arn), f"Expected partial ARN to be rejected: {arn}"
 
 
 def test_rejects_trailing_slash():
     """ARN with trailing slash must be rejected (id segment empty)."""
-    arn = "arn:aws:wafv2:us-east-1:123456789012:global/webacl/my-acl/"
+    arn = "arn:aws:wafv2:eu-west-2:123456789012:global/webacl/my-acl/"
     assert not _is_valid_cf_waf_arn(arn), f"Expected trailing-slash ARN to be rejected: {arn}"
 
 

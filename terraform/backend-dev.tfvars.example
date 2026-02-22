@@ -1,0 +1,9 @@
+# Backend configuration for DEV environment (Segmented State)
+# Copy this to backend-dev.tfvars and update values.
+# Run 'terraform init -backend-config=backend-dev.tfvars' to initialize.
+
+bucket       = "terraform-state-dev-123456789012"
+key          = "state/my-app/research-agent-a1b2/terraform.tfstate"
+region       = "eu-west-2"
+encrypt      = true
+use_lockfile = true

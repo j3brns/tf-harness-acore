@@ -305,7 +305,7 @@ repo-root/
 copier copy --force --trust \
   --data agent_name=my-agent-core-a1b2 \
   --data app_id=my-agent \
-  --data region=us-east-1 \
+  --data region=eu-west-2 \
   --data environment=dev \
   --data enable_bff=true \
   templates/agent-project .scratch/my-agent
@@ -400,7 +400,7 @@ gateway_search_type = "HYBRID"  # or "SEMANTIC"
 mcp_targets = {
   my_tool = {
     name       = "my-tool"
-    lambda_arn = "arn:aws:lambda:us-east-1:ACCOUNT:function:my-mcp"
+    lambda_arn = "arn:aws:lambda:eu-west-2:ACCOUNT:function:my-mcp"
   }
 }
 ```

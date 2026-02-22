@@ -38,7 +38,7 @@ def main():
     auth_id = outputs["agentcore_bff_authorizer_id"]["value"]
     table_name = outputs["agentcore_bff_session_table_name"]["value"]
     app_id = outputs.get("app_id", {}).get("value") or outputs["agent_name"]["value"]
-    region = boto3.session.Session().region_name or "us-east-1"
+    region = boto3.session.Session().region_name or "eu-west-2"
 
     print("Validating BFF Smoke Test [North-South Join Model]")
     print(f"API: {api_id}, Authorizer: {auth_id}, Table: {table_name}, AppID: {app_id}")

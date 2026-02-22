@@ -106,7 +106,7 @@ Save as `permissions-policy.json`:
       "Resource": "*",
       "Condition": {
         "StringEquals": {
-          "aws:RequestedRegion": ["us-east-1"]
+          "aws:RequestedRegion": ["eu-west-2"]
         }
       }
     },
@@ -164,7 +164,7 @@ Save as `permissions-policy.json`:
       "Resource": "*",
       "Condition": {
         "StringEquals": {
-          "aws:RequestedRegion": ["us-east-1"]
+          "aws:RequestedRegion": ["eu-west-2"]
         }
       }
     },
@@ -272,7 +272,7 @@ Save as `permissions-policy.json`:
 ```
 
 **Why scoped?** The previous `PowerUserAccess` allowed nearly all AWS actions. This policy:
-- Limits Bedrock to us-east-1 region
+- Limits Bedrock to eu-west-2 region
 - Restricts S3 to named bucket patterns only
 - Scopes Lambda to `*-mcp` function naming convention
 - Limits IAM to `agentcore-*` role names only
@@ -316,7 +316,7 @@ ENV="dev"
 BUCKET="terraform-state-${ENV}-$(aws sts get-caller-identity --query Account --output text)"
 
 # Create S3 bucket
-aws s3 mb "s3://${BUCKET}" --region us-east-1
+aws s3 mb "s3://${BUCKET}" --region eu-west-2
 
 # Enable versioning (for state history and recovery)
 aws s3api put-bucket-versioning \

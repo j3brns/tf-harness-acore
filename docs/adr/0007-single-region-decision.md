@@ -7,15 +7,15 @@ Accepted
 ## Context
 
 AWS Bedrock AgentCore can be deployed in multiple regions. Need to decide deployment topology:
-- Single region (us-east-1)
+- Single region (eu-west-2)
 - Multi-region active-passive
 - Multi-region active-active
 
 ## Decision
 
-Deploy to a **single primary region** for the AgentCore control plane. Keep the option to **split the BFF/API Gateway region** and **Bedrock model region** when needed (e.g., regional availability constraints).
+Deploy to a **single primary region** (eu-west-2) for the AgentCore control plane. Keep the option to **split the BFF/API Gateway region** and **Bedrock model region** when needed (e.g., regional availability constraints).
 
-Document DR region (us-west-2) for future expansion but do not implement multi-region active-active until required.
+Document DR region (eu-west-1) for future expansion but do not implement multi-region active-active until required.
 
 ## Rationale
 
@@ -33,25 +33,32 @@ Document DR region (us-west-2) for future expansion but do not implement multi-r
 - Team expertise in single-region patterns
 - Bedrock AgentCore still in preview (limited region availability)
 
-### Why us-east-1 (initially)?
-- Full Bedrock AgentCore feature availability
-- Lowest latency for primary users (East Coast)
-- Most AWS services launch here first
-- Lower data transfer costs (majority of traffic origin)
+### Why London (eu-west-2) as Primary?
+- **Full Bedrock Feature Set**: Supports AgentCore, Knowledge Bases, and Guardrails (including the widest range of models like Nova and Claude 3.7).
+- **Strategic Alignment**: Avoids limitations present in other EU regions (e.g., Frankfurt missing specific policy/model combinations).
+- **Latency**: Low latency for European user base.
+- **Cost-effective**: Meets regional data residency requirements.
+
+### Why not Frankfurt (eu-central-1)?
+- Missing key features (e.g., specific Guardrail model support) required for full AgentCore governance.
+
+### Global Exception: CloudFront (us-east-1)
+- **Mandatory**: CloudFront is a global service.
+- **ACM Certificates**: Must be in `us-east-1` for custom domains.
+- **WAF Web ACLs**: Must be in `us-east-1` (`CLOUDFRONT` scope) to attach to distributions.
 
 ### EU Variants (Current)
-- **Dublin (`eu-west-1`)** or **Frankfurt (`eu-central-1`)** for AgentCore when required by regional availability.
-- **London (`eu-west-2`)** often preferred for Bedrock model availability and inference profiles.
-- Split regions only when required by service availability, data residency, or latency constraints.
+- **London (`eu-west-2`)** is the primary region for AgentCore, Bedrock models, and inference profiles.
+- **Dublin (`eu-west-1`)** or **Frankfurt (`eu-central-1`)** may be used as split targets if specific model availability requires it, but are not the default.
 
 ## Disaster Recovery Plan
 
 ### Documented but Not Implemented
 
-**DR Region**: us-west-2
+**DR Region**: eu-west-1
 
 **Recovery Steps** (manual):
-1. Deploy infrastructure to us-west-2 from Git
+1. Deploy infrastructure to eu-west-1 from Git
 2. Restore state from S3 cross-region replication (if enabled)
 3. Update DNS to point to new region
 4. Notify users of cutover
@@ -72,7 +79,7 @@ Document DR region (us-west-2) for future expansion but do not implement multi-r
 - Single point of failure (region outage = full outage)
 - No automatic failover
 - Manual DR process
-- Dependent on us-east-1 availability
+- Dependent on eu-west-2 availability
 - Cross-region split (if used) adds latency and cross-region data transfer cost
 - Logs/metrics split across regions when BFF and AgentCore differ
 
@@ -92,7 +99,7 @@ Consider implementing multi-region when:
 Use the following variables to keep a single region by default or split regions when required:
 
 ```hcl
-region           = "eu-west-1" # default
+region           = "eu-west-2" # default
 agentcore_region = ""          # AgentCore control plane (defaults to region)
 bff_region       = ""          # API Gateway/BFF (defaults to agentcore_region)
 bedrock_region   = ""          # Bedrock models/guardrails/inference profiles (defaults to agentcore_region)
@@ -112,7 +119,7 @@ resource "aws_s3_bucket_replication_configuration" "state_dr" {
     status = "Enabled"
 
     destination {
-      bucket        = "arn:aws:s3:::terraform-state-dr-us-west-2"
+      bucket        = "arn:aws:s3:::terraform-state-dr-eu-west-1"
       storage_class = "STANDARD"
     }
   }

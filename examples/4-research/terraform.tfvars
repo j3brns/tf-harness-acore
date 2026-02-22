@@ -3,7 +3,7 @@
 
 agent_name  = "research-agent-core-g7h8"
 app_id      = "research-agent"
-region      = "us-east-1"
+region      = "eu-west-2"
 environment = "dev"
 
 tags = {
@@ -23,13 +23,13 @@ mcp_targets = {
   arxiv = {
     name = "arxiv-search"
     # IMPORTANT: Replace with your actual AWS account ID
-    lambda_arn  = "arn:aws:lambda:us-east-1:111122223333:function:arxiv-mcp"
+    lambda_arn  = "arn:aws:lambda:eu-west-2:111122223333:function:arxiv-mcp"
     description = "ArXiv paper search"
   }
   pubmed = {
     name = "pubmed-search"
     # IMPORTANT: Replace with your actual AWS account ID
-    lambda_arn  = "arn:aws:lambda:us-east-1:111122223333:function:pubmed-mcp"
+    lambda_arn  = "arn:aws:lambda:eu-west-2:111122223333:function:pubmed-mcp"
     description = "PubMed literature search"
   }
 }
