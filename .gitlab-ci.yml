@@ -403,11 +403,29 @@ promote:dev:
   script:
     - |
       set -euo pipefail
+      EVIDENCE_DIR="promotion-evidence"
+      EVIDENCE_FILE="${EVIDENCE_DIR}/promote-dev-evidence-${CI_COMMIT_SHA}.json"
+      mkdir -p "$EVIDENCE_DIR"
       echo "Promotion approved for dev deployment on ${CI_COMMIT_SHA}"
+      cat > "$EVIDENCE_FILE" <<EOF
+      {
+        "gate": "promote:dev",
+        "commit_sha": "${CI_COMMIT_SHA}",
+        "pipeline_id": "${CI_PIPELINE_ID}",
+        "job_id": "${CI_JOB_ID}",
+        "ref": "${CI_COMMIT_REF_NAME}",
+        "pipeline_source": "${CI_PIPELINE_SOURCE}",
+        "approved_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+      }
+      EOF
       echo "PROMOTION_TO_DEV_APPROVED=true" > promote-dev.env
+      echo "PROMOTE_DEV_EVIDENCE_FILE=${EVIDENCE_FILE}" >> promote-dev.env
+      echo "PROMOTE_DEV_EVIDENCE_SHA=${CI_COMMIT_SHA}" >> promote-dev.env
   artifacts:
     reports:
       dotenv: promote-dev.env
+    paths:
+      - promotion-evidence/
     expire_in: 7 days
   when: manual
   allow_failure: false
@@ -494,6 +512,10 @@ promote:test:
       echo "Validating promotion prerequisites for $CI_COMMIT_SHA on branch $CI_COMMIT_BRANCH"
       JOBS_JSON=$(curl -sS --fail --header "JOB-TOKEN: $CI_JOB_TOKEN" \
         "$CI_API_V4_URL/projects/$CI_PROJECT_ID/pipelines/$CI_PIPELINE_ID/jobs?per_page=100")
+      if ! printf '%s' "$JOBS_JSON" | jq -e '.[] | select(.name=="promote:dev" and .status=="success")' >/dev/null; then
+        echo "ERROR: promote:dev is not successful in this pipeline. Promote dev first."
+        exit 1
+      fi
       if ! printf '%s' "$JOBS_JSON" | jq -e '.[] | select(.name=="deploy:dev" and .status=="success")' >/dev/null; then
         echo "ERROR: deploy:dev is not successful in this pipeline. Promote dev first."
         exit 1
@@ -502,11 +524,34 @@ promote:test:
         echo "ERROR: smoke-test:dev is not successful in this pipeline. Promote dev first."
         exit 1
       fi
+      EVIDENCE_DIR="promotion-evidence"
+      EVIDENCE_FILE="${EVIDENCE_DIR}/promote-test-evidence-${CI_COMMIT_SHA}.json"
+      mkdir -p "$EVIDENCE_DIR"
+      cat > "$EVIDENCE_FILE" <<EOF
+      {
+        "gate": "promote:test",
+        "commit_sha": "${CI_COMMIT_SHA}",
+        "pipeline_id": "${CI_PIPELINE_ID}",
+        "job_id": "${CI_JOB_ID}",
+        "ref": "${CI_COMMIT_REF_NAME}",
+        "pipeline_source": "${CI_PIPELINE_SOURCE}",
+        "approved_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+        "prerequisites": [
+          "promote:dev",
+          "deploy:dev",
+          "smoke-test:dev"
+        ]
+      }
+      EOF
       echo "PROMOTION_TO_TEST_APPROVED=true" > promote-test.env
+      echo "PROMOTE_TEST_EVIDENCE_FILE=${EVIDENCE_FILE}" >> promote-test.env
+      echo "PROMOTE_TEST_EVIDENCE_SHA=${CI_COMMIT_SHA}" >> promote-test.env
       echo "Promotion approved for test."
   artifacts:
     reports:
       dotenv: promote-test.env
+    paths:
+      - promotion-evidence/
     expire_in: 7 days
   when: manual
   allow_failure: false
@@ -651,21 +696,59 @@ gate:prod-from-test:
       fi
 
       GATE_PASSED=0
+      GATE_SOURCE_PIPELINE_ID=""
       for PIPELINE_ID in $MAIN_PIPELINE_IDS; do
         JOBS_JSON=$(curl -sS --fail --header "JOB-TOKEN: $CI_JOB_TOKEN" \
           "$CI_API_V4_URL/projects/$CI_PROJECT_ID/pipelines/${PIPELINE_ID}/jobs?per_page=100")
-        if printf '%s' "$JOBS_JSON" | jq -e '.[] | select(.name=="deploy:test" and .status=="success")' >/dev/null \
-          && printf '%s' "$JOBS_JSON" | jq -e '.[] | select(.name=="smoke-test:test" and .status=="success")' >/dev/null; then
+        job_success() {
+          printf '%s' "$JOBS_JSON" | jq -e --arg job_name "$1" \
+            '.[] | select(.name==$job_name and .status=="success")' >/dev/null
+        }
+        job_success_with_artifact() {
+          printf '%s' "$JOBS_JSON" | jq -e --arg job_name "$1" \
+            '.[] | select(.name==$job_name and .status=="success" and ((.artifacts_file.filename // "") | length > 0))' >/dev/null
+        }
+        if job_success_with_artifact "promote:dev" \
+          && job_success_with_artifact "promote:test" \
+          && job_success "deploy:test" \
+          && job_success "smoke-test:test"; then
           echo "Promotion gate satisfied by main pipeline ID: ${PIPELINE_ID}"
           GATE_PASSED=1
+          GATE_SOURCE_PIPELINE_ID="${PIPELINE_ID}"
           break
         fi
       done
 
       if [ "$GATE_PASSED" -ne 1 ]; then
-        echo "ERROR: No successful main pipeline for this SHA contains deploy:test + smoke-test:test."
+        echo "ERROR: No successful main pipeline for this SHA contains promote:dev/promote:test evidence plus deploy:test + smoke-test:test."
         exit 1
       fi
+
+      EVIDENCE_DIR="promotion-evidence"
+      EVIDENCE_FILE="${EVIDENCE_DIR}/gate-prod-from-test-evidence-${CI_COMMIT_SHA}.json"
+      mkdir -p "$EVIDENCE_DIR"
+      cat > "$EVIDENCE_FILE" <<EOF
+      {
+        "gate": "gate:prod-from-test",
+        "commit_sha": "${CI_COMMIT_SHA}",
+        "tag": "${CI_COMMIT_TAG:-}",
+        "pipeline_id": "${CI_PIPELINE_ID}",
+        "job_id": "${CI_JOB_ID}",
+        "verified_main_pipeline_id": "${GATE_SOURCE_PIPELINE_ID}",
+        "verified_jobs": [
+          "promote:dev (artifact evidence)",
+          "promote:test (artifact evidence)",
+          "deploy:test",
+          "smoke-test:test"
+        ],
+        "verified_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+      }
+      EOF
+      echo "Prod promotion gate evidence recorded at ${EVIDENCE_FILE}"
+  artifacts:
+    paths:
+      - promotion-evidence/
+    expire_in: 90 days
   rules:
     - if: $CI_COMMIT_TAG
 
