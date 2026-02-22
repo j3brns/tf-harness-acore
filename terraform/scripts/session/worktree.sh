@@ -30,6 +30,7 @@ fi
 
 WORKTREE_BASE_DIR_DEFAULT="$(cd "${REPO_ROOT}/.." && pwd -P)/worktrees"
 WORKTREE_QUEUE_PLAN_FILES="${WORKTREE_QUEUE_PLAN_FILES:-ROADMAP.md}"
+MENU_BACK_TOKEN="__WORKTREE_MENU_BACK__"
 
 WT_PATHS=()
 WT_HEADS=()
@@ -121,6 +122,10 @@ print_worktree_table() {
 
 pause() {
   read -r -p "Press Enter to continue..." _
+}
+
+is_menu_back() {
+  [ "${1:-}" = "${MENU_BACK_TOKEN}" ]
 }
 
 shell_quote() {
@@ -232,6 +237,7 @@ choose_scope() {
   echo "  8) ci" >&2
   echo "  9) release" >&2
   echo "  10) custom" >&2
+  echo "  0) Back" >&2
   echo >&2
 
   while :; do
@@ -252,6 +258,10 @@ choose_scope() {
         printf '%s\n' "${custom_scope}"
         return 0
         ;;
+      0|back)
+        printf '%s\n' "${MENU_BACK_TOKEN}"
+        return 0
+        ;;
       *) echo "Invalid choice." >&2 ;;
     esac
   done
@@ -263,6 +273,7 @@ choose_issue_source() {
   echo "Choose issue source for new worktree:" >&2
   echo "  1) ready queue (next ready first, default)" >&2
   echo "  2) manual issue number + slug" >&2
+  echo "  0) Back" >&2
   echo >&2
   while :; do
     read -r -p "Choice [1]: " choice >&2
@@ -270,6 +281,7 @@ choose_issue_source() {
     case "${choice}" in
       1|queue|ready) printf '%s\n' "queue"; return 0 ;;
       2|manual) printf '%s\n' "manual"; return 0 ;;
+      0|back) printf '%s\n' "${MENU_BACK_TOKEN}"; return 0 ;;
       *) echo "Invalid choice." >&2 ;;
     esac
   done
@@ -288,8 +300,9 @@ choose_ready_queue_stream_label() {
   if [ -n "${env_default}" ]; then
     echo "  1) use env default: ${env_default} (default)" >&2
     echo "  2) no stream filter (ready only)" >&2
-    echo "  3) pick roadmap stream label" >&2
+    echo "  3) pick workstream lane label" >&2
     echo "  4) enter custom label" >&2
+    echo "  0) Back" >&2
     echo >&2
     while :; do
       read -r -p "Choice [1]: " choice >&2
@@ -309,10 +322,14 @@ choose_ready_queue_stream_label() {
               printf "  %d) %s\n" "$((i + 1))" "${roadmap_streams[$i]}" >&2
             fi
           done
+          echo "  0) Back" >&2
           echo >&2
           while :; do
-            read -r -p "Pick roadmap stream [1]: " stream_choice >&2
+            read -r -p "Pick workstream lane [1]: " stream_choice >&2
             stream_choice="${stream_choice:-1}"
+            if [ "${stream_choice}" = "0" ] || [ "${stream_choice}" = "back" ]; then
+              break
+            fi
             if [[ "${stream_choice}" =~ ^[0-9]+$ ]] && [ "${stream_choice}" -ge 1 ] && [ "${stream_choice}" -le "${#roadmap_streams[@]}" ]; then
               printf '%s\n' "${roadmap_streams[$((stream_choice - 1))]}"
               return 0
@@ -325,18 +342,23 @@ choose_ready_queue_stream_label() {
           printf '%s\n' "${custom_label}"
           return 0
           ;;
+        0|back)
+          printf '%s\n' "${MENU_BACK_TOKEN}"
+          return 0
+          ;;
         *) echo "Invalid choice." >&2 ;;
       esac
     done
   fi
 
-  echo "  1) no stream filter (ready only) (default)" >&2
-  echo "  2) pick roadmap stream label" >&2
+  echo "  1) no stream filter (ready only)" >&2
+  echo "  2) pick workstream lane label (default)" >&2
   echo "  3) enter custom label (e.g. provider-matrix)" >&2
+  echo "  0) Back" >&2
   echo >&2
   while :; do
-    read -r -p "Choice [1]: " choice >&2
-    choice="${choice:-1}"
+    read -r -p "Choice [2]: " choice >&2
+    choice="${choice:-2}"
     case "${choice}" in
       1) printf '%s\n' ""; return 0 ;;
       2|roadmap)
@@ -351,10 +373,14 @@ choose_ready_queue_stream_label() {
             printf "  %d) %s\n" "$((i + 1))" "${roadmap_streams[$i]}" >&2
           fi
         done
+        echo "  0) Back" >&2
         echo >&2
         while :; do
-          read -r -p "Pick roadmap stream [1]: " stream_choice >&2
+          read -r -p "Pick workstream lane [1]: " stream_choice >&2
           stream_choice="${stream_choice:-1}"
+          if [ "${stream_choice}" = "0" ] || [ "${stream_choice}" = "back" ]; then
+            break
+          fi
           if [[ "${stream_choice}" =~ ^[0-9]+$ ]] && [ "${stream_choice}" -ge 1 ] && [ "${stream_choice}" -le "${#roadmap_streams[@]}" ]; then
             printf '%s\n' "${roadmap_streams[$((stream_choice - 1))]}"
             return 0
@@ -365,6 +391,10 @@ choose_ready_queue_stream_label() {
       3|custom)
         custom_label="$(prompt_nonempty "Stream label (e.g. a, a1, provider-matrix): ")"
         printf '%s\n' "${custom_label}"
+        return 0
+        ;;
+      0|back)
+        printf '%s\n' "${MENU_BACK_TOKEN}"
         return 0
         ;;
       *) echo "Invalid choice." >&2 ;;
@@ -576,12 +606,17 @@ choose_ready_issue_from_queue() {
       printf "  %d) #%s %s\n" "$((i + 1))" "${READY_ISSUE_NUMBERS[$i]}" "${READY_ISSUE_TITLES[$i]}" >&2
     fi
   done
+  echo "  0) Back" >&2
   echo >&2
 
   local choice=""
   while :; do
     read -r -p "Pick issue [1]: " choice >&2
     choice="${choice:-1}"
+    if [ "${choice}" = "0" ] || [ "${choice}" = "back" ]; then
+      printf '%s\n' "${MENU_BACK_TOKEN}"
+      return 0
+    fi
     if [[ "${choice}" =~ ^[0-9]+$ ]] && [ "${choice}" -ge 1 ] && [ "${choice}" -le "${#READY_ISSUE_NUMBERS[@]}" ]; then
       local idx=$((choice - 1))
       printf '%s\t%s\t%s\n' "${READY_ISSUE_NUMBERS[$idx]}" "${READY_ISSUE_TITLES[$idx]}" "${READY_ISSUE_LABELS[$idx]}"
@@ -597,6 +632,7 @@ choose_auto_claim() {
   echo "Auto-claim selected ready issue?" >&2
   echo "  1) yes (default) - move labels: ready -> in-progress" >&2
   echo "  2) no" >&2
+  echo "  0) Back" >&2
   echo >&2
   while :; do
     read -r -p "Choice [1]: " choice >&2
@@ -604,6 +640,7 @@ choose_auto_claim() {
     case "${choice}" in
       1|yes|y) printf '%s\n' "yes"; return 0 ;;
       2|no|n) printf '%s\n' "no"; return 0 ;;
+      0|back) printf '%s\n' "${MENU_BACK_TOKEN}"; return 0 ;;
       *) echo "Invalid choice." >&2 ;;
     esac
   done
@@ -695,11 +732,16 @@ choose_worktree_path() {
   for n in "${!options[@]}"; do
     printf "  %d) %s\n" "$((n + 1))" "${options[$n]}" >&2
   done
+  echo "  0) Back" >&2
   echo >&2
 
   local selection=""
   while :; do
     read -r -p "Choice: " selection >&2
+    if [ "${selection}" = "0" ] || [ "${selection}" = "back" ]; then
+      printf '%s\n' "${MENU_BACK_TOKEN}"
+      return 0
+    fi
     if [[ "${selection}" =~ ^[0-9]+$ ]] && [ "${selection}" -ge 1 ] && [ "${selection}" -le "${#options[@]}" ]; then
       local mapped="${idx_map[$((selection - 1))]}"
       printf '%s\n' "${WT_PATHS[$mapped]}"
@@ -811,6 +853,7 @@ choose_agent() {
   echo "  1) gemini" >&2
   echo "  2) claude" >&2
   echo "  3) codex" >&2
+  echo "  0) Back" >&2
   echo >&2
   while :; do
     read -r -p "Choice [3]: " choice >&2
@@ -819,6 +862,7 @@ choose_agent() {
       1|gemini) printf '%s\n' "gemini"; return 0 ;;
       2|claude|clause) printf '%s\n' "claude"; return 0 ;;
       3|codex) printf '%s\n' "codex"; return 0 ;;
+      0|back) printf '%s\n' "${MENU_BACK_TOKEN}"; return 0 ;;
       *) echo "Invalid choice." >&2 ;;
     esac
   done
@@ -831,6 +875,7 @@ choose_agent_mode() {
   echo "Choose launch mode for ${agent}:" >&2
   echo "  1) normal" >&2
   echo "  2) yolo / equivalent" >&2
+  echo "  0) Back" >&2
   echo >&2
   while :; do
     read -r -p "Choice [2]: " choice >&2
@@ -838,6 +883,7 @@ choose_agent_mode() {
     case "${choice}" in
       1|normal) printf '%s\n' "normal"; return 0 ;;
       2|yolo) printf '%s\n' "yolo"; return 0 ;;
+      0|back) printf '%s\n' "${MENU_BACK_TOKEN}"; return 0 ;;
       *) echo "Invalid choice." >&2 ;;
     esac
   done
@@ -849,6 +895,7 @@ choose_handoff_action() {
   echo "Choose handoff behavior:" >&2
   echo "  1) execute-now (default)" >&2
   echo "  2) print-only (open shell, do not launch agent)" >&2
+  echo "  0) Back" >&2
   echo >&2
   while :; do
     read -r -p "Choice [1]: " choice >&2
@@ -856,6 +903,7 @@ choose_handoff_action() {
     case "${choice}" in
       1|execute-now|execute) printf '%s\n' "execute-now"; return 0 ;;
       2|print-only|print) printf '%s\n' "print-only"; return 0 ;;
+      0|back) printf '%s\n' "${MENU_BACK_TOKEN}"; return 0 ;;
       *) echo "Invalid choice." >&2 ;;
     esac
   done
@@ -867,6 +915,7 @@ choose_issue_type() {
   echo "Choose issue type:" >&2
   echo "  1) execution (default)" >&2
   echo "  2) tracker" >&2
+  echo "  0) Back" >&2
   echo >&2
   while :; do
     read -r -p "Choice [1]: " choice >&2
@@ -874,6 +923,7 @@ choose_issue_type() {
     case "${choice}" in
       1|execution|exec) printf '%s\n' "execution"; return 0 ;;
       2|tracker) printf '%s\n' "tracker"; return 0 ;;
+      0|back) printf '%s\n' "${MENU_BACK_TOKEN}"; return 0 ;;
       *) echo "Invalid choice." >&2 ;;
     esac
   done
@@ -894,6 +944,7 @@ choose_closure_condition() {
     echo "  3) release tag" >&2
     echo "  4) custom (type free-form)" >&2
   fi
+  echo "  0) Back" >&2
   echo >&2
   while :; do
     read -r -p "Choice [1]: " choice >&2
@@ -906,6 +957,7 @@ choose_closure_condition() {
           prompt_nonempty "Custom closure condition: "
           return 0
           ;;
+        0|back) printf '%s\n' "${MENU_BACK_TOKEN}"; return 0 ;;
         *) echo "Invalid choice." >&2 ;;
       esac
     else
@@ -917,6 +969,7 @@ choose_closure_condition() {
           prompt_nonempty "Custom closure condition: "
           return 0
           ;;
+        0|back) printf '%s\n' "${MENU_BACK_TOKEN}"; return 0 ;;
         *) echo "Invalid choice." >&2 ;;
       esac
     fi
@@ -934,10 +987,25 @@ open_shell_in_worktree() {
   local agent_command=""
 
   agent="$(choose_agent)"
+  if is_menu_back "${agent}"; then
+    return 0
+  fi
   agent_mode="$(choose_agent_mode "${agent}")"
+  if is_menu_back "${agent_mode}"; then
+    return 0
+  fi
   issue_type="$(choose_issue_type)"
+  if is_menu_back "${issue_type}"; then
+    return 0
+  fi
   closure_condition="$(choose_closure_condition "${issue_type}")"
+  if is_menu_back "${closure_condition}"; then
+    return 0
+  fi
   handoff_action="$(choose_handoff_action)"
+  if is_menu_back "${handoff_action}"; then
+    return 0
+  fi
   agent_prompt="$(echo_agent_prompt_for_worktree "${wt_path}" "${issue_type}" "${closure_condition}")"
   agent_command="$(build_agent_command "${agent}" "${agent_mode}" "${agent_prompt}")"
 
@@ -994,29 +1062,51 @@ create_worktree() {
   suggested_name="$(suggest_next_worktree_name)"
   worktree_name="$(prompt_with_default "Worktree folder name" "${suggested_name}")"
   issue_source="$(choose_issue_source)"
+  if is_menu_back "${issue_source}"; then
+    echo "Returning to menu."
+    return 0
+  fi
 
   if [ "${issue_source}" = "queue" ]; then
     ready_stream_label="$(choose_ready_queue_stream_label)"
+    if is_menu_back "${ready_stream_label}"; then
+      echo "Returning to menu."
+      return 0
+    fi
     if queue_pick="$(choose_ready_issue_from_queue "${ready_stream_label}")"; then
+      if is_menu_back "${queue_pick}"; then
+        echo "Returning to menu."
+        return 0
+      fi
       issue_id="$(printf '%s' "${queue_pick}" | cut -f1)"
       issue_title="$(printf '%s' "${queue_pick}" | cut -f2-)"
       issue_labels="$(printf '%s' "${queue_pick}" | cut -f3-)"
       scope_suggestion="$(infer_scope_from_issue "${issue_title}" "${issue_labels}")"
       derived_slug="$(derive_slug_from_issue_title "${issue_title}")"
       auto_claim="$(choose_auto_claim)"
+      if is_menu_back "${auto_claim}"; then
+        echo "Returning to menu."
+        return 0
+      fi
       echo
       echo "Selected ready issue: #${issue_id} ${issue_title}"
       scope="$(choose_scope "${scope_suggestion}")"
+      if is_menu_back "${scope}"; then
+        echo "Returning to menu."
+        return 0
+      fi
       slug="$(prompt_with_default "Slug (derived from issue title)" "${derived_slug}")"
     else
-      echo "Falling back to manual issue entry."
-      issue_id="$(prompt_nonempty "GitHub issue number: ")"
-      scope="$(choose_scope "task")"
-      slug="$(prompt_nonempty "Slug (lowercase, hyphenated): ")"
+      echo "No ready issue selected. Returning to menu."
+      return 0
     fi
   else
     issue_id="$(prompt_nonempty "GitHub issue number: ")"
     scope="$(choose_scope "task")"
+    if is_menu_back "${scope}"; then
+      echo "Returning to menu."
+      return 0
+    fi
     slug="$(prompt_nonempty "Slug (lowercase, hyphenated): ")"
   fi
 
@@ -1041,7 +1131,7 @@ create_worktree() {
   else
     start_ref="${REQUIRED_MAIN_BRANCH}"
   fi
-  start_ref="$(prompt_with_default "Start ref" "${start_ref}")"
+  start_ref="$(prompt_with_default "Base ref for new branch" "${start_ref}")"
 
   if git show-ref --verify --quiet "refs/heads/${branch_name}"; then
     echo "ERROR: local branch already exists: ${branch_name}"
@@ -1071,13 +1161,14 @@ create_worktree() {
   echo "  1) Open shell in new worktree"
   echo "  2) Run a command in new worktree"
   echo "  3) Return to menu"
+  echo "  0) Return to menu"
   read -r -p "Choice [1]: " next_action
   next_action="${next_action:-1}"
 
   case "${next_action}" in
     1) open_shell_in_worktree "${wt_path}" ;;
     2) run_command_in_worktree "${wt_path}" ;;
-    3) ;;
+    3|0|back) ;;
     *) echo "Unknown choice; returning to menu." ;;
   esac
 }
@@ -1087,6 +1178,9 @@ resume_worktree_open_shell() {
   if ! wt_path="$(choose_worktree_path false)"; then
     return 0
   fi
+  if is_menu_back "${wt_path}"; then
+    return 0
+  fi
   run_preflight_in_worktree "${wt_path}"
   open_shell_in_worktree "${wt_path}"
 }
@@ -1094,6 +1188,9 @@ resume_worktree_open_shell() {
 resume_worktree_run_command() {
   local wt_path=""
   if ! wt_path="$(choose_worktree_path false)"; then
+    return 0
+  fi
+  if is_menu_back "${wt_path}"; then
     return 0
   fi
   run_preflight_in_worktree "${wt_path}"
@@ -1109,6 +1206,7 @@ main_menu() {
     echo "  4) Resume worktree (preflight + command)"
     echo "  5) Preflight current worktree"
     echo "  6) Exit"
+    echo "  0) Exit"
     echo
 
     local choice=""
@@ -1135,7 +1233,7 @@ main_menu() {
         run_preflight_in_worktree "$(pwd -P)"
         pause
         ;;
-      6)
+      6|0)
         exit 0
         ;;
       *)

@@ -243,6 +243,16 @@ For all other resources, follow the decision framework (native provider first wh
 - `.scratch/` content is session-scoped and MUST NOT be committed.
 - Reusable automation belongs in existing maintained locations (`terraform/scripts/`, `Makefile`) and requires documentation.
 
+### Rule 7.3.1: `.context/` for Committed Research & Synthesis
+- `.context/` is the repository location for committed agent/human research syntheses, reference packs, and project-specific context intended to improve future execution quality.
+- `.context/` content MUST be curated and human-readable (summaries, decision notes, source indexes, migration notes), not raw dumps of fetched web pages, binaries, or generated scratch output.
+- Every `.context/` pack MUST include:
+  - check date(s) for time-sensitive facts,
+  - source links (primary sources preferred),
+  - clear repo relevance (why this context exists here).
+- Raw extraction artifacts, temporary downloads, and one-off parsing outputs MUST remain in `.scratch/` and MUST NOT be committed.
+- If workflow/tooling begins to depend on `.context/` content, document that behavior in `README.md` and/or `DEVELOPER_GUIDE.md` in the same change.
+
 ### Rule 7.4: No File Proliferation
 - Do not create variant files like `*_v2.*`, `*_improved.*`, `*_enhanced.*`, `*_copy.*`, `*_tmp.*`, or `*_backup.*`.
 - Prefer editing existing files in place.
