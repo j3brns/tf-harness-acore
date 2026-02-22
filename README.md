@@ -258,7 +258,8 @@ The `ready` queue is only useful when issue metadata is consistent. Recommended 
 
 - **Issue type labels**: `tracker`, `execution`
 - **Status labels**: `ready`, `in-progress`, `blocked`, `review`, `done`
-- **Stream labels (roadmap-aligned)**: `a0`, `a1`, `b0`, etc.
+- **Stream labels (workstream lanes)**: `a`, `b`, `c`, `d`, `e`
+- **Roadmap item labels (optional)**: `a0`, `a1`, `b0`, etc.
 - **Domain labels (optional)**: `provider`, `docs`, `runtime`, `ci`, `release`
 - **Branch scope** (`wt/<scope>/<issue>-<slug>`): a branch namespace only; use the primary touched area (`provider`, `docs`, `runtime`, etc.). `make worktree` now suggests this from labels/title, and you can override it.
 - **Priority labels (optional)**: `p0`, `p1`, `p2`, `p3`

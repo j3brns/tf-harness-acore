@@ -279,13 +279,17 @@ choose_ready_queue_stream_label() {
   local choice=""
   local custom_label=""
   local env_default="${WORKTREE_READY_STREAM_LABEL:-}"
+  local stream_choice=""
+  local roadmap_streams=("a" "b" "c" "d" "e")
+  local stream_summary=""
 
   echo >&2
   echo "Ready queue stream filter (optional):" >&2
   if [ -n "${env_default}" ]; then
     echo "  1) use env default: ${env_default} (default)" >&2
     echo "  2) no stream filter (ready only)" >&2
-    echo "  3) enter custom label" >&2
+    echo "  3) pick roadmap stream label" >&2
+    echo "  4) enter custom label" >&2
     echo >&2
     while :; do
       read -r -p "Choice [1]: " choice >&2
@@ -293,8 +297,31 @@ choose_ready_queue_stream_label() {
       case "${choice}" in
         1) printf '%s\n' "${env_default}"; return 0 ;;
         2) printf '%s\n' ""; return 0 ;;
-        3|custom)
-          custom_label="$(prompt_nonempty "Stream label (e.g. a0, provider-matrix): ")"
+        3|roadmap)
+          echo >&2
+          echo "Workstream labels:" >&2
+          local i
+          for i in "${!roadmap_streams[@]}"; do
+            stream_summary="$(stream_label_summary "${roadmap_streams[$i]}")"
+            if [ -n "${stream_summary}" ]; then
+              printf "  %d) %s - %s\n" "$((i + 1))" "${roadmap_streams[$i]}" "${stream_summary}" >&2
+            else
+              printf "  %d) %s\n" "$((i + 1))" "${roadmap_streams[$i]}" >&2
+            fi
+          done
+          echo >&2
+          while :; do
+            read -r -p "Pick roadmap stream [1]: " stream_choice >&2
+            stream_choice="${stream_choice:-1}"
+            if [[ "${stream_choice}" =~ ^[0-9]+$ ]] && [ "${stream_choice}" -ge 1 ] && [ "${stream_choice}" -le "${#roadmap_streams[@]}" ]; then
+              printf '%s\n' "${roadmap_streams[$((stream_choice - 1))]}"
+              return 0
+            fi
+            echo "Invalid choice." >&2
+          done
+          ;;
+        4|custom)
+          custom_label="$(prompt_nonempty "Stream label (e.g. a, a1, provider-matrix): ")"
           printf '%s\n' "${custom_label}"
           return 0
           ;;
@@ -304,21 +331,97 @@ choose_ready_queue_stream_label() {
   fi
 
   echo "  1) no stream filter (ready only) (default)" >&2
-  echo "  2) enter stream label (e.g. a0, provider-matrix)" >&2
+  echo "  2) pick roadmap stream label" >&2
+  echo "  3) enter custom label (e.g. provider-matrix)" >&2
   echo >&2
   while :; do
     read -r -p "Choice [1]: " choice >&2
     choice="${choice:-1}"
     case "${choice}" in
       1) printf '%s\n' ""; return 0 ;;
-      2|custom)
-        custom_label="$(prompt_nonempty "Stream label (e.g. a0, provider-matrix): ")"
+      2|roadmap)
+        echo >&2
+        echo "Workstream labels:" >&2
+        local i
+        for i in "${!roadmap_streams[@]}"; do
+          stream_summary="$(stream_label_summary "${roadmap_streams[$i]}")"
+          if [ -n "${stream_summary}" ]; then
+            printf "  %d) %s - %s\n" "$((i + 1))" "${roadmap_streams[$i]}" "${stream_summary}" >&2
+          else
+            printf "  %d) %s\n" "$((i + 1))" "${roadmap_streams[$i]}" >&2
+          fi
+        done
+        echo >&2
+        while :; do
+          read -r -p "Pick roadmap stream [1]: " stream_choice >&2
+          stream_choice="${stream_choice:-1}"
+          if [[ "${stream_choice}" =~ ^[0-9]+$ ]] && [ "${stream_choice}" -ge 1 ] && [ "${stream_choice}" -le "${#roadmap_streams[@]}" ]; then
+            printf '%s\n' "${roadmap_streams[$((stream_choice - 1))]}"
+            return 0
+          fi
+          echo "Invalid choice." >&2
+        done
+        ;;
+      3|custom)
+        custom_label="$(prompt_nonempty "Stream label (e.g. a, a1, provider-matrix): ")"
         printf '%s\n' "${custom_label}"
         return 0
         ;;
       *) echo "Invalid choice." >&2 ;;
     esac
   done
+}
+
+stream_label_summary() {
+  local stream_label="${1:-}"
+  case "${stream_label}" in
+    a*) printf '%s\n' "Workstream A: Terraform Provider Novation (CLI -> Native)" ;;
+    b*) printf '%s\n' "Workstream B: Tag + Policy Consolidation" ;;
+    c*) printf '%s\n' "Workstream C: Tenancy Portal/API Refinement" ;;
+    d*) printf '%s\n' "Developer Experience (DX)" ;;
+    e*) printf '%s\n' "Enterprise Features (Scale & Compliance)" ;;
+    *) printf '%s\n' "" ;;
+  esac
+}
+
+extract_stream_label_from_labels() {
+  local labels="${1:-}"
+  local label=""
+  local normalized=""
+  local lane_label=""
+  IFS='|' read -r -a _label_arr <<< "${labels}"
+  for label in "${_label_arr[@]}"; do
+    normalized="$(printf '%s' "${label}" | tr '[:upper:]' '[:lower:]')"
+    if [[ "${normalized}" =~ ^[a-e]$ ]]; then
+      lane_label="${normalized}"
+      break
+    fi
+  done
+  if [ -n "${lane_label}" ]; then
+    printf '%s\n' "${lane_label}"
+    return 0
+  fi
+  for label in "${_label_arr[@]}"; do
+    normalized="$(printf '%s' "${label}" | tr '[:upper:]' '[:lower:]')"
+    if [[ "${normalized}" =~ ^[a-z][0-9]+$ ]]; then
+      printf '%s\n' "${normalized}"
+      return 0
+    fi
+  done
+  printf '%s\n' ""
+}
+
+fetch_issue_labels() {
+  local issue_id="$1"
+  if ! command -v gh >/dev/null 2>&1; then
+    printf '%s\n' ""
+    return 0
+  fi
+  if [ -z "${GH_REPO}" ]; then
+    printf '%s\n' ""
+    return 0
+  fi
+  gh issue view "${issue_id}" -R "${GH_REPO}" --json labels --jq '.labels | map(.name) | join("|")' 2>/dev/null || printf '%s\n' ""
 }
 
 refresh_plan_issue_order() {
@@ -635,10 +738,26 @@ echo_agent_prompt_for_worktree() {
   local closure_condition="$3"
   local issue_id=""
   local branch_name=""
+  local issue_labels=""
+  local stream_label=""
+  local stream_summary=""
+  local stream_sentence=""
   local finish_rule=""
   local issue_type_note=""
   issue_id="$(worktree_issue_id "${wt_path}")"
   branch_name="$(worktree_branch_name "${wt_path}")"
+  if [ "${issue_id}" != "UNKNOWN" ]; then
+    issue_labels="$(fetch_issue_labels "${issue_id}")"
+    stream_label="$(extract_stream_label_from_labels "${issue_labels}")"
+    stream_summary="$(stream_label_summary "${stream_label}")"
+    if [ -n "${stream_label}" ] && [ -n "${stream_summary}" ]; then
+      stream_sentence=" Stream: ${stream_label} (${stream_summary})."
+    elif [ -n "${stream_label}" ]; then
+      stream_sentence=" Stream label: ${stream_label}."
+    else
+      stream_sentence=""
+    fi
+  fi
   if [ "${issue_type}" = "tracker" ]; then
     finish_rule="Rule 12.9"
     issue_type_note="Treat this as a tracker issue (coordination/planning unless explicitly docs/planning implementation)."
@@ -647,7 +766,7 @@ echo_agent_prompt_for_worktree() {
     issue_type_note="Treat this as an execution issue (implement in this worktree only)."
   fi
   # Final line before the prompt is a copy/paste-ready agent prompt boilerplate.
-  printf '%s\n' "You are a pragmatic, rigorous, concise coding agent working issue #${issue_id} on branch ${branch_name} in worktree ${wt_path}. ${issue_type_note} Start by reading AGENTS.md (focus on Rules 7.7-7.8 and 12.3-12.10), DEVELOPER_GUIDE.md (workflow), README.md (entrypoints), docs/architecture.md (module boundaries), and ADRs 0009/0010/0011 in docs/adr/ for design context. State your plan and expected touched paths before editing. Work only in this worktree, keep changes scoped to issue #${issue_id}, run make preflight-session now and again before commit/push, and follow existing repo patterns before introducing new files or scripts. Closure condition for this task: ${closure_condition}. Finish using ${finish_rule} and include validation evidence in the issue/PR."
+  printf '%s\n' "You are a pragmatic, rigorous, concise coding agent working issue #${issue_id} on branch ${branch_name} in worktree ${wt_path}.${stream_sentence} ${issue_type_note} Read first: AGENTS.md (focus on Rules 7.7-7.8 and 12.3-12.11), DEVELOPER_GUIDE.md (workflow), README.md (entrypoints), docs/architecture.md (module boundaries), and ADRs 0009/0010/0011 in docs/adr/. Then execute in a loop until the closure condition is met: inspect -> state plan + expected touched paths -> implement -> validate -> update docs/tests as required -> rerun checks -> continue. Work only in this worktree and keep changes scoped to issue #${issue_id}. Run make preflight-session now and again before commit/push. Follow existing repo patterns before introducing new files or scripts. Do not stop at the first blocker: if an approach conflicts with a repo rule, choose another compliant approach and continue; escalate only if no compliant path exists. Closure condition for this task: ${closure_condition}. Finish using ${finish_rule} and include validation evidence in the issue/PR."
 }
 
 build_agent_command() {

@@ -343,7 +343,9 @@ AI Agents MUST create comprehensive GitHub issues. Every issue MUST include:
 
 ### Rule 12.7: Allocation Status Labels (Standard)
 - Use labels for execution state: `ready`, `in-progress`, `blocked`, `review`, `done`.
-- Optional stream labels (for example `a0`, `provider-matrix`, `freeze-point`) MAY be used for filtering and reporting.
+- Workstream lane labels (roadmap-aligned) are: `a`, `b`, `c`, `d`, `e`.
+- Roadmap item labels (optional) are labels like `a0`, `a1`, `b0`, `c2`, `d1`, `e3`.
+- Optional domain/topic labels (for example `provider-matrix`, `freeze-point`) MAY be used for filtering and reporting.
 
 ### Rule 12.8: Execution Issue Finish Protocol (MANDATORY)
 For any Execution Issue, agents MUST complete the following finish sequence:
@@ -377,12 +379,14 @@ Every issue MUST define completion evidence:
 - closure condition (PR opened, PR merged, or release tag).
 
 ### Rule 12.11: Label Hygiene for Queueing (MANDATORY)
+- This rule is the source of truth for issue label taxonomy used by the `ready` queue and `make worktree`.
 - The `ready` queue is a scheduling mechanism and MUST remain high-signal.
 - Issues used for agent allocation MUST maintain label hygiene before they are marked `ready`.
 - Every allocatable issue MUST have:
   - exactly one issue-type label: `tracker` or `execution`,
   - exactly one status label from: `ready`, `in-progress`, `blocked`, `review`, `done`.
-- Roadmap-planned issues MUST include a roadmap-aligned stream label (for example `a0`, `a1`, `b0`).
+- Roadmap-planned issues MUST include exactly one workstream lane label (`a`, `b`, `c`, `d`, or `e`).
+- Roadmap item labels (for example `a0`, `a1`, `b0`) are RECOMMENDED for roadmap parity and queue readability, but optional.
 - Priority labels are optional, but if used MUST be singular (for example one of `p0`, `p1`, `p2`, `p3`).
 - Do not use duplicate/synonym labels for the same meaning (for example multiple competing status labels).
 - Status transitions MUST remove the previous status label in the same update (for example `ready` -> `in-progress`).
