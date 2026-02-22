@@ -21,7 +21,8 @@ Use GitLab CI with:
 - Main/tag promotion:
   - `main` push -> validate/lint/test + dev plan (no test jobs)
   - `main` manual/API pipeline -> `promote:dev` gate, dev deploy/smoke, then `promote:test` gate, test plan/deploy/smoke
-  - tags -> prod plan + manual deploy + smoke test (gated on successful test evidence from `main`)
+  - `promote:dev` and `promote:test` emit SHA-scoped promotion evidence artifacts (audit trail attached to the promoted commit SHA)
+  - tags -> prod plan + manual deploy + smoke test (gated on successful `main` pipeline test execution plus promotion-gate evidence from `promote:dev` and `promote:test`)
 - Maximum local testing (no AWS for validate/lint/test stages)
 - Scheduled drift detection (non-blocking) runs in the test stage
 
@@ -129,6 +130,17 @@ TF_STATE_BUCKET_PROD: terraform-state-prod-12345
   }]
 }
 ```
+
+### Promotion Evidence (Provider Novation Safety)
+
+- `promote:dev` writes a SHA-scoped evidence artifact and dotenv marker for the approved commit.
+- `promote:test` requires `promote:dev` + dev deploy/smoke success in the same pipeline, then writes a SHA-scoped evidence artifact.
+- `gate:prod-from-test` checks successful `main` pipelines for the tagged SHA and requires:
+  - `promote:dev` success with artifact evidence,
+  - `promote:test` success with artifact evidence,
+  - `deploy:test` success,
+  - `smoke-test:test` success.
+- `gate:prod-from-test` writes its own SHA-scoped evidence artifact for the tagged production promotion decision.
 
 ## References
 
