@@ -52,6 +52,25 @@ Out of scope:
 
 ## Repo Ground Truth (Current Implementation)
 
+### Current vs Target Pattern (Summary)
+
+#### Current Pattern (Repo Today)
+
+- **Terraform state**: environment-scoped backend key (`agentcore/{env}/terraform.tfstate` in CI)
+- **Routing**: static route binding (`/api/chat` -> one proxy -> one configured runtime ARN)
+- **Tenancy**: runtime context propagation and enforcement (`tenant_id`, `app_id`, session checks, policy shaping)
+
+This is already closer to the AWS-aligned model than a tenant-keyed Terraform layout because tenancy is handled primarily in runtime identity/policy paths, not in state partitioning.
+
+#### Target Pattern (E8A/E8B Direction)
+
+- **Terraform state**: deploy-unit segmentation (app-level or agent-level, not tenant-by-default)
+- **Routing**: explicit route/app -> agent -> runtime binding model (future evolution if/when dynamic routing is introduced)
+- **Tenancy**: runtime authorization/isolation via JWT claims, policy/interceptors, ABAC, and data partitioning
+
+AWS alignment:
+- Shared infrastructure with tenant-aware enforcement by default
+- Tenant-specific Terraform states only when infrastructure lifecycle is tenant-specific
 ### Current Join Path (Static Binding)
 
 In the current repo, `POST /api/chat` is statically bound to one proxy Lambda, and that proxy Lambda is configured with one `AGENTCORE_RUNTIME_ARN` per deployment.

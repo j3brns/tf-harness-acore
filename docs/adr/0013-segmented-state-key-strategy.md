@@ -55,7 +55,7 @@ E8A therefore treats:
 - `agent_name` as the physical runtime discriminator,
 - `tenant_id` as an authorization context (default), with an optional `tenant_alias` state segment only for future tenant-dedicated infrastructure stacks.
 
-See `.context/e8a-agentcore-multitenancy-routing-synthesis-2026-02-22.md` for the full repo-specific synthesis and AWS source mapping.
+See `.context/e8a-agentcore-multitenancy-routing-synthesis-2026-02-22.md` for the full repo-specific synthesis, including a concise "Current vs Target Pattern" summary and AWS source mapping.
 
 ### 2. Candidate Patterns Considered (Criteria-Based)
 
