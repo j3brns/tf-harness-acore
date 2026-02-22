@@ -119,7 +119,7 @@ This document outlines planned features and improvements for the Bedrock AgentCo
   * **Solution:** Enhance IAM roles and Resource-Based Policies to support cross-account tool invocation and identity propagation.
   * **Issue:** #31
 
-- [ ] **Automated Streaming Load Tester**
+- [x] **Automated Streaming Load Tester**
   * **Problem:** Hard to verify the 15-minute "Streaming Wall" without manual testing.
   * **Solution:** A CLI utility that invokes the agent with a "long-running" mock tool to verify connectivity persistence up to 900s.
   * **Issue:** #32
