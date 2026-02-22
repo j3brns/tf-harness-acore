@@ -785,6 +785,7 @@ echo_agent_prompt_for_worktree() {
   local stream_summary=""
   local stream_sentence=""
   local finish_rule=""
+  local finish_checklist=""
   local issue_type_note=""
   issue_id="$(worktree_issue_id "${wt_path}")"
   branch_name="$(worktree_branch_name "${wt_path}")"
@@ -802,13 +803,15 @@ echo_agent_prompt_for_worktree() {
   fi
   if [ "${issue_type}" = "tracker" ]; then
     finish_rule="Rule 12.9"
+    finish_checklist="Finish protocol: update tracker checklist/status, dependencies, blockers, active allocations, and ready labels; do not claim done until the tracker outcome is allocatable or the tracker closure condition is met."
     issue_type_note="Treat this as a tracker issue (coordination/planning unless explicitly docs/planning implementation)."
   else
     finish_rule="Rule 12.8"
+    finish_checklist="Finish protocol: preflight -> validate -> commit -> push branch -> open/update PR -> post issue closeout evidence -> move labels/status -> close issue only after merge (unless issue says otherwise). Local validation complete is not done. If you pause before merge, report finish stage (implementing/ready-to-commit/ready-to-push/pr-open/review/merged/cleanup-complete) and exact next command(s)."
     issue_type_note="Treat this as an execution issue (implement in this worktree only)."
   fi
   # Final line before the prompt is a copy/paste-ready agent prompt boilerplate.
-  printf '%s\n' "You are a pragmatic, rigorous, concise coding agent working issue #${issue_id} on branch ${branch_name} in worktree ${wt_path}.${stream_sentence} ${issue_type_note} Read first: AGENTS.md (focus on Rules 7.7-7.8 and 12.3-12.11), DEVELOPER_GUIDE.md (workflow), README.md (entrypoints), docs/architecture.md (module boundaries), and ADRs 0009/0010/0011 in docs/adr/. Then execute in a loop until the closure condition is met: inspect -> state plan + expected touched paths -> implement -> validate -> update docs/tests as required -> rerun checks -> continue. Work only in this worktree and keep changes scoped to issue #${issue_id}. Run make preflight-session now and again before commit/push. Follow existing repo patterns before introducing new files or scripts. Do not stop at the first blocker: if an approach conflicts with a repo rule, choose another compliant approach and continue; escalate only if no compliant path exists. Closure condition for this task: ${closure_condition}. Finish using ${finish_rule} and include validation evidence in the issue/PR."
+  printf '%s\n' "You are a pragmatic, rigorous, concise coding agent working issue #${issue_id} on branch ${branch_name} in worktree ${wt_path}.${stream_sentence} ${issue_type_note} Read first: AGENTS.md (focus on Rules 7.7-7.8 and 12.3-12.11), DEVELOPER_GUIDE.md (workflow), README.md (entrypoints), docs/architecture.md (module boundaries), and ADRs 0009/0010/0011 in docs/adr/. Then execute in a loop until the closure condition is met: inspect -> state plan + expected touched paths -> implement -> validate -> update docs/tests as required -> rerun checks -> continue. Work only in this worktree and keep changes scoped to issue #${issue_id}. Run make preflight-session now and again before commit/push. Follow existing repo patterns before introducing new files or scripts. Do not stop at the first blocker: if an approach conflicts with a repo rule, choose another compliant approach and continue; escalate only if no compliant path exists. Closure condition for this task: ${closure_condition}. ${finish_checklist} Finish using ${finish_rule} and include validation evidence in the issue/PR."
 }
 
 build_agent_command() {
@@ -1197,6 +1200,336 @@ resume_worktree_run_command() {
   run_command_in_worktree "${wt_path}"
 }
 
+gh_repo_ready() {
+  command -v gh >/dev/null 2>&1 && [ -n "${GH_REPO}" ]
+}
+
+pr_tsv_for_branch_state() {
+  local branch_name="$1"
+  local state="$2"
+  if ! gh_repo_ready; then
+    printf '%s\n' ""
+    return 0
+  fi
+  gh pr list -R "${GH_REPO}" --head "${branch_name}" --state "${state}" --limit 1 \
+    --json number,url,title,isDraft,mergedAt \
+    --jq 'if length == 0 then "" else [.[0].number, .[0].url, .[0].title, (.[0].isDraft|tostring), (.[0].mergedAt // "")] | @tsv end' \
+    2>/dev/null || printf '%s\n' ""
+}
+
+issue_tsv() {
+  local issue_id="$1"
+  if ! gh_repo_ready; then
+    printf '%s\n' ""
+    return 0
+  fi
+  if [[ ! "${issue_id}" =~ ^[0-9]+$ ]]; then
+    printf '%s\n' ""
+    return 0
+  fi
+  gh issue view "${issue_id}" -R "${GH_REPO}" --json state,labels,url,title \
+    --jq '[.state, (.labels | map(.name) | join("|")), .url, .title] | @tsv' \
+    2>/dev/null || printf '%s\n' ""
+}
+
+finish_stage_for_worktree() {
+  local wt_path="$1"
+  local branch_name=""
+  local dirty=""
+  local open_pr=""
+  local merged_pr=""
+  local upstream=""
+  local ab=""
+  local behind=0
+  local ahead=0
+
+  branch_name="$(worktree_branch_name "${wt_path}")"
+  dirty="$(git -C "${wt_path}" status --porcelain 2>/dev/null || true)"
+  if [ -n "${dirty}" ]; then
+    printf '%s\n' "implementing"
+    return 0
+  fi
+
+  if [ -n "${branch_name}" ] && [ "${branch_name}" != "(detached)" ]; then
+    open_pr="$(pr_tsv_for_branch_state "${branch_name}" "open")"
+    if [ -n "${open_pr}" ]; then
+      printf '%s\n' "review"
+      return 0
+    fi
+    merged_pr="$(pr_tsv_for_branch_state "${branch_name}" "merged")"
+    if [ -n "${merged_pr}" ]; then
+      printf '%s\n' "merged"
+      return 0
+    fi
+  fi
+
+  upstream="$(git -C "${wt_path}" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)"
+  if [ -z "${upstream}" ]; then
+    printf '%s\n' "ready-to-push"
+    return 0
+  fi
+  ab="$(git -C "${wt_path}" rev-list --left-right --count "${upstream}...HEAD" 2>/dev/null || true)"
+  if [ -n "${ab}" ]; then
+    behind="$(printf '%s' "${ab}" | awk '{print $1}')"
+    ahead="$(printf '%s' "${ab}" | awk '{print $2}')"
+    if [ "${ahead:-0}" -gt 0 ]; then
+      printf '%s\n' "ready-to-push"
+      return 0
+    fi
+  fi
+
+  printf '%s\n' "pr-open"
+}
+
+print_finish_worktree_summary() {
+  local wt_path="$1"
+  local branch_name=""
+  local issue_id=""
+  local stage=""
+  local status_line=""
+  local upstream=""
+  local ab=""
+  local issue_info=""
+  local issue_state=""
+  local issue_labels=""
+  local issue_url=""
+  local issue_title=""
+  local open_pr=""
+  local merged_pr=""
+  local open_pr_num=""
+  local open_pr_url=""
+  local open_pr_title=""
+  local open_pr_draft=""
+  local merged_pr_num=""
+  local merged_pr_url=""
+  local merged_at=""
+  local primary=""
+
+  primary="$(primary_worktree_path)"
+  branch_name="$(worktree_branch_name "${wt_path}")"
+  issue_id="$(worktree_issue_id "${wt_path}")"
+  stage="$(finish_stage_for_worktree "${wt_path}")"
+  status_line="$(git -C "${wt_path}" status -sb 2>/dev/null || true)"
+  upstream="$(git -C "${wt_path}" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)"
+  if [ -n "${upstream}" ]; then
+    ab="$(git -C "${wt_path}" rev-list --left-right --count "${upstream}...HEAD" 2>/dev/null || true)"
+  fi
+
+  issue_info="$(issue_tsv "${issue_id}")"
+  if [ -n "${issue_info}" ]; then
+    issue_state="$(printf '%s' "${issue_info}" | cut -f1)"
+    issue_labels="$(printf '%s' "${issue_info}" | cut -f2)"
+    issue_url="$(printf '%s' "${issue_info}" | cut -f3)"
+    issue_title="$(printf '%s' "${issue_info}" | cut -f4-)"
+  fi
+
+  open_pr="$(pr_tsv_for_branch_state "${branch_name}" "open")"
+  if [ -n "${open_pr}" ]; then
+    open_pr_num="$(printf '%s' "${open_pr}" | cut -f1)"
+    open_pr_url="$(printf '%s' "${open_pr}" | cut -f2)"
+    open_pr_title="$(printf '%s' "${open_pr}" | cut -f3)"
+    open_pr_draft="$(printf '%s' "${open_pr}" | cut -f4)"
+  fi
+  merged_pr="$(pr_tsv_for_branch_state "${branch_name}" "merged")"
+  if [ -n "${merged_pr}" ]; then
+    merged_pr_num="$(printf '%s' "${merged_pr}" | cut -f1)"
+    merged_pr_url="$(printf '%s' "${merged_pr}" | cut -f2)"
+    merged_at="$(printf '%s' "${merged_pr}" | cut -f5)"
+  fi
+
+  echo
+  echo "Finish Worktree Summary"
+  echo "  worktree: ${wt_path}"
+  echo "  primary:  ${primary}"
+  echo "  branch:   ${branch_name}"
+  echo "  issue:    #${issue_id}"
+  echo "  stage:    ${stage}"
+  if [ -n "${status_line}" ]; then
+    echo "  git:      ${status_line}"
+  fi
+  if [ -n "${upstream}" ]; then
+    echo "  upstream: ${upstream}${ab:+ (behind ahead = ${ab})}"
+  else
+    echo "  upstream: (none)"
+  fi
+  if [ -n "${issue_title}" ]; then
+    echo "  issue:    ${issue_state} - ${issue_title}"
+    echo "  labels:   ${issue_labels}"
+    echo "  issueurl: ${issue_url}"
+  fi
+  if [ -n "${open_pr_num}" ]; then
+    echo "  pr:       #${open_pr_num} OPEN${open_pr_draft:+ (draft=${open_pr_draft})} - ${open_pr_title}"
+    echo "  prurl:    ${open_pr_url}"
+  elif [ -n "${merged_pr_num}" ]; then
+    echo "  pr:       #${merged_pr_num} MERGED"
+    echo "  prurl:    ${merged_pr_url}"
+    echo "  mergedAt: ${merged_at}"
+  else
+    echo "  pr:       none"
+  fi
+
+  echo
+  echo "Next commands (by stage):"
+  case "${stage}" in
+    implementing)
+      echo "  - complete edits/tests, then: make preflight-session"
+      echo "  - commit: git -C ${wt_path} commit -m \"... (#${issue_id})\""
+      ;;
+    ready-to-commit)
+      echo "  - commit changes with issue number"
+      ;;
+    ready-to-push)
+      echo "  - push: git -C ${wt_path} push -u origin ${branch_name}"
+      echo "  - open PR: gh pr create -R ${GH_REPO:-<repo>} --base ${REQUIRED_MAIN_BRANCH} --head ${branch_name} --fill"
+      ;;
+    pr-open)
+      echo "  - open PR: gh pr create -R ${GH_REPO:-<repo>} --base ${REQUIRED_MAIN_BRANCH} --head ${branch_name} --fill"
+      ;;
+    review)
+      if [ -n "${open_pr_num}" ]; then
+        echo "  - checks: gh pr checks ${open_pr_num} -R ${GH_REPO:-<repo>}"
+        echo "  - merge:  gh pr merge ${open_pr_num} -R ${GH_REPO:-<repo>} --merge --delete-branch"
+      else
+        echo "  - check/open PR, then merge when green"
+      fi
+      ;;
+    merged)
+      echo "  - update issue labels/status + close issue if still open"
+      if [ "${wt_path}" != "${primary}" ]; then
+        echo "  - cleanup: git worktree remove ${wt_path}"
+        echo "  - cleanup: git -C ${REPO_ROOT} branch -d ${branch_name}"
+        echo "  - cleanup: git -C ${REPO_ROOT} worktree prune"
+      else
+        echo "  - cleanup: primary worktree retained"
+      fi
+      ;;
+    cleanup-complete)
+      echo "  - no further action"
+      ;;
+    *)
+      echo "  - run finish protocol per Rule 12.8 / 12.9"
+      ;;
+  esac
+  echo
+}
+
+finish_worktree_protocol() {
+  local wt_path=""
+  local primary=""
+  local choice=""
+  local branch_name=""
+  local open_pr=""
+  local open_pr_num=""
+  local issue_id=""
+  local issue_state=""
+
+  if ! wt_path="$(choose_worktree_path false)"; then
+    return 0
+  fi
+  if is_menu_back "${wt_path}"; then
+    return 0
+  fi
+  primary="$(primary_worktree_path)"
+
+  while :; do
+    branch_name="$(worktree_branch_name "${wt_path}")"
+    issue_id="$(worktree_issue_id "${wt_path}")"
+    open_pr="$(pr_tsv_for_branch_state "${branch_name}" "open")"
+    open_pr_num="$(printf '%s' "${open_pr}" | cut -f1)"
+    issue_state="$(printf '%s' "$(issue_tsv "${issue_id}")" | cut -f1)"
+
+    print_finish_worktree_summary "${wt_path}"
+    echo "Finish Worktree Actions"
+    echo "  1) Refresh summary (default)"
+    echo "  2) Run preflight in worktree"
+    echo "  3) Push branch to origin"
+    echo "  4) Open PR (--fill)"
+    echo "  5) Check PR checks"
+    echo "  6) Merge open PR (--merge --delete-branch)"
+    echo "  7) Mark issue done/close (post-merge)"
+    echo "  8) Cleanup merged worktree (remove + branch -d + prune)"
+    echo "  9) Run custom command in worktree"
+    echo "  0) Back"
+    echo
+    read -r -p "Choice [1]: " choice
+    choice="${choice:-1}"
+    echo
+
+    case "${choice}" in
+      1)
+        ;;
+      2)
+        run_preflight_in_worktree "${wt_path}" || true
+        ;;
+      3)
+        echo "Pushing ${branch_name} to origin ..."
+        git -C "${wt_path}" push -u origin "${branch_name}" || true
+        ;;
+      4)
+        if ! gh_repo_ready; then
+          echo "gh/GitHub repo not available; cannot open PR from menu."
+        else
+          gh pr create -R "${GH_REPO}" --base "${REQUIRED_MAIN_BRANCH}" --head "${branch_name}" --fill || true
+        fi
+        ;;
+      5)
+        if ! gh_repo_ready; then
+          echo "gh/GitHub repo not available; cannot check PR."
+        elif [ -z "${open_pr_num}" ]; then
+          echo "No open PR found for branch ${branch_name}."
+        else
+          gh pr checks "${open_pr_num}" -R "${GH_REPO}" || true
+        fi
+        ;;
+      6)
+        if ! gh_repo_ready; then
+          echo "gh/GitHub repo not available; cannot merge PR."
+        elif [ -z "${open_pr_num}" ]; then
+          echo "No open PR found for branch ${branch_name}."
+        else
+          gh pr merge "${open_pr_num}" -R "${GH_REPO}" --merge --delete-branch || true
+        fi
+        ;;
+      7)
+        if ! gh_repo_ready; then
+          echo "gh/GitHub repo not available; cannot update issue."
+        elif [[ ! "${issue_id}" =~ ^[0-9]+$ ]]; then
+          echo "Could not parse issue id from branch ${branch_name}."
+        else
+          if [ "${issue_state}" = "OPEN" ]; then
+            gh issue edit "${issue_id}" -R "${GH_REPO}" --add-label done --remove-label review --remove-label in-progress >/dev/null 2>&1 || true
+            gh issue close "${issue_id}" -R "${GH_REPO}" || true
+          else
+            echo "Issue #${issue_id} is already ${issue_state:-unknown}."
+          fi
+        fi
+        ;;
+      8)
+        if [ "${wt_path}" = "${primary}" ]; then
+          echo "Refusing to remove primary worktree."
+        else
+          echo "Cleaning up ${wt_path} ..."
+          if git worktree remove "${wt_path}" && git -C "${REPO_ROOT}" branch -d "${branch_name}" && git -C "${REPO_ROOT}" worktree prune; then
+            echo "Cleanup complete."
+            return 0
+          fi
+          echo "Cleanup not completed. Resolve any unmerged/unpushed changes and retry."
+        fi
+        ;;
+      9)
+        run_command_in_worktree "${wt_path}" || true
+        ;;
+      0|back)
+        return 0
+        ;;
+      *)
+        echo "Invalid choice."
+        ;;
+    esac
+    echo
+  done
+}
+
 main_menu() {
   while :; do
     echo "Worktree Session Menu"
@@ -1205,7 +1538,8 @@ main_menu() {
     echo "  3) Resume worktree (preflight + shell)"
     echo "  4) Resume worktree (preflight + command)"
     echo "  5) Preflight current worktree"
-    echo "  6) Exit"
+    echo "  6) Finish worktree (guided protocol)"
+    echo "  7) Exit"
     echo "  0) Exit"
     echo
 
@@ -1233,7 +1567,10 @@ main_menu() {
         run_preflight_in_worktree "$(pwd -P)"
         pause
         ;;
-      6|0)
+      6)
+        finish_worktree_protocol
+        ;;
+      7|0)
         exit 0
         ;;
       *)

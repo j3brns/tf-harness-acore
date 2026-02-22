@@ -273,6 +273,16 @@ For all other resources, follow the decision framework (native provider first wh
 - If preflight fails, do not proceed with edits/commits until resolved.
 
 ### Rule 7.8: Worktree Finish & Cleanup
+- A worktree is **not finished** when code is only local or locally validated.
+- A worktree is finished only when the issue closure condition has been met (for example `PR merged`) and any required issue/PR evidence updates are posted.
+- Agents MUST track and report the current finish stage when pausing or handing off. Use these stages:
+  - `implementing` (editing/validating in worktree),
+  - `ready-to-commit`,
+  - `ready-to-push`,
+  - `pr-open`,
+  - `review`,
+  - `merged`,
+  - `cleanup-complete`.
 - Do not remove a linked worktree until its branch is pushed and no local-only work remains.
 - After merge to `main`, agents SHOULD remove the linked worktree, delete the local branch, and run `git worktree prune`.
 - Worktree cleanup MUST NOT discard unmerged or unpushed changes.
@@ -370,6 +380,11 @@ For any Execution Issue, agents MUST complete the following finish sequence:
    - evidence links (PR, commit SHA, CI).
 7. Update issue labels/status (`in-progress` -> `review` or `done`).
 8. Close the issue only after merge unless the team workflow explicitly closes on PR creation.
+- Agents MUST NOT mark an Execution Issue complete based only on local edits or local validation.
+- If pausing before merge, agents MUST report:
+  - current finish stage (Rule 7.8),
+  - what is already complete,
+  - exact next command(s) to advance the issue.
 
 ### Rule 12.9: Tracker Issue Finish Protocol (MANDATORY)
 For Tracker Issues, agents are done when work is allocatable or fully coordinated:

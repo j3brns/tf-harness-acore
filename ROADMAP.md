@@ -40,26 +40,26 @@ This document outlines planned features and improvements for the Bedrock AgentCo
   * Require zero unplanned destroys before any apply in dev.
   * **Issue:** #18
 
-- [ ] **A2: State Transition Runbook**
+- [x] **A2: State Transition Runbook**
   * Define `import`/`moved` procedures per resource family and add rollback instructions.
   * Add pre-flight checks: state backup, drift check, plan delta review.
   * Add post-flight checks: idempotent second apply, smoke validation, audit trail.
   * **Issue:** #19
 
-- [ ] **A3: Promotion Through Existing Gates**
+- [x] **A3: Promotion Through Existing Gates**
   * Dev: `promote:dev` required before deploy.
   * Test: manual `release/*` pipeline + `promote:test` required.
   * Prod: tagged SHA with `gate:prod-from-test` evidence.
   * **Issue:** #20
 
-- [ ] **A4: Decommission Legacy CLI Paths**
+- [x] **A4: Decommission Legacy CLI Paths**
   * Remove migrated `null_resource` branches only after 2 green promotion cycles.
   * Keep CLI fallback only for matrix entries still marked `cli-required`.
   * **Issue:** #21
 
 ### Workstream B: Tag + Policy Consolidation
 
-- [ ] **B0: Canonical Tag Taxonomy**
+- [x] **B0: Canonical Tag Taxonomy**
   * Standardize required tags across all modules: `AppID`, `Environment`, `AgentName`, `ManagedBy=Terraform`, `Owner`.
   * Ensure provider `default_tags` and module `tags` are non-conflicting and deterministic.
   * **Issue:** #22
@@ -81,7 +81,7 @@ This document outlines planned features and improvements for the Bedrock AgentCo
 
 ### Workstream C: Tenancy Portal/API Refinement
 
-- [ ] **C0: API Contract First**
+- [x] **C0: API Contract First**
   * Define versioned tenancy admin API contract for onboarding, lifecycle, and access control.
   * Required operations: `create tenant`, `suspend tenant`, `rotate tenant credentials`, `fetch tenant audit summary`.
   * **Issue:** #26
