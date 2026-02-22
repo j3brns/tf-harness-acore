@@ -15,10 +15,19 @@ def test_ssm_durability():
 
     with open("terraform/modules/agentcore-foundation/gateway.tf", "r") as f:
         content = f.read()
-        if 'data "aws_ssm_parameter" "gateway_id"' not in content:
-            raise Exception("FAILED: SSM data source missing in gateway.tf")
+        if 'resource "null_resource" "gateway"' in content:
+            raise Exception('FAILED: legacy CLI gateway null_resource still exists in gateway.tf')
+        if 'resource "null_resource" "gateway_target"' in content:
+            raise Exception('FAILED: legacy CLI gateway_target null_resource still exists in gateway.tf')
+        if 'data "aws_ssm_parameter" "gateway_id"' in content:
+            raise Exception('FAILED: legacy gateway SSM bridge data source still exists in gateway.tf')
 
-    print("  PASS: Brittle local state dependencies removed.")
+    with open("terraform/modules/agentcore-foundation/identity.tf", "r") as f:
+        content = f.read()
+        if 'data "aws_ssm_parameter" "workload_identity_id"' not in content:
+            raise Exception("FAILED: workload identity SSM data source missing in identity.tf")
+
+    print("  PASS: Legacy gateway SSM bridge removed; CLI-required identity SSM durability retained.")
 
 
 def test_arch_logic():
@@ -49,7 +58,6 @@ def test_cli_output_dir_creation():
     print("[Test 4] Verifying CLI modules create local .terraform output directories...")
 
     required_files = [
-        "terraform/modules/agentcore-foundation/gateway.tf",
         "terraform/modules/agentcore-foundation/identity.tf",
         "terraform/modules/agentcore-governance/evaluations.tf",
         "terraform/modules/agentcore-governance/policy.tf",
@@ -79,25 +87,27 @@ def test_provider_freeze_point_pin():
     print("  PASS: AWS provider freeze-point pin verified.")
 
 
-def test_native_gateway_pilot_guards():
-    print("[Test 6] Verifying native gateway pilot compatibility guards...")
+def test_native_gateway_decommission():
+    print("[Test 6] Verifying gateway legacy CLI path decommission...")
 
     with open("terraform/modules/agentcore-foundation/gateway.tf", "r") as f:
         content = f.read()
         if 'var.gateway_search_type == "HYBRID" ? "SEMANTIC" : var.gateway_search_type' not in content:
             raise Exception("FAILED: native gateway search_type compatibility guard missing in gateway.tf")
+        if "use_native_gateway" in content:
+            raise Exception('FAILED: gateway.tf still references deprecated pilot toggle "use_native_gateway"')
 
     with open("terraform/modules/agentcore-foundation/variables.tf", "r") as f:
         content = f.read()
-        if 'variable "use_native_gateway"' not in content:
-            raise Exception('FAILED: module variable "use_native_gateway" missing in foundation variables.tf')
+        if 'variable "use_native_gateway"' in content:
+            raise Exception('FAILED: deprecated module variable "use_native_gateway" still present in foundation variables.tf')
 
     with open("terraform/variables.tf", "r") as f:
         content = f.read()
-        if 'variable "use_native_gateway"' not in content:
-            raise Exception('FAILED: root variable "use_native_gateway" missing in terraform/variables.tf')
+        if 'variable "use_native_gateway"' in content:
+            raise Exception('FAILED: deprecated root variable "use_native_gateway" still present in terraform/variables.tf')
 
-    print("  PASS: Native gateway pilot guards verified.")
+    print("  PASS: Gateway legacy CLI path removed and pilot toggle decommissioned.")
 
 
 if __name__ == "__main__":
@@ -107,7 +117,7 @@ if __name__ == "__main__":
         test_zip_exclusions()
         test_cli_output_dir_creation()
         test_provider_freeze_point_pin()
-        test_native_gateway_pilot_guards()
+        test_native_gateway_decommission()
         print("\nAll remediation integrity tests PASSED successfully.")
     except Exception as e:
         print("\nREMEDIATION TEST FAILED: " + str(e))

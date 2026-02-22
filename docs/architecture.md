@@ -160,8 +160,8 @@ agentcore-foundation (NO dependencies)
 **Purpose**: Core infrastructure (Gateway, Identity, Observability)
 
 **Resources**:
-- `null_resource` + CLI for Gateway (MCP protocol gateway)
-- `null_resource` + CLI for Gateway Target (MCP Lambda targets)
+- `aws_bedrockagentcore_gateway` - MCP protocol gateway (native provider)
+- `aws_bedrockagentcore_gateway_target` - MCP Lambda targets (native provider)
 - `null_resource` + CLI for Workload Identity (OAuth2 identity)
 - `aws_cloudwatch_log_group` - Centralized logging
 - `aws_xray_sampling_rule` - Distributed tracing
@@ -477,7 +477,6 @@ Due to AWS provider gaps, the core Bedrock AgentCore suite uses AWS CLI:
 
 | Resource | CLI Command |
 |----------|------------|
-| Gateway | `bedrock-agentcore-control create-gateway` |
 | Identity | `bedrock-agentcore-control create-workload-identity` |
 | Browser | `bedrock-agentcore-control create-browser` |
 | Code Interpreter | `bedrock-agentcore-control create-code-interpreter` |
