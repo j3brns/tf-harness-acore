@@ -60,6 +60,15 @@ jobs:
       - name: Ensure generated OpenAPI artifact is committed
         run: git diff --exit-code -- docs/api/mcp-tools-v1.openapi.json
 
+  governance-conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Canonical tag conformance
+        run: bash terraform/tests/validation/tags_test.sh
+      - name: IAM wildcard exception documentation conformance
+        run: python3 terraform/tests/validation/policy_wildcard_exceptions_test.py
+
   terraform-validate:
     runs-on: ubuntu-latest
     steps:
