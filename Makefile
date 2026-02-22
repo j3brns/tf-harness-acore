@@ -21,7 +21,7 @@ init-segmented: ## Initialize with segmented key (provide ENV, APP_ID, AGENT_NAM
 	terraform -chdir=$(TERRAFORM_DIR) init \
 		-backend-config="bucket=terraform-state-$(ENV)-$(BUCKET_ID)" \
 		-backend-config="key=state/$(APP_ID)/$(AGENT_NAME)/terraform.tfstate" \
-		-backend-config="region=eu-west-2" \
+		-backend-config="region=eu-central-1" \
 		-backend-config="encrypt=true" \
 		-backend-config="use_lockfile=true"
 

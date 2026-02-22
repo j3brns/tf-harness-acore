@@ -43,7 +43,7 @@ LOG_MESSAGES = [
     "Listening for events...",
     "Incoming payload: { 'action': 'invoke', 'agentId': 'AG-12345' }",
     "Processing natural language query...",
-    "Routing to Lambda target: arn:aws:lambda:eu-west-2:123456789012:function:agent",
+    "Routing to Lambda target: arn:aws:lambda:eu-central-1:123456789012:function:agent",
     "Executing tool: list_buckets",
     "Tool execution successful. Duration: 142ms",
     "Generating response...",
@@ -72,7 +72,7 @@ def discover_config():
         outputs = json.loads(res)
 
         config = {
-            "region": "eu-west-2",  # Default
+            "region": "eu-central-1",  # Default
             "agent_id": outputs.get("agentcore_runtime_arn", {}).get("value")
             or outputs.get("gateway_id", {}).get("value"),
             "log_group": outputs.get("log_group_name", {}).get("value"),
@@ -82,7 +82,7 @@ def discover_config():
         # If not in outputs, we might need to check terraform.tfstate or just default
         return config
     except Exception:
-        return {"region": "eu-west-2", "agent_id": None, "log_group": None}
+        return {"region": "eu-central-1", "agent_id": None, "log_group": None}
 
 
 def matrix_rain_effect(duration=3.0):
@@ -190,7 +190,7 @@ def main():
 
     # Configuration Discovery
     config = discover_config()
-    region = args.region or config.get("region") or "eu-west-2"
+    region = args.region or config.get("region") or "eu-central-1"
     agent_id = args.agent_id or config.get("agent_id") or "UNKNOWN"
     log_group = args.log_group or config.get("log_group")
 

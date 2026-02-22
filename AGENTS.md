@@ -192,7 +192,7 @@ For all other resources, follow the decision framework (native provider first wh
 
 ### Rule 5.4: Query Examples
 - Availability check:
-  - `get_regional_availability(region="eu-west-2", resource_type="product", filters=["Amazon Bedrock AgentCore","Amazon Bedrock AgentCore Runtime"])`
+  - `get_regional_availability(region="eu-central-1", resource_type="product", filters=["Amazon Bedrock AgentCore","Amazon Bedrock AgentCore Runtime"])`
 - API/CLI reference:
   - `search_documentation(search_phrase="bedrock-agentcore-control create-gateway", topics=["reference_documentation"])`
 - Troubleshooting:

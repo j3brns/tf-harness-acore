@@ -49,12 +49,12 @@ variable "bff_custom_domain_name" {
 }
 
 variable "bff_acm_certificate_arn" {
-  description = "ARN of the ACM certificate for the custom domain. Must be in eu-west-2 for CloudFront."
+  description = "ARN of the ACM certificate for the custom domain. Must be in eu-central-1 for CloudFront."
   type        = string
   default     = ""
   validation {
-    condition     = var.bff_acm_certificate_arn == "" || can(regex("^arn:aws:acm:eu-west-2:[0-9]{12}:certificate/[a-f0-9-]+$", var.bff_acm_certificate_arn))
-    error_message = "bff_acm_certificate_arn must be in eu-west-2 for CloudFront."
+    condition     = var.bff_acm_certificate_arn == "" || can(regex("^arn:aws:acm:eu-central-1:[0-9]{12}:certificate/[a-f0-9-]+$", var.bff_acm_certificate_arn))
+    error_message = "bff_acm_certificate_arn must be in eu-central-1 for CloudFront."
   }
 }
 

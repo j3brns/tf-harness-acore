@@ -1,14 +1,14 @@
 # Example Terraform variables for AgentCore deployment
 # Copy this file to terraform.tfvars and update values as needed
 
-region      = "eu-west-2"
+region      = "eu-central-1"
 # Optional AgentCore control-plane region override (defaults to region)
-# Example: AgentCore in eu-west-2 with BFF in eu-west-2
+# Example: AgentCore in eu-central-1 with BFF in eu-central-1
 agentcore_region = ""
 # Optional BFF/API Gateway region override (defaults to agentcore_region)
 bff_region = ""
 # Optional Bedrock region override for models/guardrails/inference profiles (defaults to agentcore_region)
-# Example: AgentCore in eu-west-2 with Bedrock models in eu-west-2
+# Example: AgentCore in eu-central-1 with Bedrock models in eu-central-1
 bedrock_region = ""
 
 # Optional BFF runtime ARN override (required if enable_bff=true and enable_runtime=false)
@@ -32,11 +32,11 @@ gateway_search_type  = "HYBRID"
 mcp_targets = {
   web_search = {
     name       = "web-search-tool"
-    lambda_arn = "arn:aws:lambda:eu-west-2:123456789012:function:web-search-mcp"
+    lambda_arn = "arn:aws:lambda:eu-central-1:123456789012:function:web-search-mcp"
   }
   code_executor = {
     name       = "code-executor-tool"
-    lambda_arn = "arn:aws:lambda:eu-west-2:123456789012:function:code-executor-mcp"
+    lambda_arn = "arn:aws:lambda:eu-central-1:123456789012:function:code-executor-mcp"
   }
 }
 
@@ -50,7 +50,7 @@ enable_xray          = true
 log_retention_days   = 30
 enable_agent_dashboards = false
 # agent_dashboard_name = "my-research-agent-dashboard"
-# dashboard_region = "eu-west-2" # Defaults to region when empty
+# dashboard_region = "eu-central-1" # Defaults to region when empty
 # dashboard_widgets_override = jsonencode([
 #   {
 #     type   = "text"

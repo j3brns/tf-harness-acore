@@ -44,7 +44,7 @@ CI_ENVIRONMENT_ROLE_ARN_DEV   = arn:aws:iam::111...:role/gitlab-terraform-deploy
 CI_ENVIRONMENT_ROLE_ARN_TEST  = arn:aws:iam::222...:role/gitlab-terraform-deployer-test
 CI_ENVIRONMENT_ROLE_ARN_PROD  = arn:aws:iam::333...:role/gitlab-terraform-deployer-prod
 TF_STATE_BUCKET_DEV           = terraform-state-dev-12345
-TF_VAR_region                 = eu-west-2
+TF_VAR_region                 = eu-central-1
 TF_VAR_environment            = dev
 ```
 

@@ -264,7 +264,7 @@ If you deploy MCP servers separately:
 mcp_targets = {
   s3_tools = {
     name        = "s3-tools"
-    lambda_arn  = "arn:aws:lambda:eu-west-2:YOUR_ACCOUNT:function:agentcore-mcp-s3-tools-dev"
+    lambda_arn  = "arn:aws:lambda:eu-central-1:YOUR_ACCOUNT:function:agentcore-mcp-s3-tools-dev"
     description = "S3 bucket and object operations"
   }
 }

@@ -9,7 +9,7 @@
 $GitLabUrl = if ($env:GITLAB_URL) { $env:GITLAB_URL } else { "https://gitlab.com" }
 $GitLabProjectPath = if ($env:GITLAB_PROJECT_PATH) { $env:GITLAB_PROJECT_PATH } else { "julian.burns50/ocds-agentcore" }
 $AwsProfile = if ($env:AWS_PROFILE) { $env:AWS_PROFILE } else { "agentcore-terra" }
-$AwsRegion = if ($env:AWS_REGION) { $env:AWS_REGION } else { "eu-west-2" }
+$AwsRegion = if ($env:AWS_REGION) { $env:AWS_REGION } else { "eu-central-1" }
 
 # --- Derived Variables ---
 $Uri = New-Object System.Uri($GitLabUrl)

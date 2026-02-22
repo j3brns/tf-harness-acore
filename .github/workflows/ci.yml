@@ -210,7 +210,7 @@ jobs:
           copier copy --force --trust \
             --data agent_name=ci-agent \
             --data app_id=ci-agent \
-            --data region=eu-west-2 \
+            --data region=eu-central-1 \
             --data environment=dev \
             --data enable_bff=true \
             templates/agent-project .generated-test

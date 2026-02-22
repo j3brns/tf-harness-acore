@@ -91,7 +91,7 @@ class TestCreateSessionManager:
             "memory_id": "mem-abc123",
             "session_id": "session-123",
             "actor_id": "test-actor",
-            "region_name": "eu-west-2",
+            "region_name": "eu-central-1",
         }
         mock_config_instance = MagicMock()
         mock_config_class.return_value = mock_config_instance
@@ -108,5 +108,5 @@ class TestCreateSessionManager:
         )
         mock_manager_class.assert_called_once_with(
             agentcore_memory_config=mock_config_instance,
-            region_name="eu-west-2",
+            region_name="eu-central-1",
         )

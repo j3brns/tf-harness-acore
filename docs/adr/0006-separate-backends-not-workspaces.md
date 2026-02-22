@@ -20,13 +20,13 @@ Use separate backends (one per environment) instead of Terraform workspaces.
 # backend-dev.tfvars
 bucket = "terraform-state-dev-12345"
 key    = "state/my-app/agent-a1b2/terraform.tfstate"
-region = "eu-west-2"
+region = "eu-central-1"
 encrypt = true
 
 # backend-prod.tfvars
 bucket = "terraform-state-prod-67890"
 key    = "state/my-app/agent-c3d4/terraform.tfstate"
-region = "eu-west-2"
+region = "eu-central-1"
 encrypt = true
 ```
 

@@ -27,10 +27,10 @@ def test_build_default_prompt_mentions_duration_and_heartbeat():
 
 
 def test_resolve_target_url_uses_api_output_and_appends_chat():
-    outputs = {"agentcore_bff_api_url": {"value": "https://abc.execute-api.eu-west-2.amazonaws.com/dev"}}
+    outputs = {"agentcore_bff_api_url": {"value": "https://abc.execute-api.eu-central-1.amazonaws.com/dev"}}
     with patch.object(mod, "read_terraform_outputs", return_value=outputs):
         url = mod.resolve_target_url(None, use_spa_url=False)
-    assert url == "https://abc.execute-api.eu-west-2.amazonaws.com/dev/chat"
+    assert url == "https://abc.execute-api.eu-central-1.amazonaws.com/dev/chat"
 
 
 def test_resolve_target_url_uses_spa_output_and_appends_api_chat():

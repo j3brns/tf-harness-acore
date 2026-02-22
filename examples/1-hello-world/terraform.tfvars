@@ -3,7 +3,7 @@
 
 agent_name  = "hello-world-s3-a1b2"
 app_id      = "hello-world-s3"
-region      = "eu-west-2"
+region      = "eu-central-1"
 environment = "dev"
 
 tags = {

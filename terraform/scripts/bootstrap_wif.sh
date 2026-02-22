@@ -12,7 +12,7 @@ set -euo pipefail
 GITLAB_URL="${GITLAB_URL:-https://gitlab.yourcompany.com}"
 GITLAB_PROJECT_PATH="${GITLAB_PROJECT_PATH:-mygroup/terraform-agentcore}"
 AWS_PROFILE="${AWS_PROFILE:-agentcore-terra}"
-AWS_REGION="${AWS_REGION:-eu-west-2}"
+AWS_REGION="${AWS_REGION:-eu-central-1}"
 
 # --- Derived Variables ---
 DOMAIN=$(echo "$GITLAB_URL" | sed -e 's|^[^/]*//||' -e 's|/.*$||')

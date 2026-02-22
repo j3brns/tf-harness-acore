@@ -80,7 +80,7 @@ Before deploying, you must:
    ```hcl
    mcp_targets = {
      titanic_dataset = {
-       lambda_arn = "arn:aws:lambda:eu-west-2:YOUR_ACCOUNT_ID:function:titanic-mcp"
+       lambda_arn = "arn:aws:lambda:eu-central-1:YOUR_ACCOUNT_ID:function:titanic-mcp"
      }
    }
    ```

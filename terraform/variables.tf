@@ -1,7 +1,7 @@
 variable "region" {
   description = "Default AWS region"
   type        = string
-  default     = "eu-west-2"
+  default     = "eu-central-1"
 }
 
 variable "agentcore_region" {

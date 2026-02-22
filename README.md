@@ -172,7 +172,7 @@ Create a `terraform.tfvars` file or use one of the provided examples.
 ```hcl
 agent_name  = "my-agent-core-a1b2"
 app_id      = "my-agent"
-region      = "eu-west-2"
+region      = "eu-central-1"
 environment = "dev"
 
 enable_gateway      = true
@@ -332,7 +332,7 @@ Non-interactive flow (repeatable in automation):
 copier copy --force --trust \
   --data agent_name=my-agent-core-a1b2 \
   --data app_id=my-agent \
-  --data region=eu-west-2 \
+  --data region=eu-central-1 \
   --data environment=dev \
   --data enable_bff=true \
   templates/agent-project .scratch/my-agent
@@ -357,7 +357,7 @@ Notes:
 | `agent_name` | `string` | -- (required) | Internal physical agent identity (immutable). Lowercase pattern: `word-word-word-xxxx` or `word-word-word-env-xxxx` (4-6 char suffix). |
 | `app_id` | `string` | `agent_name` | Human-facing application alias for routing and multi-tenant isolation (North anchor). |
 | `allow_legacy_agent_name` | `bool` | `false` | Temporary migration escape hatch to keep an existing legacy `agent_name` without forced rename. |
-| `region` | `string` | `eu-west-2` | Default AWS region for all resources. |
+| `region` | `string` | `eu-central-1` | Default AWS region for all resources. |
 | `agentcore_region` | `string` | `region` | AgentCore control-plane region override. |
 | `bedrock_region` | `string` | `agentcore_region` | Bedrock model region override. |
 | `bff_region` | `string` | `agentcore_region` | BFF/API Gateway region override. |
@@ -513,7 +513,7 @@ Example (root module inputs):
 enable_bff = true
 
 # External runtime (different account)
-bff_agentcore_runtime_arn      = "arn:aws:bedrock-agentcore:eu-west-2:222222222222:runtime/my-runtime"
+bff_agentcore_runtime_arn      = "arn:aws:bedrock-agentcore:eu-central-1:222222222222:runtime/my-runtime"
 bff_agentcore_runtime_role_arn = "arn:aws:iam::222222222222:role/my-runtime-role"
 ```
 

@@ -81,7 +81,7 @@ Enterprise deployments can attach a WAFv2 Web ACL to the CloudFront distribution
 
 ### Constraints
 
-- The Web ACL **must** be created in `eu-west-2` with `scope = "CLOUDFRONT"`. CloudFront only accepts global-scope WAFv2 ACLs.
+- The Web ACL **must** be created in `eu-central-1` with `scope = "CLOUDFRONT"`. CloudFront only accepts global-scope WAFv2 ACLs.
 - This is **separate** from `waf_acl_arn`, which attaches a REGIONAL Web ACL to the API Gateway stage.
 - Enabling WAF incurs additional AWS cost per million requests evaluated. Refer to [AWS WAF pricing](https://aws.amazon.com/waf/pricing/) before enabling.
 
@@ -94,8 +94,8 @@ module "agentcore_bff" {
   enable_bff = true
   # ... other required variables ...
 
-  # Optional: attach a CloudFront-scope WAFv2 Web ACL (must be in eu-west-2)
-  cloudfront_waf_acl_arn = "arn:aws:wafv2:eu-west-2:123456789012:global/webacl/my-cf-acl/abc-123"
+  # Optional: attach a CloudFront-scope WAFv2 Web ACL (must be in eu-central-1)
+  cloudfront_waf_acl_arn = "arn:aws:wafv2:eu-central-1:123456789012:global/webacl/my-cf-acl/abc-123"
 }
 ```
 
@@ -107,7 +107,7 @@ Enterprise deployments can configure a custom domain name (e.g., `agent.example.
 
 ### Constraints
 
-- The ACM certificate **must** be created in `eu-west-2`. CloudFront only accepts certificates from this region for global distributions.
+- The ACM certificate **must** be created in `eu-central-1`. CloudFront only accepts certificates from this region for global distributions.
 - You must separately configure a DNS record (e.g., CNAME in Route 53 or your DNS provider) pointing the custom domain to the CloudFront distribution's domain name.
 - The `spa_url` output will reflect the custom domain if configured.
 
@@ -122,7 +122,7 @@ module "agentcore_bff" {
 
   # Optional: custom domain and ACM certificate
   custom_domain_name  = "agent.example.com"
-  acm_certificate_arn = "arn:aws:acm:eu-west-2:123456789012:certificate/abc12345-def6-7890-ghij-klmnopqrstuv"
+  acm_certificate_arn = "arn:aws:acm:eu-central-1:123456789012:certificate/abc12345-def6-7890-ghij-klmnopqrstuv"
 }
 ```
 

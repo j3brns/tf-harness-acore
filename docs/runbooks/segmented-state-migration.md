@@ -35,7 +35,7 @@ Create a temporary backend configuration file (e.g., `migrate.tfvars`) containin
 # migrate.tfvars
 bucket       = "terraform-state-<env>-<id>"
 key          = "state/<app_id>/<agent_name>/terraform.tfstate"
-region       = "eu-west-2"
+region       = "eu-central-1"
 encrypt      = true
 use_lockfile = true
 ```

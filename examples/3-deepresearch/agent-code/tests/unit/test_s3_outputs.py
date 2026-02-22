@@ -31,13 +31,13 @@ class TestGetS3Client:
     @patch("deepresearch.utils.s3_outputs.boto3.client")
     def test_uses_env_region_when_not_specified(self, mock_boto_client, monkeypatch):
         """Should use AWS_REGION from environment when not specified."""
-        monkeypatch.setenv("AWS_REGION", "eu-west-2")
+        monkeypatch.setenv("AWS_REGION", "eu-central-1")
         mock_client = MagicMock()
         mock_boto_client.return_value = mock_client
 
         result = get_s3_client()
 
-        mock_boto_client.assert_called_once_with("s3", region_name="eu-west-2")
+        mock_boto_client.assert_called_once_with("s3", region_name="eu-central-1")
         assert result == mock_client
 
 

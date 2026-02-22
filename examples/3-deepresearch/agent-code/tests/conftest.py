@@ -28,8 +28,8 @@ def clean_env(monkeypatch):
 @pytest.fixture
 def mock_aws_region(monkeypatch):
     """Set AWS region for tests."""
-    monkeypatch.setenv("AWS_REGION", "eu-west-2")
-    return "eu-west-2"
+    monkeypatch.setenv("AWS_REGION", "eu-central-1")
+    return "eu-central-1"
 
 
 @pytest.fixture

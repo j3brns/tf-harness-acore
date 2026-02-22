@@ -3,7 +3,7 @@
 
 agent_name  = "deep-research-agent-e5f6"
 app_id      = "deep-research"
-region      = "eu-west-2"
+region      = "eu-central-1"
 environment = "dev"
 
 # Runtime configuration
@@ -18,7 +18,7 @@ enable_gateway = true
 # mcp_targets = {
 #   search = {
 #     name        = "internet-search-api"
-#     lambda_arn  = "arn:aws:lambda:eu-west-2:YOUR_ACCOUNT:function:linkup-search-mcp"
+#     lambda_arn  = "arn:aws:lambda:eu-central-1:YOUR_ACCOUNT:function:linkup-search-mcp"
 #     description = "Linkup SDK internet search integration"
 #   }
 # }

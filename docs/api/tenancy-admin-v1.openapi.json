@@ -13,7 +13,7 @@
       "url": "https://{host}",
       "variables": {
         "host": {
-          "default": "example.execute-api.eu-west-2.amazonaws.com"
+          "default": "example.execute-api.eu-central-1.amazonaws.com"
         }
       }
     }

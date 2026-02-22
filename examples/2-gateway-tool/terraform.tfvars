@@ -3,7 +3,7 @@
 
 agent_name  = "titanic-data-analyzer-c3d4"
 app_id      = "titanic-analyzer"
-region      = "eu-west-2"
+region      = "eu-central-1"
 environment = "dev"
 
 tags = {
@@ -32,7 +32,7 @@ mcp_targets = {
   titanic_dataset = {
     name = "titanic-dataset-tool"
     # IMPORTANT: Replace with output from: cd examples/mcp-servers/terraform && terraform output titanic_data_lambda_arn
-    lambda_arn  = "arn:aws:lambda:eu-west-2:111122223333:function:agentcore-mcp-titanic-data-dev"
+    lambda_arn  = "arn:aws:lambda:eu-central-1:111122223333:function:agentcore-mcp-titanic-data-dev"
     description = "Provides Titanic dataset for survival analysis"
   }
 }

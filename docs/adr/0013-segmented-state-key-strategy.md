@@ -41,7 +41,7 @@ Since Terraform `backend` blocks do not support variables, we will use **Partial
    terraform init 
      -backend-config="bucket=terraform-state-dev-12345" 
      -backend-config="key=state/my-app/research-agent-a1b2/terraform.tfstate" 
-     -backend-config="region=eu-west-2"
+     -backend-config="region=eu-central-1"
    ```
 
 ## Rationale

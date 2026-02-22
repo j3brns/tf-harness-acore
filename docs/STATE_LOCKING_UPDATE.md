@@ -21,7 +21,7 @@ terraform {
   backend "s3" {
     bucket         = "terraform-state-dev"
     key            = "agentcore/terraform.tfstate"
-    region         = "eu-west-2"
+    region         = "eu-central-1"
     encrypt        = true
     dynamodb_table = "terraform-state-lock-dev"  # ← DynamoDB required
   }
@@ -40,7 +40,7 @@ terraform {
   backend "s3" {
     bucket       = "terraform-state-dev"
     key          = "agentcore/terraform.tfstate"
-    region       = "eu-west-2"
+    region       = "eu-central-1"
     encrypt      = true
     use_lockfile = true  # ← Native S3 locking
   }

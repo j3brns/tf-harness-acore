@@ -10,23 +10,29 @@ Always verify current regional availability before deciding to split.
 
 Common patterns:
 
-1. **All resources in London (Primary Recommendation)**
+1. **All resources in Frankfurt (Primary Recommendation)**
 ```hcl
-region           = "eu-west-2"
+region           = "eu-central-1"
 agentcore_region = ""
 bedrock_region   = ""
 bff_region       = ""
 ```
 
-2. **AgentCore London, Bedrock Dublin (Split Pattern)**
+2. **AgentCore Frankfurt, Bedrock Dublin (Split Pattern)**
 ```hcl
-region           = "eu-west-2"
-agentcore_region = "eu-west-2"
+region           = "eu-central-1"
+agentcore_region = "eu-central-1"
 bedrock_region   = "eu-west-1"
-bff_region       = "eu-west-2"
+bff_region       = "eu-central-1"
 ```
 
 3. **AgentCore Frankfurt, Bedrock London (Split Pattern)**
+```hcl
+region           = "eu-central-1"
+agentcore_region = "eu-central-1"
+bedrock_region   = "eu-west-2"
+bff_region       = "eu-central-1"
+```
 ```hcl
 region           = "eu-central-1"
 agentcore_region = "eu-central-1"

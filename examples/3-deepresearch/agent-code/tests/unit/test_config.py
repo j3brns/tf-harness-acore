@@ -51,7 +51,7 @@ class TestGetMemoryConfig:
         """Should return config dict when memory is properly configured."""
         monkeypatch.setenv("ENABLE_MEMORY", "true")
         monkeypatch.setenv("AGENTCORE_MEMORY_ID", "mem-abc123")
-        monkeypatch.setenv("AWS_REGION", "eu-west-2")
+        monkeypatch.setenv("AWS_REGION", "eu-central-1")
 
         config = get_memory_config("session-123")
 
@@ -59,7 +59,7 @@ class TestGetMemoryConfig:
         assert config["memory_id"] == "mem-abc123"
         assert config["session_id"] == "session-123"
         assert config["actor_id"] == "deepsearch-agent"  # default
-        assert config["region_name"] == "eu-west-2"
+        assert config["region_name"] == "eu-central-1"
 
     def test_uses_custom_actor_id(self, monkeypatch):
         """Should use custom AGENTCORE_ACTOR_ID when set."""

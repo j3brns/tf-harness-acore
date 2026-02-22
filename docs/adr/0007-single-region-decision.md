@@ -7,15 +7,15 @@ Accepted
 ## Context
 
 AWS Bedrock AgentCore can be deployed in multiple regions. Need to decide deployment topology:
-- Single region (eu-west-2)
+- Single region (eu-central-1)
 - Multi-region active-passive
 - Multi-region active-active
 
 ## Decision
 
-Deploy to a **single primary region** (eu-west-2) for the AgentCore control plane. Keep the option to **split the BFF/API Gateway region** and **Bedrock model region** when needed (e.g., regional availability constraints).
+Deploy to a **single primary region** (eu-central-1) for the AgentCore control plane. Keep the option to **split the BFF/API Gateway region** and **Bedrock model region** when needed (e.g., regional availability constraints).
 
-Document DR region (eu-west-1) for future expansion but do not implement multi-region active-active until required.
+Document DR region (eu-west-1 or eu-west-2) for future expansion but do not implement multi-region active-active until required.
 
 ## Rationale
 
@@ -33,7 +33,7 @@ Document DR region (eu-west-1) for future expansion but do not implement multi-r
 - Team expertise in single-region patterns
 - Bedrock AgentCore still in preview (limited region availability)
 
-### Why London (eu-west-2) as Primary?
+### Why Frankfurt (eu-central-1) as Primary?
 - **Full Bedrock Feature Set**: Supports AgentCore, Knowledge Bases, and Guardrails (including the widest range of models like Nova and Claude 3.7).
 - **Strategic Alignment**: Avoids limitations present in other EU regions (e.g., Frankfurt missing specific policy/model combinations).
 - **Latency**: Low latency for European user base.
@@ -48,8 +48,8 @@ Document DR region (eu-west-1) for future expansion but do not implement multi-r
 - **WAF Web ACLs**: Must be in `us-east-1` (`CLOUDFRONT` scope) to attach to distributions.
 
 ### EU Variants (Current)
-- **London (`eu-west-2`)** is the primary region for AgentCore, Bedrock models, and inference profiles.
-- **Dublin (`eu-west-1`)** or **Frankfurt (`eu-central-1`)** may be used as split targets if specific model availability requires it, but are not the default.
+- **Frankfurt (`eu-central-1`)** is the primary region for AgentCore Runtime, Bedrock models, and Cedar Policy integration.
+- **London (`eu-west-2`)** or **Dublin (`eu-west-1`)** may be used as split targets for Bedrock models if specific capacity is needed, but do not support the full runtime/policy set.
 
 ## Disaster Recovery Plan
 
@@ -79,7 +79,7 @@ Document DR region (eu-west-1) for future expansion but do not implement multi-r
 - Single point of failure (region outage = full outage)
 - No automatic failover
 - Manual DR process
-- Dependent on eu-west-2 availability
+- Dependent on eu-central-1 availability
 - Cross-region split (if used) adds latency and cross-region data transfer cost
 - Logs/metrics split across regions when BFF and AgentCore differ
 
@@ -99,7 +99,7 @@ Consider implementing multi-region when:
 Use the following variables to keep a single region by default or split regions when required:
 
 ```hcl
-region           = "eu-west-2" # default
+region           = "eu-central-1" # default
 agentcore_region = ""          # AgentCore control plane (defaults to region)
 bff_region       = ""          # API Gateway/BFF (defaults to agentcore_region)
 bedrock_region   = ""          # Bedrock models/guardrails/inference profiles (defaults to agentcore_region)

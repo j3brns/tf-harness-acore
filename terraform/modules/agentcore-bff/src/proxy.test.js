@@ -27,8 +27,8 @@ jest.mock("https", () => ({ request: mockHttpsRequest }));
 
 // --- Set env vars BEFORE requiring proxy ---
 process.env.AGENTCORE_RUNTIME_ARN =
-  "arn:aws:bedrock-agentcore:eu-west-2:123456789012:runtime/test";
-process.env.AGENTCORE_REGION = "eu-west-2";
+  "arn:aws:bedrock-agentcore:eu-central-1:123456789012:runtime/test";
+process.env.AGENTCORE_REGION = "eu-central-1";
 
 setupAwsLambdaGlobal();
 const { handler, _writeError } = require("./proxy");
@@ -125,7 +125,7 @@ describe("proxy.js", () => {
       setupAwsLambdaGlobal();
       jest.mock("https", () => ({ request: jest.fn() }));
       process.env.AGENTCORE_RUNTIME_ARN =
-        "arn:aws:bedrock-agentcore:eu-west-2:123456789012:runtime/test";
+        "arn:aws:bedrock-agentcore:eu-central-1:123456789012:runtime/test";
       const { handler: h } = require("./proxy");
 
       const stream = mockResponseStream();

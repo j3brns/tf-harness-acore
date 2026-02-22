@@ -82,7 +82,7 @@ try:
     @mock_aws
     def test_with_mock():
         # Create mock S3
-        s3 = boto3.client('s3', region_name='eu-west-2')
+        s3 = boto3.client('s3', region_name='eu-central-1')
         s3.create_bucket(Bucket='test-bucket')
 
         # Test handler
