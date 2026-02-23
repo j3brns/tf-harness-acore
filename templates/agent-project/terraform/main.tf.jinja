@@ -1,23 +1,11 @@
-terraform {
-  required_version = ">= 1.5.0"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = ">= 6.0" # Required for native BFF response streaming
-    }
-    http = {
-      source  = "hashicorp/http"
-      version = ">= 3.0"
-    }
-  }
-}
-
 provider "aws" {
-  region = "{{ region }}"
+  region = var.region
+
   default_tags {
     tags = {
-      Project = "{{ agent_name }}"
-      ManagedBy = "Terraform"
+      Project     = var.agent_name
+      Environment = var.environment
+      ManagedBy   = "terraform"
     }
   }
 }
@@ -25,28 +13,28 @@ provider "aws" {
 # OIDC Discovery (Build-time Discovery)
 data "http" "oidc_config" {
   count = {{ enable_bff | lower }} ? 1 : 0
-  url   = "${trimsuffix(local.oidc_issuer, "/")}/.well-known/openid-configuration"
+  url   = "${trimsuffix(var.oidc_issuer, "/")}/.well-known/openid-configuration"
 }
 
 locals {
-  app_id = "{{ app_id }}"
-  oidc_issuer = "https://login.microsoftonline.com/YOUR_TENANT_ID/v2.0"
   oidc_discovery = try(jsondecode(data.http.oidc_config[0].response_body), {})
 }
 
-# Root module - orchestrates all AgentCore components
+# -----------------------------------------------------------------------------
+# Module Orchestration
+# -----------------------------------------------------------------------------
 
 module "agentcore_foundation" {
   source = "github.com/j3brns/tf-harness-acore//terraform/modules/agentcore-foundation?ref=main"
 
-  agent_name  = "{{ agent_name }}"
-  region      = "{{ region }}"
-  bedrock_region = "{{ region }}"
-  environment = "{{ environment }}"
+  agent_name  = var.agent_name
+  region      = var.region
+  bedrock_region = var.region
+  environment = var.environment
 
   # Gateway configuration
   enable_gateway      = true
-  gateway_name        = "{{ agent_name }}-gateway"
+  gateway_name        = "${var.agent_name}-gateway"
   gateway_search_type = "HYBRID"
 
   # Identity configuration
@@ -61,8 +49,8 @@ module "agentcore_foundation" {
 module "agentcore_tools" {
   source = "github.com/j3brns/tf-harness-acore//terraform/modules/agentcore-tools?ref=main"
 
-  agent_name = "{{ agent_name }}"
-  region     = "{{ region }}"
+  agent_name = var.agent_name
+  region     = var.region
 
   # Code interpreter
   enable_code_interpreter       = {{ enable_code_interpreter | lower }}
@@ -76,15 +64,15 @@ module "agentcore_tools" {
 module "agentcore_runtime" {
   source = "github.com/j3brns/tf-harness-acore//terraform/modules/agentcore-runtime?ref=main"
 
-  agent_name = "{{ agent_name }}"
-  app_id     = local.app_id
-  region     = "{{ region }}"
-  bedrock_region = "{{ region }}"
-  environment = "{{ environment }}"
+  agent_name = var.agent_name
+  app_id     = var.app_id
+  region     = var.region
+  bedrock_region = var.region
+  environment = var.environment
 
   # Runtime configuration
   enable_runtime          = true
-  runtime_source_path     = "../agent-code"
+  runtime_source_path     = "${path.module}/../agent-code"
 
   # Memory configuration
   enable_memory = true
@@ -102,17 +90,17 @@ module "agentcore_runtime" {
 module "agentcore_governance" {
   source = "github.com/j3brns/tf-harness-acore//terraform/modules/agentcore-governance?ref=main"
 
-  agent_name = "{{ agent_name }}"
-  region     = "{{ region }}"
-  bedrock_region = "{{ region }}"
+  agent_name = var.agent_name
+  region     = var.region
+  bedrock_region = var.region
 
   # Policy engine
   enable_policy_engine   = false
 
   # Guardrails
   enable_guardrails                   = {{ enable_guardrails | lower }}
-  guardrail_name                      = "{{ agent_name }}-guardrail"
-  guardrail_description               = "Safety guardrail for {{ agent_name }}"
+  guardrail_name                      = "${var.agent_name}-guardrail"
+  guardrail_description               = "Safety guardrail for ${var.agent_name}"
 
   # Evaluations
   enable_evaluations  = false
@@ -127,19 +115,19 @@ module "agentcore_bff" {
   source = "github.com/j3brns/tf-harness-acore//terraform/modules/agentcore-bff?ref=main"
 
   enable_bff  = {{ enable_bff | lower }}
-  agent_name  = "{{ agent_name }}"
-  app_id      = local.app_id
-  region      = "{{ region }}"
-  agentcore_region = "{{ region }}"
-  environment = "{{ environment }}"
+  agent_name  = var.agent_name
+  app_id      = var.app_id
+  region      = var.region
+  agentcore_region = var.region
+  environment = var.environment
   agentcore_runtime_arn = module.agentcore_runtime.runtime_arn
 
-  # Auth Configuration (Placeholders - MUST be updated)
-  oidc_issuer                 = local.oidc_issuer
+  # Auth Configuration
+  oidc_issuer                 = var.oidc_issuer
   oidc_authorization_endpoint = try(local.oidc_discovery.authorization_endpoint, "")
   oidc_token_endpoint         = try(local.oidc_discovery.token_endpoint, "")
-  oidc_client_id              = "YOUR_CLIENT_ID"
-  oidc_client_secret_arn      = "arn:aws:secretsmanager:{{ region }}:YOUR_ACCOUNT:secret:YOUR_SECRET"
+  oidc_client_id              = var.oidc_client_id
+  oidc_client_secret_arn      = var.oidc_client_secret_arn
 
   depends_on = [
     module.agentcore_foundation

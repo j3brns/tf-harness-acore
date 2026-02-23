@@ -1,0 +1,25 @@
+import pytest
+from runtime import invoke
+
+def test_invoke_basic():
+    """
+    Test basic invocation of the agent entrypoint function.
+    """
+    payload = {"input": "Hello"}
+    # Call the decorated function directly
+    response = invoke(payload)
+    
+    assert response["status"] == "success"
+    assert "Hello from {{ agent_name }}!" in response["message"]
+    assert "Hello" in response["message"]
+    assert response["payload"] == payload
+
+def test_invoke_alternate_payload():
+    """
+    Test invocation with alternate payload structure.
+    """
+    payload = {"prompt": "What is AI?"}
+    response = invoke(payload)
+    
+    assert response["status"] == "success"
+    assert "What is AI?" in response["message"]

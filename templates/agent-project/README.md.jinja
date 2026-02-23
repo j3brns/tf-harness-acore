@@ -1,0 +1,51 @@
+# {{ agent_name }}
+
+{{ description }}
+
+Scaffolded using Bedrock AgentCore.
+
+## Project Structure
+
+- `agent-code/`: Python runtime code for the agent.
+- `terraform/`: Infrastructure as Code (Terraform) to deploy the agent.
+- `frontend/`: (Optional) React-based dashboard for interacting with the agent.
+
+## Getting Started
+
+### 1. Prerequisites
+
+- Python {{ python_version }}
+- Terraform >= 1.10.0
+- AWS CLI configured with appropriate credentials.
+
+### 2. Infrastructure Deployment
+
+```bash
+cd terraform
+terraform init
+# Copy the example vars and update them
+cp terraform.tfvars.example terraform.tfvars
+# Update variables.tf or terraform.tfvars with your OIDC settings if using BFF
+terraform apply
+```
+
+### 3. Agent Development
+
+```bash
+cd agent-code
+# Create a virtual environment
+python -m venv .venv
+source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+# Install dependencies
+pip install -e ".[dev]"
+# Run tests
+pytest
+```
+
+## Runtime Configuration
+
+The agent entrypoint is in `agent-code/runtime.py`. You can customize the logic there.
+
+## License
+
+Unlicensed / Internal Use Only

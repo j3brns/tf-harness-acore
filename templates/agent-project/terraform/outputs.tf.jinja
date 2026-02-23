@@ -1,0 +1,19 @@
+output "agent_name" {
+  description = "Deployed agent name"
+  value       = var.agent_name
+}
+
+output "region" {
+  description = "AWS region"
+  value       = var.region
+}
+
+output "gateway_endpoint" {
+  description = "AgentCore Gateway endpoint"
+  value       = try(module.agentcore_foundation.gateway_endpoint, null)
+}
+
+output "bff_endpoint" {
+  description = "BFF API endpoint (if enabled)"
+  value       = {{ enable_bff | lower }} ? try(module.agentcore_bff.bff_endpoint, null) : null
+}

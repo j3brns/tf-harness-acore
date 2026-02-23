@@ -1,0 +1,49 @@
+variable "region" {
+  description = "AWS region"
+  type        = string
+  default     = "{{ region }}"
+}
+
+variable "environment" {
+  description = "Environment name"
+  type        = string
+  default     = "{{ environment }}"
+}
+
+variable "agent_name" {
+  description = "Internal agent identity used in physical AWS resource names (immutable)"
+  type        = string
+  default     = "{{ agent_name }}"
+
+  validation {
+    condition = (
+      length(var.agent_name) <= 64 &&
+      can(regex("^[a-z0-9]+-[a-z0-9]+-[a-z0-9]+(?:-[a-z0-9]+)?-[a-z0-9]{4,6}$", var.agent_name))
+    )
+    error_message = "agent_name must be lowercase and include a 4-6 char suffix (e.g. my-agent-core-a1b2)."
+  }
+}
+
+variable "app_id" {
+  description = "Human-facing application alias"
+  type        = string
+  default     = "{{ app_id }}"
+}
+
+variable "oidc_issuer" {
+  description = "OIDC Issuer URL for BFF authentication"
+  type        = string
+  default     = "https://login.microsoftonline.com/YOUR_TENANT_ID/v2.0"
+}
+
+variable "oidc_client_id" {
+  description = "OIDC Client ID for BFF authentication"
+  type        = string
+  default     = "YOUR_CLIENT_ID"
+}
+
+variable "oidc_client_secret_arn" {
+  description = "ARN of the Secrets Manager secret containing the OIDC client secret"
+  type        = string
+  default     = "arn:aws:secretsmanager:{{ region }}:YOUR_ACCOUNT:secret:YOUR_SECRET"
+}
