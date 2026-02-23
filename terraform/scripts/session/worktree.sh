@@ -808,6 +808,7 @@ echo_agent_prompt_for_worktree() {
   local wt_path="$1"
   local issue_type="$2"
   local closure_condition="$3"
+  local agent_name="${4:-codex}"
   local issue_id=""
   local branch_name=""
   local issue_labels=""
@@ -817,6 +818,8 @@ echo_agent_prompt_for_worktree() {
   local finish_rule=""
   local finish_checklist=""
   local issue_type_note=""
+  local rules_doc="AGENTS.md"
+  local rules_doc_hint=""
   issue_id="$(worktree_issue_id "${wt_path}")"
   branch_name="$(worktree_branch_name "${wt_path}")"
   if [ "${issue_id}" != "UNKNOWN" ]; then
@@ -831,17 +834,23 @@ echo_agent_prompt_for_worktree() {
       stream_sentence=""
     fi
   fi
+  case "${agent_name}" in
+    gemini) rules_doc="GEMINI.md" ;;
+    claude|clause) rules_doc="CLAUDE.md" ;;
+    *) rules_doc="AGENTS.md" ;;
+  esac
+  rules_doc_hint="${rules_doc} (byte-identical mirror set: AGENTS.md / CLAUDE.md / GEMINI.md)"
   if [ "${issue_type}" = "tracker" ]; then
     finish_rule="Rule 12.9"
-    finish_checklist="Finish protocol: update tracker checklist/status, dependencies, blockers, active allocations, and ready labels; do not claim done until the tracker outcome is allocatable or the tracker closure condition is met."
+    finish_checklist="Follow ${finish_rule} in ${rules_doc} for tracker completion and handoff reporting."
     issue_type_note="Treat this as a tracker issue (coordination/planning unless explicitly docs/planning implementation)."
   else
     finish_rule="Rule 12.8 + 12.8.1"
-    finish_checklist="Finish protocol: preflight -> validate -> commit -> push branch -> open/update PR (one execution PR for this execution issue) -> include PR body closing reference 'Closes #${issue_id}' -> post issue closeout evidence -> move labels/status. Close the issue only after merge unless team workflow explicitly closes on PR creation. After merge, verify PR/issue consistency (PR merged, issue closed, status label done); if auto-close did not happen, fix issue close/labels/evidence immediately. Local validation complete is not done. If you pause before merge, report finish stage (implementing/ready-to-commit/ready-to-push/pr-open/review/merged/cleanup-complete) and exact next command(s)."
+    finish_checklist="Follow ${finish_rule} in ${rules_doc} exactly (including one execution PR -> one execution issue, PR body 'Closes #${issue_id}', post-merge verification, and finish-stage reporting). Local validation complete is not done."
     issue_type_note="Treat this as an execution issue (implement in this worktree only)."
   fi
   # Final line before the prompt is a copy/paste-ready agent prompt boilerplate.
-  printf '%s\n' "Role: pragmatic, rigorous, concise coding agent. Task: issue #${issue_id} on branch ${branch_name} in worktree ${wt_path}.${stream_sentence} Type: ${issue_type_note} Read first: AGENTS.md (focus on Rules 7.7-7.8 and 12.3-12.11), DEVELOPER_GUIDE.md, README.md, docs/architecture.md, docs/adr/ (review 0009/0010/0011). Scope: work only in this worktree; keep changes scoped to issue #${issue_id}; follow existing repo patterns before adding files/scripts. Loop: inspect -> state plan + expected touched paths -> implement -> validate -> update docs/tests -> rerun checks -> continue until closure condition is met. Closure: ${closure_condition}. Required actions: run make preflight-session now and again before commit/push; include validation evidence in issue/PR. Finish (${finish_rule}): ${finish_checklist} If blocked: do not stop at the first blocker; if an approach conflicts with a repo rule, choose another compliant approach and continue; escalate only if no compliant path exists."
+  printf '%s\n' "Role: pragmatic, rigorous, concise coding agent. Task: issue #${issue_id} on branch ${branch_name} in worktree ${wt_path}.${stream_sentence} First response: confirm you have read ${rules_doc_hint}, name which file you read, and state you will follow it as the rules source of truth. Type: ${issue_type_note} Read first: ${rules_doc} (focus on Rules 7.7-7.8 and 12.3-12.11), DEVELOPER_GUIDE.md, README.md, docs/architecture.md, docs/adr/ (review 0009/0010/0011). Scope: work only in this worktree; keep changes scoped to issue #${issue_id}; follow existing repo patterns before adding files/scripts. Loop: inspect -> state plan + expected touched paths -> implement -> validate -> update docs/tests -> rerun checks -> continue until closure condition is met. Closure: ${closure_condition}. Required actions: run make preflight-session now and again before commit/push; include validation evidence in issue/PR; use ${rules_doc} for finish protocol, queue/label hygiene, and handoff behavior. Finish: ${finish_checklist} If blocked: do not stop at the first blocker; if an approach conflicts with a repo rule, choose another compliant approach and continue; escalate only if no compliant path exists."
 }
 
 build_agent_command() {
@@ -1039,7 +1048,7 @@ open_shell_in_worktree() {
   if is_menu_back "${handoff_action}"; then
     return 0
   fi
-  agent_prompt="$(echo_agent_prompt_for_worktree "${wt_path}" "${issue_type}" "${closure_condition}")"
+  agent_prompt="$(echo_agent_prompt_for_worktree "${wt_path}" "${issue_type}" "${closure_condition}" "${agent}")"
   agent_command="$(build_agent_command "${agent}" "${agent_mode}" "${agent_prompt}")"
 
   echo

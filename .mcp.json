@@ -26,11 +26,10 @@
       "type": "stdio",
       "command": "uv",
       "args": [
-        "tool",
         "run",
         "--from",
         "awslabs.aws-documentation-mcp-server@latest",
-        "awslabs.aws-documentation-mcp-server.exe"
+        "awslabs.aws-documentation-mcp-server"
       ],
       "env": {
         "FASTMCP_LOG_LEVEL": "ERROR",
@@ -43,11 +42,10 @@
       "type": "stdio",
       "command": "uv",
       "args": [
-        "tool",
         "run",
         "--from",
         "awslabs.terraform-mcp-server@latest",
-        "awslabs.terraform-mcp-server.exe"
+        "awslabs.terraform-mcp-server"
       ],
       "env": {
         "FASTMCP_LOG_LEVEL": "ERROR"

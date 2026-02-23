@@ -9,6 +9,12 @@
 
 **Status**: Temporary. Applies until the exit criteria below are met.
 
+### Temporary Directive Governance
+- **Owner**: Repository maintainers working the `v0.1.x` release freeze.
+- **Scope**: This prolog governs release-freeze work only and does not broaden feature scope.
+- **Precedence**: This prolog overrides lower-level workflow convenience only while active. Security, architecture, and issue-scope rules still apply.
+- **Removal Trigger**: Remove this prolog in the same change that satisfies the exit criteria below.
+
 ### Purpose
 - Freeze a clean SemVer baseline (`0.1.x`) without carrying repository sprawl into release history.
 - Align GitHub (`origin`) and GitLab (`gitlab`) release behavior.
@@ -39,6 +45,36 @@
 ---
 
 ## RULE 0: Quick Start (Hard Stops)
+
+### Rule 0.1: Agent Runtime Contract (MANDATORY)
+Before making changes, agents MUST:
+1. Confirm which rules file they read (`AGENTS.md`, `CLAUDE.md`, or `GEMINI.md`) and use it as the working source of truth.
+2. Run `make preflight-session` and stop if it fails.
+3. Confirm the assigned issue type (`tracker` or `execution`) and closure condition.
+4. Work only in the assigned worktree/branch for the assigned issue.
+5. Keep the PR scoped to the issue; split work if scope expands materially.
+6. Use AWS Knowledge MCP first for AWS-specific questions (Rule 5).
+7. Follow the finish protocol (Rule 12.8 / 12.9); local validation alone is not done.
+8. Update required docs in the same change for any behavior/workflow/architecture change.
+
+### Rule 0.2: Rule Interpretation (Normative vs Guidance)
+- Rules using **MUST / MUST NOT / REQUIRED / FORBIDDEN** are normative and mandatory.
+- Examples, rationale text, and reference lists are guidance unless they explicitly state a normative requirement.
+- When a guidance example conflicts with a normative rule, the normative rule wins.
+
+### Rule 0.3: Rule Precedence & Conflict Resolution (MANDATORY)
+If rules or constraints appear to conflict, apply this precedence order:
+1. Security and safety requirements (Rule 1, Rule 14, fail-fast behavior).
+2. Architecture and boundary constraints (Rule 2, Rule 9, Rule 10, Rule 11, Rule 13).
+3. Issue scope and allocation rules (Rule 12, assigned issue acceptance criteria, PR scope guard).
+4. Temporary release-freeze directives (when active and applicable).
+5. Workflow/tooling convenience and local preferences.
+
+Conflict handling requirements:
+- Do NOT violate a higher-precedence rule to satisfy a lower-precedence one.
+- If an approach conflicts with repo rules, choose a compliant alternative and continue.
+- If no compliant path exists, stop and report the conflict, affected rule(s), and the smallest viable unblock decision.
+- Do not broaden PR scope to fix unrelated CI debt unless the current issue explicitly includes that remediation (see Rule 7.7.1).
 
 ### Non-Negotiables
 - **No IAM wildcard resources** (except documented AWS-required exceptions).
@@ -234,6 +270,11 @@ For all other resources, follow the decision framework (native provider first wh
 - `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` MUST remain byte-identical.
 - If one file changes, all three MUST be updated in the same commit.
 
+### Rule 7.1.1: Agent Rule Mirror Update Workflow
+- When updating agent rules, edit one source file and then copy it verbatim to the other two files in the same change.
+- Agents SHOULD verify byte identity before commit using non-interactive checks (for example `cmp` or `sha256sum`).
+- Do not make manual wording edits independently in the mirrored files.
+
 ### Rule 7.2: Update Docs Before Commit/Push
 - Any behavioral, CI/CD, architecture, or workflow change MUST include the required docs update before commit and before push.
 - "Follow-up docs later" is not permitted.
@@ -271,6 +312,30 @@ For all other resources, follow the decision framework (native provider first wh
 - Session startup/worktree safety checks are governed by the repo SoT file: `terraform/scripts/session/preflight.policy`.
 - Agents and humans MUST run `make preflight-session` at session start and before commit/push.
 - If preflight fails, do not proceed with edits/commits until resolved.
+
+### Rule 7.7.1: CI Failure Triage (Regression vs Existing Debt)
+- When CI fails, agents MUST classify failures before broadening scope:
+  - **Regression**: caused by the current change and must be fixed in the current issue.
+  - **Pre-existing debt**: existing repo failure not caused by the current change.
+- Agents MUST fix regressions in the current issue before merge.
+- Agents MUST NOT silently expand PR scope to remediate pre-existing debt unless:
+  - the current issue explicitly includes that remediation, or
+  - a tracker/execution split is created and the work is reassigned.
+- If pre-existing debt blocks merge, agents MUST record the blocker and create/update a scoped issue for the debt.
+
+### Rule 7.7.2: CI Failure Output Must Be Actionable
+- CI jobs and local validation commands SHOULD emit actionable failure details directly in job logs.
+- If a tool writes structured output to artifacts (for example JUnit/XML), agents MUST ensure the command also preserves readable failure diagnostics in logs or document how to retrieve them.
+- Do not treat a failing tool as "opaque"; identify and report the exact failing rule/check/message before changing code.
+
+### Rule 7.7.3: Scanner Exception Governance (Checkov/TFLint/Similar)
+- Security/static-analysis exceptions MUST be explicit, minimal, and justified.
+- Prefer the narrowest exception scope available:
+  - inline/resource-level skip for resource-specific accepted exceptions,
+  - repo-level config skip only when the exception is intentionally broad and documented.
+- Every exception MUST include a rationale stating why the finding is acceptable in this repo context.
+- Temporary exceptions SHOULD reference a tracking issue and expected removal condition.
+- Adding a scanner exception MUST NOT be used to mask a true regression without documenting the tradeoff.
 
 ### Rule 7.8: Worktree Finish & Cleanup
 - A worktree is **not finished** when code is only local or locally validated.
@@ -352,6 +417,13 @@ AI Agents MUST create comprehensive GitHub issues. Every issue MUST include:
 - Each active Execution Issue MUST map to exactly one worktree and one branch.
 - Do not allocate parallel agents to tasks with high-overlap file paths unless explicitly coordinated.
 
+### Rule 12.5.1: PR Scope Guard (MANDATORY)
+- A PR MUST remain within the assigned issue scope and expected touched paths for that issue.
+- If implementation reveals materially broader work (for example architecture + implementation, or unrelated subsystem changes), agents MUST do one of the following before continuing:
+  - split the work into separate issues/PRs, or
+  - update the issue scope explicitly and obtain coordination approval on the issue.
+- Agents MUST NOT use a single PR to "sneak in" unrelated fixes just to turn CI green.
+
 ### Rule 12.6: Tracker-Agent Completion Criteria
 - An agent assigned to a Tracker Issue is done when the work is allocatable:
   - child Execution Issues created/updated with full Rule 12.1 structure,
@@ -367,6 +439,21 @@ AI Agents MUST create comprehensive GitHub issues. Every issue MUST include:
 - Workstream lane labels (roadmap-aligned) are: `a`, `b`, `c`, `d`, `e`.
 - Roadmap item labels (optional) are labels like `a0`, `a1`, `b0`, `c2`, `d1`, `e3`.
 - Optional domain/topic labels (for example `provider-matrix`, `freeze-point`) MAY be used for filtering and reporting.
+
+Allowed status transitions (standard flow):
+
+| From | To | Required Trigger / Evidence |
+| --- | --- | --- |
+| `triage` | `ready` | Rule 12.1 complete, dependencies explicit, closure condition defined, allocatable to one agent/worktree |
+| `triage` | `blocked` | Issue is specified but waiting on dependency/decision; blocker is explicitly documented |
+| `ready` | `in-progress` | Agent/worktree assigned (auto-claim or manual claim) |
+| `ready` | `blocked` | A dependency or decision blocker is discovered before active implementation; blocker is explicitly documented |
+| `in-progress` | `review` | Branch pushed, PR opened/updated, issue evidence updated enough for review |
+| `in-progress` | `blocked` | New blocker discovered and documented |
+| `review` | `in-progress` | Review/CI requested changes require more implementation work |
+| `review` | `done` | PR merged, issue closed (or explicitly closed by workflow), evidence updated |
+| `blocked` | `ready` | Blocking dependency/decision resolved and documented |
+| `done` | `in-progress` | Only if issue is explicitly reopened with new scope or regression follow-up in the same issue |
 
 ### Rule 12.8: Execution Issue Finish Protocol (MANDATORY)
 For any Execution Issue, agents MUST complete the following finish sequence:
@@ -396,6 +483,17 @@ For any Execution Issue, agents MUST complete the following finish sequence:
   - target Execution Issue closed,
   - issue status label transitioned to `done`.
 - If auto-close did not occur (for example missing closing keyword), agents MUST immediately close the issue and update labels/evidence in the same finish sequence.
+
+### Rule 12.8.2: Review-Stage Handoff Content (MANDATORY)
+- A handoff or pause at `pr-open` or `review` stage MUST include:
+  - current finish stage (Rule 7.8),
+  - PR link,
+  - issue number and status label,
+  - completed finish steps,
+  - current blocker/rationale (if merge is not immediately possible),
+  - exact next command(s).
+- "PR open" alone is not a sufficient handoff.
+- If PR checks are failing or merge is blocked, agents MUST state the exact failing check or merge blocker.
 
 ### Rule 12.9: Tracker Issue Finish Protocol (MANDATORY)
 For Tracker Issues, agents are done when work is allocatable or fully coordinated:

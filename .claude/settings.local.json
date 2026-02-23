@@ -16,9 +16,8 @@
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
-    "awslabs.aws-documentation-mcp-server",
     "awslabs.terraform-mcp-server",
-    "awsdocs",
-    "aws-terraform"
+    "aws-terraform",
+    "awslabs.aws-documentation-mcp-server"
   ]
 }
