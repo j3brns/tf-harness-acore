@@ -41,9 +41,11 @@ terraform {
 }
 ```
 
-> **Note**: CI generates the backend key as `agentcore/${CI_ENVIRONMENT_NAME}/terraform.tfstate`.
-> ADR 0013 documents a planned further segmentation (`agentcore/{env}/{app_id}/{agent_name}/terraform.tfstate`)
-> and the migration runbook is in `docs/runbooks/segmented-terraform-state-key-migration.md`.
+> **Note**: CI now defaults to the segmented backend key pattern
+> `agentcore/${CI_ENVIRONMENT_NAME}/${TF_STATE_APP_ID}/${TF_STATE_AGENT_NAME}/terraform.tfstate`.
+> ADR 0013 defines the strategy and the migration runbook is
+> `docs/runbooks/segmented-terraform-state-key-migration.md`. During phased migration,
+> some environments may temporarily use the legacy env-only key.
 
 ## State Structure
 
