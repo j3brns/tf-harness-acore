@@ -237,8 +237,6 @@ make watch   # auto-restart on file changes (inotifywait)
 
 ### The Makefile
 
-The root Makefile exposes the full development surface through forty-odd targets. `make quickstart` gets a new team member from clone to validated in under a minute. `make plan-dev` through `make plan-research` let you plan against any example configuration without remembering tfvars paths. `make test-all` runs every Terraform and Python validation in sequence. `make security-scan` runs Checkov. `make policy-report` generates the policy and tag conformance report. `make logs-gateway` through `make logs-evaluator` tail CloudWatch logs per component.
- `make docs` regenerates terraform-docs plus MCP OpenAPI/typed-client artifacts, `make generate-openapi-client` regenerates the TypeScript SDK from the MCP OpenAPI spec, and `make check-openapi-client` validates generated-client drift. `make streaming-load-test` runs the automated NDJSON streaming connectivity/load tester for validating the 15-minute (900s) streaming wall through the BFF proxy. `make debug` runs a plan with `TF_LOG=DEBUG` for when things go sideways.
 The root Makefile exposes the full development surface through forty-odd targets. `make quickstart` gets a new team member from clone to validated in under a minute. `make plan-dev` through `make plan-research` let you plan against any example configuration without remembering tfvars paths. `make test-all` runs every Terraform and Python validation in sequence. `make security-scan` runs Checkov. `make logs-gateway` through `make logs-evaluator` tail CloudWatch logs per component. `make docs` regenerates terraform-docs plus MCP OpenAPI/typed-client artifacts, `make generate-openapi-client` regenerates the TypeScript SDK from the MCP OpenAPI spec, `make check-openapi-client` validates generated-client drift, and `make openapi-contract-diff OLD=<baseline.json>` produces a classified contract diff/changelog summary (potentially breaking vs additive vs documentation-only) for PR/release review. `make streaming-load-test` runs the automated NDJSON streaming connectivity/load tester for validating the 15-minute (900s) streaming wall through the BFF proxy. `make debug` runs a plan with `TF_LOG=DEBUG` for when things go sideways.
 
 No target requires AWS credentials except those that explicitly deploy or read live infrastructure. Formatting, validation, security scanning, linting, and Python unit tests all run locally and offline.
@@ -425,9 +423,8 @@ Notes:
 | `python_version` | `string` | `3.12` | Python version for packaging. |
 | `lambda_architecture` | `string` | `x86_64` | Compute architecture: `x86_64` or `arm64` (Graviton). |
 | `deployment_bucket_name` | `string` | `""` | Custom S3 bucket for deployment artifacts (auto-created if empty). |
-| `enable_inference_profile` | `bool` | `false` | Enable Bedrock application inference profile. |
-| `inference_profile_name` | `string` | `""` | Name for the inference profile. |
-| `inference_profile_model_source_arn` | `string` | `""` | Foundation model or system-defined inference profile ARN. |
+
+> The inference profile is created in the foundation module and its ARN is automatically persisted to SSM at `/agentcore/{agent_name}/inference-profile/arn` for runtime discovery.
 
 ### Per-Agent Dashboards (Issue #10)
 
@@ -446,13 +443,13 @@ Example runtime config:
 
 ```hcl
 runtime_config = {
-  modelId = module.agentcore_runtime.inference_profile_arn
+  modelId = module.agentcore_foundation.inference_profile_arn
 }
 ```
 
 Operational verification points:
 
-- Terraform output `agentcore_inference_profile_arn` (or `module.agentcore_runtime.inference_profile_arn`) confirms the profile ARN to wire into `modelId`.
+- Terraform output `agentcore_inference_profile_arn` (or `module.agentcore_foundation.inference_profile_arn`) confirms the profile ARN to wire into `modelId`.
 - Terraform output `agentcore_dashboard_console_url` opens the per-agent CloudWatch dashboard for operational correlation (errors/latency/logs).
 - AWS billing/usage tooling (for example Cost Explorer and Bedrock usage reporting) should be inspected using the inference-profile-based calling pattern above to attribute usage to the agent-specific profile.
 
@@ -497,6 +494,7 @@ Operational verification points:
 | `2-gateway-tool` | MCP gateway integration with a Titanic dataset analysis Lambda | Gateway, Code Interpreter (SANDBOX), Runtime, Packaging |
 | `3-deepresearch` | Full-featured research agent with Strands DeepAgents | Gateway, Code Interpreter, Browser, Memory (BOTH), Observability |
 | `4-research` | Research agent with governance and quality evaluation | Gateway, Code Interpreter, Browser, Memory, Evaluations (REASONING) |
+| `5-integrated` | Full module composition with BFF/SPA, CloudFront, and Token Handler | Gateway, Runtime, BFF, CloudFront, WAF, Memory, Evaluations, Code Interpreter |
 
 Deploy any example with a single command:
 
@@ -767,7 +765,7 @@ S3 Bucket (per environment)
 | [DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md) | Team onboarding, development workflow, and common tasks |
 | [AGENTS.md](./AGENTS.md) | Development rules and principles for AI coding agents |
 | [docs/architecture.md](./docs/architecture.md) | System design, data flows, and resource model |
-| [docs/adr/](./docs/adr/) | Architecture Decision Records (0001 through 0012) |
+| [docs/adr/](./docs/adr/) | Architecture Decision Records (0001 through 0013) |
 
 ---
 
