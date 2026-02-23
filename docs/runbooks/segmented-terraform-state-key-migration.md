@@ -238,7 +238,7 @@ Never manually edit the state JSON.
 
 ## CI/CD Notes
 
-- If GitLab CI or local scripts generate backend config files dynamically, update the generated `key` value to `agentcore/${ENV}/terraform.tfstate` before running `terraform init`.
+- If GitLab CI or local scripts generate backend config files dynamically, update the generated `key` value to `agentcore/${ENV}/${TF_STATE_APP_ID}/${TF_STATE_AGENT_NAME}/terraform.tfstate` before running `terraform init`.
 - Freeze overlapping deploy jobs during the migration window to avoid lock contention and split-brain state writes.
 
 ## Related References

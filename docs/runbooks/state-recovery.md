@@ -6,13 +6,17 @@ This runbook covers recovery procedures for Terraform state issues.
 
 ## Scenarios
 
-Set the state key variables for the environment you are recovering. The repo-standard backend key is segmented by environment (`agentcore/${ENV}/terraform.tfstate`).
+Set the state key variables for the environment you are recovering. The repo-standard CI backend key is segmented by environment + app + agent (`agentcore/${ENV}/${TF_STATE_APP_ID}/${TF_STATE_AGENT_NAME}/terraform.tfstate`).
 
 ```bash
 export ENV="<dev|test|prod>"
 export PROJECT_ID="<project-or-account-suffix>"
+export TF_STATE_APP_ID="<app-id-slug>"
+export TF_STATE_AGENT_NAME="<agent-name-slug>"
 export STATE_BUCKET="terraform-state-${ENV}-${PROJECT_ID}"
-export STATE_KEY="agentcore/${ENV}/terraform.tfstate"
+export STATE_KEY="agentcore/${ENV}/${TF_STATE_APP_ID}/${TF_STATE_AGENT_NAME}/terraform.tfstate"
+# Legacy (pre-ADR-0013 migration) fallback:
+# export STATE_KEY="agentcore/${ENV}/terraform.tfstate"
 ```
 
 ### 1. State File Corruption
@@ -56,7 +60,7 @@ terraform plan
 
 **Recovery Steps:**
 
-Terraform 1.10+ uses **Native S3 locking**. A lock file is created at `${STATE_KEY}.tflock` (for example `agentcore/dev/terraform.tfstate.tflock`).
+Terraform 1.10+ uses **Native S3 locking**. A lock file is created at `${STATE_KEY}.tflock` (for example `agentcore/dev/app/agent/terraform.tfstate.tflock`).
 
 ```bash
 # 1. Identify the lock ID from the error message
