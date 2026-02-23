@@ -72,6 +72,8 @@ resource "aws_cloudfront_distribution" "bff" {
   # checkov:skip=CKV2_AWS_47: WAF association is optional; configure via cloudfront_waf_acl_arn for enterprise deployments
   # checkov:skip=CKV2_AWS_42: Custom SSL requires ACM cert (out of scope for harness default)
   # checkov:skip=CKV2_AWS_46: S3 Origin Access is enabled via OAC
+  # checkov:skip=CKV_AWS_310: Intentional harness default; origin failover needs multi-region BFF/API topology and cutover design (#79)
+  # checkov:skip=CKV_AWS_374: Intentional harness default; geo restrictions are workload policy choices and typically enforced in WAF
   count = var.enable_bff ? 1 : 0
 
   # Optional WAFv2 CLOUDFRONT-scope Web ACL association (must be in us-east-1)
