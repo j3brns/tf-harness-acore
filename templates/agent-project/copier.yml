@@ -4,13 +4,14 @@ _min_copier_version: "9.0.0"
 # Questions
 agent_name:
   type: str
-  help: "Internal agent identity for physical AWS resources (immutable; use 3+ words plus 4-6 char suffix, e.g. my-agent-core-a1b2)"
+  help: "Internal agent identity for physical AWS resources (immutable; must be lowercase and include a 4-6 char suffix, e.g. my-agent-core-a1b2)"
   default: "my-agent-core-a1b2"
+  validator: "{% if not agent_name | regex_search('^[a-z0-9]+-[a-z0-9]+-[a-z0-9]+(?:-[a-z0-9]+)?-[a-z0-9]{4,6}$') %}agent_name must be lowercase and include a 4-6 char suffix (e.g. my-agent-core-a1b2).{% endif %}"
 
 app_id:
   type: str
   help: "Human-facing application alias for routing/tenancy (can stay stable if agent_name rotates)"
-  default: "{{ agent_name }}"
+  default: "{{ agent_name | regex_replace('-[a-z0-9]{4,6}$', '') }}"
 
 description:
   type: str
@@ -62,7 +63,7 @@ enable_bff:
 python_version:
   type: str
   default: "3.12"
-  choices: ["3.12", "3.11"]
+  choices: ["3.12"]
 
 _message_after_copy: |
   Agent scaffold created at: {{ _copier_conf.dst_path }}
@@ -71,8 +72,6 @@ _message_after_copy: |
     1. cd {{ _copier_conf.dst_path }}/terraform
     2. terraform init -backend=false
     3. terraform validate
+    4. cd ../agent-code && pip install -e ".[dev]"
 
-  If BFF is enabled, replace placeholder OIDC values before deploy:
-    - local.oidc_issuer
-    - oidc_client_id
-    - oidc_client_secret_arn
+  If BFF is enabled, update local.oidc_issuer and other OIDC variables in terraform/variables.tf before deploy.
