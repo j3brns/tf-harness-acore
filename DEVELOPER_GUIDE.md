@@ -491,6 +491,9 @@ pre-commit run --all-files
 - Uses `terraform init -backend=false` on the runner (local only, no AWS).
 - Uses shared GitHub Actions for Terraform, TFLint, and Checkov setup plus caching.
 - Caches Terraform plugins, TFLint plugins, and pip downloads to speed CI runs.
+- Includes `checkov-bff-regression`, a BFF-only Checkov baseline gate that compares BFF findings to the temporary approved `#79` hardening subset and fails on regressions or baseline drift.
+- The full `checkov` job remains for repo-wide visibility; `checkov-bff-regression` is the scoped gate for BFF Checkov regression control.
+- When `#79` reduces/removes the remaining BFF findings, update `terraform/scripts/ci/checkov_bff_regression_gate.py` baseline pairs in the same PR with validation evidence.
 - No deployments run in GitHub Actions.
 
 ### GitLab CI (deployment pipeline)
