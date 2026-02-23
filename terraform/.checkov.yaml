@@ -41,6 +41,7 @@ skip-check:
   - CKV2_AWS_6   # S3 public access block (Enforced via separate resources)
   - CKV2_AWS_62  # S3 event notifications
   - CKV2_AWS_61  # S3 lifecycle configuration (Managed manually)
+  - CKV2_AWS_34  # Non-secret SSM String parameters are used for identifiers (e.g., inference profile ARN), not secrets
 
   # Serverless & Lambda Specifics
   - CKV_AWS_115  # Lambda concurrency
