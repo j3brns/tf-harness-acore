@@ -1,5 +1,6 @@
 resource "aws_api_gateway_rest_api" "bff" {
   # checkov:skip=CKV2_AWS_77: WAF on Rest API requires cost decision
+  # checkov:skip=CKV_AWS_237: Intentional harness default; zero-downtime REST API replacement requires parallel cutover design (#79)
   count = var.enable_bff ? 1 : 0
 
   name        = "agentcore-bff-${var.agent_name}"
@@ -42,6 +43,7 @@ resource "aws_api_gateway_deployment" "bff" {
 }
 
 resource "aws_api_gateway_stage" "bff" {
+  # checkov:skip=CKV_AWS_120: Intentional harness default; API caching is disabled for OIDC callbacks and per-session streaming responses
   # checkov:skip=CKV2_AWS_51: Client Cert not used (Token Handler pattern)
   # checkov:skip=CKV2_AWS_29: WAF managed at CloudFront layer (if enabled)
   # checkov:skip=CKV2_AWS_77: Log4j AMR managed by AWSManagedRulesCommonRuleSet in WAF ACL
@@ -79,6 +81,7 @@ resource "aws_wafv2_web_acl_association" "bff" {
 }
 
 resource "aws_api_gateway_method_settings" "bff" {
+  # checkov:skip=CKV_AWS_225: Intentional harness default; method caching is disabled to avoid caching auth/session and streaming traffic
   count = var.enable_bff ? 1 : 0
 
   rest_api_id = aws_api_gateway_rest_api.bff[0].id
@@ -146,6 +149,7 @@ resource "aws_api_gateway_authorizer" "token_handler" {
 # --- Methods: GET /auth/login ---
 
 resource "aws_api_gateway_method" "login" {
+  # checkov:skip=CKV_AWS_59: Intentional harness default; OIDC login entrypoint must be public and issues only a redirect
   # checkov:skip=CKV2_AWS_53: Validation skipped for redirect-only handler
   count         = var.enable_bff ? 1 : 0
   rest_api_id   = aws_api_gateway_rest_api.bff[0].id
@@ -167,6 +171,7 @@ resource "aws_api_gateway_integration" "login" {
 # --- Methods: GET /auth/callback ---
 
 resource "aws_api_gateway_method" "callback" {
+  # checkov:skip=CKV_AWS_59: Intentional harness default; OIDC callback must be public and validates state/session in Lambda
   # checkov:skip=CKV2_AWS_53: Validation skipped for OIDC callback
   count         = var.enable_bff ? 1 : 0
   rest_api_id   = aws_api_gateway_rest_api.bff[0].id

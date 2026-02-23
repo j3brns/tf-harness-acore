@@ -1,6 +1,7 @@
 # Session Store (DynamoDB)
 # Stores strict server-side sessions. Tokens NEVER touch the browser.
 resource "aws_dynamodb_table" "sessions" {
+  # checkov:skip=CKV_AWS_119: Intentional harness default; sessions use AWS-managed DynamoDB SSE (ADR-0008), CMK is optional enterprise hardening
   count = var.enable_bff ? 1 : 0
 
   name         = "agentcore-sessions-${var.agent_name}-${var.environment}"

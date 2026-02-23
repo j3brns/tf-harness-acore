@@ -137,6 +137,28 @@ module "agentcore_bff" {
 | **IP rate limiting** | Add a rate-based rule (threshold ≥ 2000 req/5 min per IP recommended as a starting baseline) to protect the `/auth/*` OIDC callback path. |
 | **Alert on BLOCK actions** | Create a CloudWatch metric filter on the WAF log group and alarm on `terminatingRuleType = REGULAR` action `BLOCK` to detect attack surges. |
 
+## Checkov Classification (Issue #78)
+
+Issue `#78` classifies BFF Checkov findings that are intentional harness defaults and adds resource-level skips with explicit rationale.
+These skips preserve current harness behavior and document where enterprise controls are optional or workload-specific.
+
+### Intentional Harness Defaults (Skipped in Code)
+
+- `CKV_AWS_119` (DynamoDB CMK): BFF sessions use AWS-managed DynamoDB SSE by default per ADR-0008; CMK is an enterprise/regulatory opt-in.
+- `CKV_AWS_120` / `CKV_AWS_225` (API Gateway caching): Caching is intentionally disabled because the BFF mixes OIDC auth endpoints and per-session streaming `/api/chat` traffic.
+- `CKV_AWS_237` (API Gateway create-before-destroy): Zero-downtime REST API replacement requires a parallel cutover pattern and is not the harness default.
+- `CKV_AWS_59` on `/auth/login` and `/auth/callback`: These OIDC entrypoints must be public by design; state/session checks occur in the token-handler Lambda flow.
+- `CKV_AWS_310` (CloudFront origin failover): Active/passive failover requires additional multi-region topology and cutover logic beyond the default harness.
+- `CKV_AWS_374` (CloudFront geo restriction): Geographic restrictions are tenant/workload policy decisions and should generally be enforced with WAF geo-match rules.
+
+### Remaining BFF Hardening Findings (Track in #79)
+
+The following findings remain intentionally unskipped in issue `#78` because addressing them changes runtime behavior or adds infrastructure:
+
+- `CKV_AWS_86` (CloudFront access logging)
+- `CKV_AWS_50` (Lambda X-Ray tracing)
+- `CKV_AWS_272` (Lambda code signing)
+
 ## Known Failure Modes (Rule 16)
 
 ### 1. 502 Bad Gateway on `/auth/callback`
