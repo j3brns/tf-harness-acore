@@ -186,6 +186,26 @@ jobs:
       - name: Checkov scan
         run: checkov -d terraform --framework terraform --quiet --compact --config-file terraform/.checkov.yaml
 
+  checkov-bff-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkov-setup
+        with:
+          python_version: "3.12"
+      - name: Checkov JSON scan (BFF regression gate input)
+        run: |
+          set -euo pipefail
+          CHECKOV_JSON="${RUNNER_TEMP}/checkov-bff-regression.json"
+          # The full repo checkov scan may fail on known debt. This gate compares
+          # only BFF findings against the approved temporary baseline for #79.
+          set +e
+          checkov -d terraform --framework terraform --quiet --compact --config-file terraform/.checkov.yaml --output json > "${CHECKOV_JSON}"
+          CHECKOV_EXIT=$?
+          set -e
+          echo "Full Checkov exit code (informational for BFF regression gate): ${CHECKOV_EXIT}"
+          python3 terraform/scripts/ci/checkov_bff_regression_gate.py --input "${CHECKOV_JSON}"
+
   examples-validate:
     runs-on: ubuntu-latest
     steps:
