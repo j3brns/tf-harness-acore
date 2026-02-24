@@ -26,18 +26,7 @@ def _finding(check_id: str, resource: str, file_path: str = "/modules/agentcore-
 
 def test_gate_passes_when_bff_findings_match_expected_baseline():
     gate = _load_module()
-    payload = _payload(
-        [
-            _finding("CKV_AWS_86", "module.agentcore_bff.aws_cloudfront_distribution.bff"),
-            _finding("CKV_AWS_50", "module.agentcore_bff.aws_lambda_function.auth_handler"),
-            _finding("CKV_AWS_50", "module.agentcore_bff.aws_lambda_function.authorizer"),
-            _finding("CKV_AWS_50", "module.agentcore_bff.aws_lambda_function.proxy"),
-            _finding("CKV_AWS_272", "module.agentcore_bff.aws_lambda_function.auth_handler"),
-            _finding("CKV_AWS_272", "module.agentcore_bff.aws_lambda_function.authorizer"),
-            _finding("CKV_AWS_272", "module.agentcore_bff.aws_lambda_function.proxy"),
-            _finding("CKV_AWS_999", "module.agentcore_foundation.aws_s3_bucket.example"),
-        ]
-    )
+    payload = _payload([_finding("CKV_AWS_999", "module.agentcore_foundation.aws_s3_bucket.example")])
 
     result = gate.evaluate_bff_regression(gate.extract_bff_findings(payload))
 
@@ -50,13 +39,6 @@ def test_gate_fails_on_unexpected_bff_finding_and_reports_it():
     gate = _load_module()
     payload = _payload(
         [
-            _finding("CKV_AWS_86", "module.agentcore_bff.aws_cloudfront_distribution.bff"),
-            _finding("CKV_AWS_50", "module.agentcore_bff.aws_lambda_function.auth_handler"),
-            _finding("CKV_AWS_50", "module.agentcore_bff.aws_lambda_function.authorizer"),
-            _finding("CKV_AWS_50", "module.agentcore_bff.aws_lambda_function.proxy"),
-            _finding("CKV_AWS_272", "module.agentcore_bff.aws_lambda_function.auth_handler"),
-            _finding("CKV_AWS_272", "module.agentcore_bff.aws_lambda_function.authorizer"),
-            _finding("CKV_AWS_272", "module.agentcore_bff.aws_lambda_function.proxy"),
             _finding("CKV_AWS_123", "module.agentcore_bff.aws_api_gateway_stage.bff"),
         ]
     )
@@ -71,20 +53,12 @@ def test_gate_fails_on_unexpected_bff_finding_and_reports_it():
 
 def test_gate_fails_when_expected_baseline_drifts():
     gate = _load_module()
-    payload = _payload(
-        [
-            _finding("CKV_AWS_86", "module.agentcore_bff.aws_cloudfront_distribution.bff"),
-            _finding("CKV_AWS_50", "module.agentcore_bff.aws_lambda_function.auth_handler"),
-            _finding("CKV_AWS_50", "module.agentcore_bff.aws_lambda_function.authorizer"),
-            _finding("CKV_AWS_50", "module.agentcore_bff.aws_lambda_function.proxy"),
-            _finding("CKV_AWS_272", "module.agentcore_bff.aws_lambda_function.auth_handler"),
-            _finding("CKV_AWS_272", "module.agentcore_bff.aws_lambda_function.authorizer"),
-        ]
-    )
+    payload = _payload([_finding("CKV_AWS_86", "module.agentcore_bff.aws_cloudfront_distribution.bff")])
 
     result = gate.evaluate_bff_regression(gate.extract_bff_findings(payload))
     summary = gate.format_result(result)
 
     assert result.ok is False
-    assert ("CKV_AWS_272", "module.agentcore_bff.aws_lambda_function.proxy") in result.missing_expected
-    assert "Expected baseline failures missing (baseline drift):" in summary
+    assert ("CKV_AWS_86", "module.agentcore_bff.aws_cloudfront_distribution.bff") in result.unexpected
+    assert result.missing_expected == ()
+    assert "Unexpected BFF failures (regression):" in summary

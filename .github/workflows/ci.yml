@@ -228,7 +228,7 @@ jobs:
         run: |
           mkdir .generated-test
           copier copy --force --trust \
-            --data agent_name=ci-agent \
+            --data agent_name=ci-agent-core-a1b2 \
             --data app_id=ci-agent \
             --data region=us-east-1 \
             --data environment=dev \

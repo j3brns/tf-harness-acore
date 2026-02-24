@@ -151,13 +151,13 @@ These skips preserve current harness behavior and document where enterprise cont
 - `CKV_AWS_310` (CloudFront origin failover): Active/passive failover requires additional multi-region topology and cutover logic beyond the default harness.
 - `CKV_AWS_374` (CloudFront geo restriction): Geographic restrictions are tenant/workload policy decisions and should generally be enforced with WAF geo-match rules.
 
-### Remaining BFF Hardening Findings (Track in #79)
+### BFF Hardening Completion (Issue #79)
 
-The following findings remain intentionally unskipped in issue `#78` because addressing them changes runtime behavior or adds infrastructure:
+Issue `#79` completes the remaining BFF Checkov hardening set from `#78`:
 
-- `CKV_AWS_86` (CloudFront access logging)
-- `CKV_AWS_50` (Lambda X-Ray tracing)
-- `CKV_AWS_272` (Lambda code signing)
+- `CKV_AWS_86` (CloudFront access logging): remediated by enabling `logging_config` on the distribution (reusing the shared logging bucket when configured, otherwise the SPA bucket).
+- `CKV_AWS_50` (Lambda X-Ray tracing): remediated by enabling `tracing_config { mode = "Active" }` on the auth handler, authorizer, and proxy Lambdas.
+- `CKV_AWS_272` (Lambda code signing): documented as a resource-level skip because signer profile/trust setup is an external dependency and not a harness default.
 
 ## Known Failure Modes (Rule 16)
 
