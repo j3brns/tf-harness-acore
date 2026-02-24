@@ -262,6 +262,13 @@ For all other resources, follow the decision framework (native provider first wh
 - Use non-interactive CLI commands only (for example: `git push origin main`, `git push gitlab main`, `git push origin v0.1.0`, `git push gitlab v0.1.0`).
 - Validate both CI systems after push: GitHub Actions for validation and GitLab CI for deployment gates.
 
+### Rule 6.5: GitLab Group/Project Release Autonomy Boundaries
+- GitLab CI/CD governance SHOULD separate shared platform controls from team delivery autonomy using group/subgroup/project boundaries.
+- Shared platform controls (for example protected tags/environments, group CI policy, WIF/OIDC deploy trust) SHOULD be managed at the platform group level.
+- Application teams MAY own day-to-day delivery cadence and lower-environment deployments within project/subgroup policy boundaries.
+- Production promotion approvals and protected release tags are **CI/release-plane** controls and MUST NOT be used as runtime tenant authorization signals.
+- Record promotion evidence (pipeline ID, approver, promoted SHA lineage) in issue/PR/release evidence rather than encoding it into runtime request authorization logic.
+
 ---
 
 ## RULE 7: Documentation Sync & Sprawl Control
@@ -374,6 +381,22 @@ For all other resources, follow the decision framework (native provider first wh
 
 ### Rule 10.2: User Context Must Persist
 - **Requirement**: Original Entra ID context MUST be exchanged, not dropped.
+
+### Rule 10.3: Inbound and Outbound Identity MUST Be Modeled Separately
+- **Inbound identity** answers who may call routes/tools/runtimes and MUST be validated at ingress (JWT/IAM + scope/audience checks as applicable).
+- **Outbound identity** answers what credential mode is used to call downstream targets (IAM/OAuth/API key) and MUST be explicitly selected per target type.
+- A valid inbound identity MUST NOT imply unrestricted outbound access.
+- Outbound authorization MUST be independently policy-constrained and auditable.
+
+### Rule 10.4: Identity Envelope and Session Binding Are REQUIRED
+- BFF/API-facing flows MUST normalize validated identity context into an internal identity envelope that preserves at least: `app_id`, `tenant_id`, principal identity, `session_id`, and correlation IDs.
+- `tenant_id` MUST come from validated identity context / policy evaluation, not untrusted request payload fields.
+- Session handling components MUST validate that the session binding matches the same `app_id` + `tenant_id` (and compatible principal) before downstream runtime invocation.
+
+### Rule 10.5: CI/Release Metadata MUST NOT Drive Runtime Tenant Authorization
+- CI/release-plane metadata (for example pipeline IDs, approvers, environment promotions, release tags) MAY govern deployment and promotion.
+- CI/release-plane metadata MUST NOT be used as an authorization signal for runtime tenant access decisions.
+- Runtime tenant authorization MUST rely on validated request identity context and policy evaluation only.
 
 ---
 
@@ -505,6 +528,17 @@ For Tracker Issues, agents are done when work is allocatable or fully coordinate
 - tracker checklist/status updated.
 Tracker agents SHOULD NOT perform implementation work unless the tracker is explicitly a planning/docs implementation task.
 
+### Rule 12.9.1: Senior Engineer Review is Mandatory for High-Risk Trackers
+- Tracker Issues that coordinate changes to architecture boundaries, identity propagation, multi-tenant isolation, Terraform state topology, CI/release controls, or security posture MUST include a senior engineer review at:
+  - kickoff (architecture/scope review before execution starts), and
+  - closeout (evidence/risk review before tracker is marked `done`).
+- The tracker issue MUST record:
+  - reviewer identity,
+  - review date,
+  - findings (or explicit \"no findings\"),
+  - required follow-up issues (if any).
+- Execution issues under such trackers SHOULD reference the tracker review findings when they materially constrain implementation choices.
+
 ### Rule 12.10: Definition of Done Must Be Explicit
 Every issue MUST define completion evidence:
 - required validation commands,
@@ -631,3 +665,19 @@ pre-commit run --all-files
 
 ### Rule 14.5: Just-in-Time (ZTO) Onboarding
 - **Requirement**: Tenant-specific logical resources (S3 prefixes, DDB items) MUST be provisioned just-in-time upon first successful OIDC authentication.
+
+### Rule 14.6: Metadata Plane Separation (Tags vs Telemetry vs Traces) (MANDATORY)
+- All relevant artifacts MUST carry metadata, but metadata MUST be recorded in the correct plane:
+  - **Infrastructure Plane**: AWS resource tags (for long-lived resource ownership/governance),
+  - **Runtime Request Plane**: structured logs/audit records (for `app_id`, `tenant_id`, `session_id`, outcomes),
+  - **Tracing Plane**: trace annotations/metadata for correlation,
+  - **Release Plane**: CI/promotion evidence metadata.
+- Shared AWS resources (for example API Gateway, Lambda, DynamoDB tables, CloudFront) MUST NOT be tagged with a single `TenantID` unless they are tenant-dedicated resources.
+- Tenant/request identity metadata MUST be captured in structured logs/audit records and MUST NOT rely solely on AWS resource tags.
+- Reference: `docs/adr/0014-metadata-tagging-telemetry-and-release-metadata-boundaries.md`.
+
+### Rule 14.7: Multi-Tenancy Viability Claims Must Be Tiered and Evidence-Based
+- Agents and docs MUST NOT claim "full multi-tenancy" solely because infrastructure is shared.
+- Multi-tenant readiness claims MUST state the operating tier (for example shared stack with tenant-partitioned data vs tenant-dedicated runtime stack) and the isolation mechanisms in force.
+- At minimum, pooled/shared-stack multi-tenancy claims require evidence that identity validation, session binding, ABAC/policy enforcement, storage partitioning, and audit/trace correlation are all implemented and tested.
+- Reference: `docs/adr/0015-bff-identity-persistence-interceptors-and-multitenancy-viability.md`.

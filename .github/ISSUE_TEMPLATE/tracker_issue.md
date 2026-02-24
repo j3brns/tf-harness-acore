@@ -13,6 +13,9 @@ assignees: []
 
 ## Technical Detail
 - Scope boundaries
+- Actor/persona boundaries (who owns runtime changes vs platform/CI/release-plane changes)
+- Entity boundaries affected (`AppID`, `TenantID`, `AgentName`, `Environment`, metadata planes)
+- Plane(s) affected (`runtime`, `control`, `CI/release`, `observability`)
 - Key technical decisions / assumptions
 - Risks / blockers likely to affect sequencing
 - Non-goals for this tracker
@@ -37,10 +40,12 @@ assignees: []
 - [ ] Active allocations recorded
 - [ ] Blockers captured
 - [ ] Tracker checklist/status updated
+- [ ] Senior engineer review recorded for kickoff and closeout when tracker touches architecture/security/state-topology/release controls
 
 ## Labels / Queueing
 - Status label: `ready` / `in-progress` / `blocked` / `review` / `done` (for tracker workflow)
-- Stream label (roadmap-aligned): e.g. `a0`, `a1`, `b0`
+- Stream lane label (roadmap-aligned): `a` / `b` / `c` / `d` / `e`
+- Roadmap item label (optional): e.g. `a0`, `a1`, `b0`
 - Domain label(s) if useful
 - Priority label (optional): `p0` / `p1` / `p2` / `p3`
 
@@ -53,3 +58,7 @@ assignees: []
 - Next ready issue:
 - Current blockers:
 - Evidence links (PRs, CI, docs):
+
+## Senior Review (Required for architecture/security/state-topology/release-control trackers)
+- Pass 1 (kickoff architecture review): reviewer / date / findings
+- Pass 2 (closeout evidence review): reviewer / date / findings

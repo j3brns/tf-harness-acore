@@ -1,4 +1,4 @@
-.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both ci-status-both streaming-load-test policy-report
+.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both ci-status-both streaming-load-test policy-report template-smoke template-smoke-full
 
 # Variables
 ROOT_DIR := $(abspath .)
@@ -134,6 +134,7 @@ test: test-validate test-security test-examples test-cedar test-frontend
 test-validate: ## Run Terraform validation tests
 	terraform -chdir=$(TERRAFORM_DIR) fmt -check -recursive
 	terraform -chdir=$(TERRAFORM_DIR) validate
+	bash $(TERRAFORM_DIR)/tests/validation/architecture_scaling_guidance_test.sh
 	@echo "✓ Terraform validation passed"
 
 test-security: ## Run security scans
@@ -151,6 +152,12 @@ test-cedar: ## Validate Cedar policies
 test-frontend: ## Run frontend accessibility regression tests
 	@echo "Running frontend accessibility tests..."
 	cd terraform/tests/frontend && npm install && npx playwright install chromium && npm run test:accessibility
+
+template-smoke: ## Fast Copier template smoke test (render + placeholder + local path rewrite checks)
+	bash $(TERRAFORM_DIR)/tests/validation/template_scaffold_smoke_test.sh
+
+template-smoke-full: ## Full Copier template smoke test (includes terraform init/validate on generated scaffolds)
+	TEMPLATE_SMOKE_MODE=full bash $(TERRAFORM_DIR)/tests/validation/template_scaffold_smoke_test.sh
 
 preview-frontend: ## Run a local server to preview frontend components
 	@echo "Starting component preview server on http://localhost:8080..."

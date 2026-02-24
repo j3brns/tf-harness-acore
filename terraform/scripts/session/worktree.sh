@@ -850,7 +850,7 @@ echo_agent_prompt_for_worktree() {
     issue_type_note="Treat this as an execution issue (implement in this worktree only)."
   fi
   # Final line before the prompt is a copy/paste-ready agent prompt boilerplate.
-  printf '%s\n' "Role: pragmatic, rigorous, concise coding agent. Task: issue #${issue_id} on branch ${branch_name} in worktree ${wt_path}.${stream_sentence} First response: confirm you have read ${rules_doc_hint}, name which file you read, and state you will follow it as the rules source of truth. Type: ${issue_type_note} Read first: ${rules_doc} (focus on Rules 7.7-7.8 and 12.3-12.11), DEVELOPER_GUIDE.md, README.md, docs/architecture.md, docs/adr/ (review 0009/0010/0011). Scope: work only in this worktree; keep changes scoped to issue #${issue_id}; follow existing repo patterns before adding files/scripts. Loop: inspect -> state plan + expected touched paths -> implement -> validate -> update docs/tests -> rerun checks -> continue until closure condition is met. Closure: ${closure_condition}. Required actions: run make preflight-session now and again before commit/push; include validation evidence in issue/PR; use ${rules_doc} for finish protocol, queue/label hygiene, and handoff behavior. Finish: ${finish_checklist} If blocked: do not stop at the first blocker; if an approach conflicts with a repo rule, choose another compliant approach and continue; escalate only if no compliant path exists."
+  printf '%s\n' "Role: pragmatic, rigorous, concise coding agent. Task: issue #${issue_id} on branch ${branch_name} in worktree ${wt_path}.${stream_sentence} First response: confirm you have read ${rules_doc_hint}, name which file you read, and state you will follow it as the rules source of truth. Type: ${issue_type_note} Read first: ${rules_doc} (focus on Rules 7.7-7.8, 10, 12.3-12.11, 14), DEVELOPER_GUIDE.md, README.md, docs/architecture.md, docs/adr/0014-metadata-tagging-telemetry-and-release-metadata-boundaries.md, docs/adr/0015-bff-identity-persistence-interceptors-and-multitenancy-viability.md, docs/adr/0016-terraform-scaling-stack-topology-and-terragrunt-adoption-thresholds.md, docs/runbooks/tenant-platform-architecture-build-plan.md (if relevant to issue scope), docs/runbooks/terraform-scaling-stack-segmentation-and-terragrunt-pilot.md (if state/stack/CI scale is in scope), and docs/adr/ (review 0009/0010/0011). Scope: work only in this worktree; keep changes scoped to issue #${issue_id}; follow existing repo patterns before adding files/scripts. Loop: inspect -> state plan + expected touched paths -> implement -> validate -> update docs/tests -> rerun checks -> continue until closure condition is met. Closure: ${closure_condition}. Required actions: run make preflight-session now and again before commit/push; include validation evidence in issue/PR; use ${rules_doc} for finish protocol, queue/label hygiene, and handoff behavior. Finish: ${finish_checklist} If blocked: do not stop at the first blocker; if an approach conflicts with a repo rule, choose another compliant approach and continue; escalate only if no compliant path exists."
 }
 
 build_agent_command() {
@@ -1575,6 +1575,42 @@ finish_worktree_protocol() {
   done
 }
 
+show_plan_summary() {
+  local roadmap="${REPO_ROOT}/ROADMAP.md"
+  local plan_doc="${REPO_ROOT}/docs/runbooks/tenant-platform-architecture-build-plan.md"
+
+  echo "Plan Summary"
+  echo "  repo: ${REPO_ROOT}"
+  echo
+
+  if [ -f "${roadmap}" ]; then
+    echo "ROADMAP.md (headings)"
+    rg -n '^## ' "${roadmap}" || true
+    echo
+  else
+    echo "ROADMAP.md not found."
+    echo
+  fi
+
+  if [ -f "${plan_doc}" ]; then
+    echo "Architecture Build Plan: ${plan_doc}"
+    echo "  key headings:"
+    rg -n '^## |^### ' "${plan_doc}" || true
+    echo
+    echo "  open checklist items (first 20):"
+    rg -n '^- \\[ \\]' "${plan_doc}" | head -n 20 || true
+    echo
+    echo "  references:"
+    rg -n '^## References|^- `docs/' "${plan_doc}" || true
+    echo
+  else
+    echo "Architecture build plan not found: ${plan_doc}"
+    echo
+  fi
+
+  echo "Use make worktree -> Create/Resume to allocate implementation against the next ready issue."
+}
+
 main_menu() {
   while :; do
     echo "Worktree Session Menu"
@@ -1584,6 +1620,7 @@ main_menu() {
     echo "  4) Resume worktree (preflight + command)"
     echo "  5) Preflight current worktree"
     echo "  6) Finish worktree (guided protocol)"
+    echo "  7) Show plan summary (roadmap + architecture build plan)"
     echo "  0) Exit"
     echo
 
@@ -1614,7 +1651,11 @@ main_menu() {
       6)
         finish_worktree_protocol
         ;;
-      7|0)
+      7)
+        show_plan_summary
+        pause
+        ;;
+      0)
         exit 0
         ;;
       *)

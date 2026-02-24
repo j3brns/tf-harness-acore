@@ -13,10 +13,16 @@ assignees: []
 - Roadmap item reference (if applicable): #
 
 ## Technical Detail
+- Actor / persona primarily affected (e.g. Agent Developer, Platform Maintainer, Tenant Admin, CI/Promotion Pipeline)
+- Entity boundary touched (`AppID`, `TenantID`, `AgentName`, `Environment`, `SessionID`, metadata plane)
+- Plane(s) affected (`runtime`, `control`, `CI/release`, `observability`)
 - Primary module/domain (`foundation` / `tools` / `runtime` / `governance` / `docs` / `ci`)
 - Expected implementation approach (Terraform-native vs CLI pattern)
 - Specific APIs/resources/patterns involved
 - Constraints / non-goals
+- Inbound identity impact (if any)
+- Outbound identity impact (if any)
+- Cross-boundary escalation required? (If yes, record escalation target and reason)
 
 ## Touched Paths (Expected)
 - `terraform/...`
@@ -40,7 +46,8 @@ make preflight-session
 
 ## Labels / Queueing
 - Status label: `ready` / `in-progress` / `blocked` / `review` / `done`
-- Stream label (roadmap-aligned): e.g. `a0`, `a1`, `b0`
+- Stream lane label (roadmap-aligned): `a` / `b` / `c` / `d` / `e`
+- Roadmap item label (optional): e.g. `a0`, `a1`, `b0`
 - Domain label (optional): e.g. `provider`, `docs`, `runtime`
 - Priority label (optional): `p0` / `p1` / `p2` / `p3`
 

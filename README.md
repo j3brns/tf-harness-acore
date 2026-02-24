@@ -278,7 +278,7 @@ For an interactive linked-worktree helper (list/create/resume), use:
 make worktree
 ```
 
-The menu validates branch naming against the same policy regex, runs `make preflight-session` in the selected worktree, and can hand off into your selected agent/CLI in the correct worktree. For new worktrees, it can pull from the GitHub `ready` issue queue, order it by plan docs (default `ROADMAP.md` issue order), then by priority labels, then by creation time, auto-derive the branch slug from the selected issue title, suggest a branch `scope` namespace from issue labels/title (editable), and optionally auto-claim the selected issue (`ready` -> `in-progress`) after worktree creation and preflight pass. You can override queue plan sources with `WORKTREE_QUEUE_PLAN_FILES` (space-separated repo-relative files). On shell handoff, it lets you choose `gemini`, `claude`, or `codex`, choose `yolo`/equivalent mode or normal mode, choose `issue type` (execution or tracker), choose the expected `closure condition`, and choose `execute-now` or `print-only`. It then prints a boilerplate agent prompt plus the launch command (with selected worktree path and parsed issue number injected) and either executes it immediately or opens a shell without executing it.
+The menu validates branch naming against the same policy regex, runs `make preflight-session` in the selected worktree, and can hand off into your selected agent/CLI in the correct worktree. For new worktrees, it can pull from the GitHub `ready` issue queue, order it by plan docs (default `ROADMAP.md` issue order), then by priority labels, then by creation time, auto-derive the branch slug from the selected issue title, suggest a branch `scope` namespace from issue labels/title (editable), and optionally auto-claim the selected issue (`ready` -> `in-progress`) after worktree creation and preflight pass. You can override queue plan sources with `WORKTREE_QUEUE_PLAN_FILES` (space-separated repo-relative files). On shell handoff, it lets you choose `gemini`, `claude`, or `codex`, choose `yolo`/equivalent mode or normal mode, choose `issue type` (execution or tracker), choose the expected `closure condition`, and choose `execute-now` or `print-only`. It then prints a boilerplate agent prompt plus the launch command (with selected worktree path and parsed issue number injected) and either executes it immediately or opens a shell without executing it. A `Show plan summary` menu action surfaces `ROADMAP.md` plus the tenant-platform architecture build plan headings/checklist for quick allocation context.
 
 ### Issue Queue Conventions (for `make worktree`)
 
@@ -299,6 +299,18 @@ Queue ordering for `make worktree` create flow:
 3. `createdAt` (fallback only)
 
 GitHub issue templates are provided for both tracker and execution issues under `.github/ISSUE_TEMPLATE/` and are aligned with Rule 12 requirements (Context, Technical Detail, Tasks, Acceptance Criteria, and closeout evidence).
+
+### Architecture Program Tracking (Identity / Multi-Tenancy / Cost / Release Autonomy)
+
+Current architecture expansion work is tracked in:
+- `docs/adr/0014-metadata-tagging-telemetry-and-release-metadata-boundaries.md`
+- `docs/adr/0015-bff-identity-persistence-interceptors-and-multitenancy-viability.md`
+- `docs/adr/0016-terraform-scaling-stack-topology-and-terragrunt-adoption-thresholds.md`
+- `docs/runbooks/tenant-platform-architecture-build-plan.md`
+- `docs/runbooks/terraform-scaling-stack-segmentation-and-terragrunt-pilot.md`
+
+If an issue touches BFF identity/interceptors, tenant isolation, audit/tracing metadata, inference-profile cost allocation, or GitLab release autonomy boundaries, read these before implementation and reflect docs impact in the same change.
+If an issue touches Terraform state topology, stack boundaries, or Terragrunt evaluation/adoption, read ADR `0016` and the scaling pilot runbook before implementation.
 
 ### Windows Support
 
@@ -336,6 +348,20 @@ copier copy --force --trust \
   templates/agent-project .scratch/my-agent
 ```
 
+Fast inner-loop scaffold verification (recommended during template development):
+
+```bash
+make template-smoke
+```
+
+This generates temporary scaffolds under `.scratch/`, rewrites module sources to the local checkout, checks for unresolved template placeholders/compiled artifacts, and runs fast local validation suitable for rapid iteration.
+
+For a trust-and-verify pass that includes generated `terraform init -backend=false` + `terraform validate` (slower, closer to CI fidelity), run:
+
+```bash
+make template-smoke-full
+```
+
 Notes:
 - `agent_name` is the internal immutable identity for physical AWS resource names. Use a low-collision suffix pattern such as `word-word-word-a1b2`.
 - `app_id` is the logical app boundary for multi-tenant partitioning; keep it stable across related agents.
@@ -359,7 +385,7 @@ Notes:
 | `agentcore_region` | `string` | `region` | AgentCore control-plane region override. |
 | `bedrock_region` | `string` | `agentcore_region` | Bedrock model region override. |
 | `bff_region` | `string` | `agentcore_region` | BFF/API Gateway region override. |
-| `environment` | `string` | `dev` | Deployment stage: `dev`, `staging`, or `prod`. |
+| `environment` | `string` | `dev` | Deployment stage: `dev`, `test`, or `prod`. |
 | `tags` | `map(string)` | `{}` | Additional tags applied to all resources (canonical tags `AppID`, `AgentAlias`, `Environment`, `AgentName`, `ManagedBy`, `Owner` are merged automatically). |
 
 ### Foundation

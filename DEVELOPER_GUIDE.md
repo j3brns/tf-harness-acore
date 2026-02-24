@@ -20,7 +20,7 @@ This guide covers the development workflow for contributors. For initial account
 | `app_id` | Human-facing application alias / logical boundary (North Anchor). | `${agent_name}` |
 | `allow_legacy_agent_name` | Temporary migration escape hatch for an existing deployed legacy `agent_name`. | `false` |
 | `lambda_architecture` | Compute architecture (`x86_64` or `arm64`). | `x86_64` |
-| `environment` | Deployment stage (`dev`, `staging`, `prod`). | `dev` |
+| `environment` | Deployment stage (`dev`, `test`, `prod`). | `dev` |
 
 ## Development Workflow
 
@@ -538,6 +538,8 @@ git push gitlab v0.1.0
 ### DO
 - Run `make preflight-session` at session start and before commit/push
 - Use `make worktree` to create/resume linked worktrees with enforced naming + preflight
+- Use `make worktree` -> `Show plan summary` when allocating architecture/identity/multi-tenancy work (surfaces `ROADMAP.md` + `docs/runbooks/tenant-platform-architecture-build-plan.md`)
+- Use `make template-smoke` for low-cost Copier template checks during scaffold iteration; use `make template-smoke-full` before PR/push when template Terraform wiring changed
 - Run `terraform validate` before every commit
 - Use pre-commit hooks
 - Test examples after module changes
@@ -545,6 +547,7 @@ git push gitlab v0.1.0
 - Use descriptive commit messages
 - Keep changes focused (one logical change per commit)
 - Document decisions in ADRs
+- Read ADRs `0014`, `0015`, and `0016` before changing identity propagation, tenant telemetry/tracing, inference-profile cost attribution, GitLab release autonomy boundaries, or Terraform state/stack scaling strategy
 - Update docs when changing code
 - Close issues with a comprehensive summary comment (changes, validation, outcomes)
 
