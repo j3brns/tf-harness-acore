@@ -28,6 +28,7 @@ resource "aws_lambda_function" "auth_handler" {
   # checkov:skip=CKV_AWS_116: DLQ not required for synchronous OIDC handler
   # checkov:skip=CKV_AWS_117: Public access required for OIDC issuer reachability
   # checkov:skip=CKV_AWS_115: Concurrency managed at account/module level
+  # checkov:skip=CKV_AWS_272: Lambda code signing requires signer profile/trust setup and is optional for harness defaults (#79)
 
   count = var.enable_bff ? 1 : 0
 
@@ -40,6 +41,10 @@ resource "aws_lambda_function" "auth_handler" {
   filename                       = data.archive_file.auth_handler[0].output_path
   source_code_hash               = data.archive_file.auth_handler[0].output_base64sha256
   reserved_concurrent_executions = var.reserved_concurrency > 0 ? var.reserved_concurrency : null
+
+  tracing_config {
+    mode = "Active"
+  }
 
   environment {
     variables = {
@@ -62,6 +67,7 @@ resource "aws_lambda_function" "authorizer" {
   # checkov:skip=CKV_AWS_116: DLQ not required for authorizer
   # checkov:skip=CKV_AWS_117: Internal VPC access not required
   # checkov:skip=CKV_AWS_115: Concurrency managed at account/module level
+  # checkov:skip=CKV_AWS_272: Lambda code signing requires signer profile/trust setup and is optional for harness defaults (#79)
 
   count = var.enable_bff ? 1 : 0
 
@@ -74,6 +80,10 @@ resource "aws_lambda_function" "authorizer" {
   filename                       = data.archive_file.authorizer[0].output_path
   source_code_hash               = data.archive_file.authorizer[0].output_base64sha256
   reserved_concurrent_executions = var.reserved_concurrency > 0 ? var.reserved_concurrency : null
+
+  tracing_config {
+    mode = "Active"
+  }
 
   environment {
     variables = {
@@ -92,6 +102,7 @@ resource "aws_lambda_function" "proxy" {
   # checkov:skip=CKV2_AWS_75: Protected by Authorizer
   # checkov:skip=CKV_AWS_116: DLQ not required for streaming proxy
   # checkov:skip=CKV_AWS_117: Public access required for Bedrock API reachability
+  # checkov:skip=CKV_AWS_272: Lambda code signing requires signer profile/trust setup and is optional for harness defaults (#79)
 
   count = var.enable_bff ? 1 : 0
 
@@ -104,6 +115,10 @@ resource "aws_lambda_function" "proxy" {
   filename                       = data.archive_file.proxy[0].output_path
   source_code_hash               = data.archive_file.proxy[0].output_base64sha256
   reserved_concurrent_executions = var.reserved_concurrency > 0 ? var.reserved_concurrency : null
+
+  tracing_config {
+    mode = "Active"
+  }
 
   environment {
     variables = {

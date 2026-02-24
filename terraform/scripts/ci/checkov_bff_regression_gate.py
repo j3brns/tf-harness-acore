@@ -14,16 +14,8 @@ from typing import Any
 
 BFF_RESOURCE_PREFIX = "module.agentcore_bff."
 
-# Temporary approved baseline for the behavior-changing hardening work tracked in #79.
-EXPECTED_BFF_FAILURE_PAIRS: tuple[tuple[str, str], ...] = (
-    ("CKV_AWS_86", "module.agentcore_bff.aws_cloudfront_distribution.bff"),
-    ("CKV_AWS_50", "module.agentcore_bff.aws_lambda_function.auth_handler"),
-    ("CKV_AWS_50", "module.agentcore_bff.aws_lambda_function.authorizer"),
-    ("CKV_AWS_50", "module.agentcore_bff.aws_lambda_function.proxy"),
-    ("CKV_AWS_272", "module.agentcore_bff.aws_lambda_function.auth_handler"),
-    ("CKV_AWS_272", "module.agentcore_bff.aws_lambda_function.authorizer"),
-    ("CKV_AWS_272", "module.agentcore_bff.aws_lambda_function.proxy"),
-)
+# Approved baseline after #79 hardening completion: no remaining BFF Checkov failures.
+EXPECTED_BFF_FAILURE_PAIRS: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -112,7 +104,7 @@ def format_result(result: GateResult) -> str:
     if result.missing_expected:
         lines.append("")
         lines.append("Expected baseline failures missing (baseline drift):")
-        lines.append("  Update the baseline in this script when #79 intentionally changes the remaining BFF hardening set.")
+        lines.append("  Update the baseline in this script when #79+ changes the approved BFF hardening state.")
         for check_id, resource in result.missing_expected:
             lines.append(f"  - {check_id} | {resource}")
 
