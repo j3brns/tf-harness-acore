@@ -160,6 +160,21 @@ evaluation_type    = "TOOL_CALL"  # TOOL_CALL, REASONING, RESPONSE, ALL
 evaluator_model_id = "anthropic.claude-sonnet-4-5"
 ```
 
+## Regional Availability Guardrails (Issue #100)
+
+The framework enforces feature availability by region to prevent deployment failures.
+
+| Region | Supported Features |
+| :--- | :--- |
+| `eu-central-1` (Frankfurt) | Core, Policy, Evaluations |
+| `eu-west-1` (Ireland) | Core, Policy |
+| `us-east-1` (N. Virginia) | Core, Policy, Evaluations |
+| `us-west-2` (Oregon) | Core, Policy, Evaluations |
+| `ap-southeast-2` (Sydney) | Core, Policy, Evaluations |
+| `eu-west-2` (London) | None (Runtime/Gateway planned) |
+
+If you enable a feature in an unsupported region, `terraform plan` will fail with a descriptive error.
+
 ## Example Deployments
 
 ### Minimal Agent (Gateway Only)
