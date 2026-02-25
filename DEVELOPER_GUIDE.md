@@ -22,6 +22,18 @@ This guide covers the development workflow for contributors. For initial account
 | `lambda_architecture` | Compute architecture (`x86_64` or `arm64`). | `x86_64` |
 | `environment` | Deployment stage (`dev`, `staging`, `prod`). | `dev` |
 
+### Regional Availability Guardrails (Issue #100)
+
+AgentCore feature coverage varies by region. The framework enforces guardrails to prevent enabling features in regions where they are not yet supported.
+
+| Feature | Supported Regions (GA/Preview) |
+| :--- | :--- |
+| **Core** (Runtime, Gateway, Memory, Identity, Observability, Tools) | `us-east-1`, `us-east-2`, `us-west-2`, `ap-south-1`, `ap-southeast-1`, `ap-southeast-2`, `ap-northeast-1`, `eu-central-1`, `eu-west-1` |
+| **Policy Engine** (Preview) | `us-east-1`, `us-west-2`, `ap-south-1`, `ap-southeast-1`, `ap-southeast-2`, `ap-northeast-1`, `eu-central-1`, `eu-west-1` |
+| **Evaluations** (Preview) | `us-east-1`, `us-west-2`, `ap-southeast-2`, `eu-central-1` |
+
+If you attempt to enable a feature in an unsupported region, `terraform plan` will fail with a descriptive error message. London (`eu-west-2`) is currently NOT supported for AgentCore Runtime, Gateway, Policy, or Evaluations.
+
 Regional availability note: AgentCore feature coverage varies by region. Prefer a region that supports the specific features you plan to enable (for example Runtime, Policy, Evaluations) and verify against the current AWS AgentCore region matrix/endpoints before rollout.
 
 Runtime deployability guard (checked `2026-02-25`): use `make validate-region` (or rely on `make plan*` / `make apply*`, which call it automatically) to fail fast when the effective `agentcore_region` lacks AWS General Reference AgentCore control/data plane endpoint coverage required by this repo's deployment path. A region can appear in the AgentCore Runtime feature matrix and still fail this deployability guard.
