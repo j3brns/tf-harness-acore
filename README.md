@@ -483,6 +483,8 @@ Operational verification points:
 | `bff_agentcore_runtime_arn` | `string` | `""` | AgentCore runtime ARN for the proxy (required if `enable_bff=true` and `enable_runtime=false`). |
 | `bff_agentcore_runtime_role_arn` | `string` | `""` | Optional runtime IAM role ARN for BFF to assume (set for cross-account runtime identity propagation). |
 | `proxy_reserved_concurrency` | `number` | `10` | Reserved concurrent executions for the BFF proxy Lambda. |
+| `enable_bff_cloudfront_access_logging` | `bool` | `true` | Enable CloudFront standard access logging for the BFF distribution (default preserves current harness behavior). |
+| `bff_cloudfront_access_logs_prefix` | `string` | `"cloudfront-access-logs/"` | S3 key prefix for BFF CloudFront standard access logs (no leading slash). |
 
 ---
 
