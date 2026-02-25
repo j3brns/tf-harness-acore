@@ -106,6 +106,11 @@ generate-openapi-client: ## Generate typed TypeScript client from MCP Tools Open
 	python3 terraform/scripts/generate_mcp_typescript_client.py
 	@echo "✓ Typed client generated to docs/api/mcp-tools-v1.client.ts"
 
+report-sdk-drift: ## Generate SDK version drift report for example agents
+	@echo "Generating SDK version drift report..."
+	python3 terraform/scripts/report_sdk_drift.py
+	@echo "✓ SDK version drift report generated to docs/SDK_VERSION_DRIFT_REPORT.md"
+
 check-openapi-client: ## Verify generated MCP Tools TypeScript client matches OpenAPI spec
 	@echo "Checking MCP Tools TypeScript client drift..."
 	python3 terraform/scripts/generate_mcp_typescript_client.py --check
