@@ -223,6 +223,7 @@ These skips preserve current harness behavior and document where enterprise cont
 - `CKV_AWS_120` / `CKV_AWS_225` (API Gateway caching): Caching is intentionally disabled because the BFF mixes OIDC auth endpoints and per-session streaming `/api/chat` traffic.
 - `CKV_AWS_237` (API Gateway create-before-destroy): Zero-downtime REST API replacement requires a parallel cutover pattern and is not the harness default.
 - `CKV_AWS_59` on `/auth/login` and `/auth/callback`: These OIDC entrypoints must be public by design; state/session checks occur in the token-handler Lambda flow.
+- `CKV2_AWS_53` on six tenant-admin API methods (Issue `#91`): These `HTTP_PROXY` routes validate tenant-admin request semantics in the BFF proxy Lambda, where Rule 14.1 tenant/session ownership checks and authorizer context are available. Skips are scoped to the six tenant-admin `aws_api_gateway_method` resources only.
 - `CKV_AWS_310` (CloudFront origin failover): Active/passive failover requires additional multi-region topology and cutover logic beyond the default harness.
 - `CKV_AWS_374` (CloudFront geo restriction): Geographic restrictions are tenant/workload policy decisions and should generally be enforced with WAF geo-match rules.
 

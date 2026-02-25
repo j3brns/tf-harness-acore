@@ -310,6 +310,7 @@ resource "aws_api_gateway_integration" "chat" {
 
 # POST /api/tenancy/v1/admin/tenants
 resource "aws_api_gateway_method" "create_tenant" {
+  # checkov:skip=CKV2_AWS_53: HTTP_PROXY tenant-admin validation is enforced in the proxy Lambda, including Rule 14.1 tenant-scope checks
   count         = var.enable_bff ? 1 : 0
   rest_api_id   = aws_api_gateway_rest_api.bff[0].id
   resource_id   = aws_api_gateway_resource.tenants[0].id
@@ -332,6 +333,7 @@ resource "aws_api_gateway_integration" "create_tenant" {
 
 # POST /api/tenancy/v1/admin/tenants/{tenantId}:suspend
 resource "aws_api_gateway_method" "suspend_tenant" {
+  # checkov:skip=CKV2_AWS_53: HTTP_PROXY tenant-admin validation is enforced in the proxy Lambda, including Rule 14.1 tenant-scope checks
   count         = var.enable_bff ? 1 : 0
   rest_api_id   = aws_api_gateway_rest_api.bff[0].id
   resource_id   = aws_api_gateway_resource.tenant_suspend[0].id
@@ -354,6 +356,7 @@ resource "aws_api_gateway_integration" "suspend_tenant" {
 
 # POST /api/tenancy/v1/admin/tenants/{tenantId}:rotate-credentials
 resource "aws_api_gateway_method" "rotate_tenant_credentials" {
+  # checkov:skip=CKV2_AWS_53: HTTP_PROXY tenant-admin validation is enforced in the proxy Lambda, including Rule 14.1 tenant-scope checks
   count         = var.enable_bff ? 1 : 0
   rest_api_id   = aws_api_gateway_rest_api.bff[0].id
   resource_id   = aws_api_gateway_resource.tenant_rotate_credentials[0].id
@@ -376,6 +379,7 @@ resource "aws_api_gateway_integration" "rotate_tenant_credentials" {
 
 # GET /api/tenancy/v1/admin/tenants/{tenantId}/audit-summary
 resource "aws_api_gateway_method" "fetch_tenant_audit_summary" {
+  # checkov:skip=CKV2_AWS_53: HTTP_PROXY tenant-admin validation is enforced in the proxy Lambda, including Rule 14.1 tenant-scope checks
   count         = var.enable_bff ? 1 : 0
   rest_api_id   = aws_api_gateway_rest_api.bff[0].id
   resource_id   = aws_api_gateway_resource.tenant_audit_summary[0].id
@@ -398,6 +402,7 @@ resource "aws_api_gateway_integration" "fetch_tenant_audit_summary" {
 
 # GET /api/tenancy/v1/admin/tenants/{tenantId}/diagnostics
 resource "aws_api_gateway_method" "fetch_tenant_diagnostics" {
+  # checkov:skip=CKV2_AWS_53: HTTP_PROXY tenant-admin validation is enforced in the proxy Lambda, including Rule 14.1 tenant-scope checks
   count         = var.enable_bff ? 1 : 0
   rest_api_id   = aws_api_gateway_rest_api.bff[0].id
   resource_id   = aws_api_gateway_resource.tenant_diagnostics[0].id
@@ -420,6 +425,7 @@ resource "aws_api_gateway_integration" "fetch_tenant_diagnostics" {
 
 # GET /api/tenancy/v1/admin/tenants/{tenantId}/timeline
 resource "aws_api_gateway_method" "fetch_tenant_timeline" {
+  # checkov:skip=CKV2_AWS_53: HTTP_PROXY tenant-admin validation is enforced in the proxy Lambda, including Rule 14.1 tenant-scope checks
   count         = var.enable_bff ? 1 : 0
   rest_api_id   = aws_api_gateway_rest_api.bff[0].id
   resource_id   = aws_api_gateway_resource.tenant_timeline[0].id
