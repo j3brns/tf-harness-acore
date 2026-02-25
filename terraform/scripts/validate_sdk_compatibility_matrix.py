@@ -30,7 +30,7 @@ CURATED_STABLE_PINS = {
     "strands-agents": "1.18.0",
     "strands-agents-tools": "0.2.16",
     "strands-deep-agents": "0.1.1",
-    "boto3": "1.40.52",
+    "boto3": "1.40.65",
     "numpy": "1.26.4",
     "pandas": "2.2.2",
     "requests": "2.32.3",
