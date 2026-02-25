@@ -36,6 +36,11 @@ If you attempt to enable a feature in an unsupported region, `terraform plan` wi
 
 Regional availability note: AgentCore feature coverage varies by region. Prefer a region that supports the specific features you plan to enable (for example Runtime, Policy, Evaluations) and verify against the current AWS AgentCore region matrix/endpoints before rollout.
 
+Runtime deployability guard (checked `2026-02-25`): use `make validate-region` (or rely on `make plan*` / `make apply*`, which call it automatically) to fail fast when the effective `agentcore_region` lacks AWS General Reference AgentCore control/data plane endpoint coverage required by this repo's deployment path. A region can appear in the AgentCore Runtime feature matrix and still fail this deployability guard.
+Sources:
+- https://docs.aws.amazon.com/general/latest/gr/bedrock_agentcore.html
+- https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-regions.html
+
 ## Development Workflow
 
 ### Making Changes
@@ -45,6 +50,7 @@ Regional availability note: AgentCore feature coverage varies by region. Prefer 
 # Edit files...
 
 # 2. Validate locally (NO AWS needed)
+make validate-region TFVARS=../examples/1-hello-world/terraform.tfvars
 cd terraform
 terraform fmt -recursive
 terraform validate
@@ -529,6 +535,7 @@ git push gitlab v0.1.0
 
 ### DO
 - Run `make preflight-session` at session start and before commit/push
+- Run `make validate-region` (or `make plan*` / `make apply*`) before deploy/apply to catch unsupported AgentCore Runtime regions early
 - Use `make worktree` to create/resume linked worktrees with enforced naming + preflight
 - Run `terraform validate` before every commit
 - Use pre-commit hooks
