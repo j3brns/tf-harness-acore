@@ -28,15 +28,23 @@ def test_api_throttling():
 
 
 def test_spa_cache_headers():
-    print("[Senior Test 3] Verifying SPA Caching Strategy...")
+    print("[Senior Test 3] Verifying CloudFront cache/origin request policy strategy...")
     cf_tf_path = "terraform/modules/agentcore-bff/cloudfront.tf"
     with open(cf_tf_path, "r") as f:
         content = f.read()
         if "default_cache_behavior {" not in content:
             raise Exception("FAILED: Default cache behavior block not found")
-        if "default_ttl            = 0" not in content:
-            raise Exception("FAILED: Index.html caching is enabled (TTL > 0)")
-    print("  PASS: SPA cache strategy (immediate refresh) verified.")
+        if 'name = "Managed-CachingDisabled"' not in content:
+            raise Exception("FAILED: Managed CloudFront CachingDisabled policy lookup missing")
+        if "cache_policy_id  = data.aws_cloudfront_cache_policy.caching_disabled.id" not in content:
+            raise Exception("FAILED: SPA default behavior is not wired to explicit disabled cache policy")
+        if "forwarded_values {" in content:
+            raise Exception("FAILED: Legacy forwarded_values blocks still present (expected explicit policies)")
+        if "default_ttl            = 0" in content or "default_ttl = 0" in content:
+            raise Exception("FAILED: Legacy TTL fields still present (expected cache policy usage)")
+        if 'origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id' not in content:
+            raise Exception("FAILED: API/auth origin request policy wiring missing")
+    print("  PASS: CloudFront policy-based cache strategy verified.")
 
 
 def test_alarm_actions():

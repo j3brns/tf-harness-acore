@@ -29,6 +29,14 @@ resource "aws_cloudfront_response_headers_policy" "security" {
   }
 }
 
+data "aws_cloudfront_cache_policy" "caching_disabled" {
+  name = "Managed-CachingDisabled"
+}
+
+data "aws_cloudfront_origin_request_policy" "all_viewer_except_host_header" {
+  name = "Managed-AllViewerExceptHostHeader"
+}
+
 resource "aws_cloudfront_function" "spa_route_rewrite" {
   count   = var.enable_bff ? 1 : 0
   name    = "agentcore-bff-spa-rewrite-${var.agent_name}"
@@ -115,13 +123,10 @@ resource "aws_cloudfront_distribution" "bff" {
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
     cached_methods   = ["GET", "HEAD"]
     target_origin_id = "S3-SPA"
+    cache_policy_id  = data.aws_cloudfront_cache_policy.caching_disabled.id
 
-    forwarded_values {
-      query_string = false
-      cookies {
-        forward = "none"
-      }
-    }
+    # No origin request policy on the SPA behavior: the managed disabled cache policy
+    # already preserves the prior "forward nothing" semantics (no cookies/query strings/headers).
 
     response_headers_policy_id = aws_cloudfront_response_headers_policy.security[0].id
 
@@ -133,58 +138,34 @@ resource "aws_cloudfront_distribution" "bff" {
     }
 
     viewer_protocol_policy = "redirect-to-https"
-
-    # Senior Engineer: Prevent index.html caching
-    # This ensures new deploys are visible immediately
-    min_ttl     = 0
-    default_ttl = 0
-    max_ttl     = 0
   }
 
   # API Behavior
   ordered_cache_behavior {
-    path_pattern     = "/api/*"
-    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "APIGateway"
-
-    forwarded_values {
-      query_string = true
-      headers      = ["Authorization", "Cookie", "Origin"] # CORS/Auth
-      cookies {
-        forward = "all"
-      }
-    }
+    path_pattern             = "/api/*"
+    allowed_methods          = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods           = ["GET", "HEAD"]
+    target_origin_id         = "APIGateway"
+    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id
 
     response_headers_policy_id = aws_cloudfront_response_headers_policy.security[0].id
 
     viewer_protocol_policy = "https-only"
-    min_ttl                = 0
-    default_ttl            = 0
-    max_ttl                = 0
   }
 
   # Auth Behavior
   ordered_cache_behavior {
-    path_pattern     = "/auth/*"
-    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "APIGateway"
-
-    forwarded_values {
-      query_string = true
-      headers      = ["Authorization", "Cookie", "Origin"]
-      cookies {
-        forward = "all"
-      }
-    }
+    path_pattern             = "/auth/*"
+    allowed_methods          = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods           = ["GET", "HEAD"]
+    target_origin_id         = "APIGateway"
+    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id
 
     response_headers_policy_id = aws_cloudfront_response_headers_policy.security[0].id
 
     viewer_protocol_policy = "https-only"
-    min_ttl                = 0
-    default_ttl            = 0
-    max_ttl                = 0
   }
 
   restrictions {
