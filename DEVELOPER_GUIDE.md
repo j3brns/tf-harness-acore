@@ -10,6 +10,7 @@ This guide covers the development workflow for contributors. For initial account
 - Current release line is `0.1.x`.
 - Release tags are immutable and formatted as `vMAJOR.MINOR.PATCH` (example `v0.1.0`).
 - When bumping version, update `VERSION` and `CHANGELOG.md` in the same commit.
+- Run `make validate-version-metadata` to verify `VERSION`, `CHANGELOG.md`, `README.md`, `DEVELOPER_GUIDE.md`, and `docs/architecture.md` stay in sync.
 - Push release refs to both remotes: `origin` (GitHub) and `gitlab` (GitLab).
 
 ## Core Variables
@@ -76,6 +77,9 @@ terraform fmt -check -recursive
 
 # Generate policy and tag conformance report (Inventory + Governance)
 make policy-report
+
+# Validate VERSION / CHANGELOG / docs version metadata consistency
+make validate-version-metadata
 
 # Generate all documentation (including MCP Tools OpenAPI + typed client)
 make docs

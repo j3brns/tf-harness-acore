@@ -1,4 +1,4 @@
-.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both ci-status-both streaming-load-test policy-report validate-region
+.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both ci-status-both streaming-load-test policy-report validate-region validate-version-metadata
 
 # Variables
 ROOT_DIR := $(abspath .)
@@ -217,6 +217,9 @@ validate-region: ## Validate AgentCore Runtime region deployability (TFVARS=... 
 		$(if $(REGION),--region "$(REGION)",) \
 		$(if $(AGENTCORE_REGION),--agentcore-region "$(AGENTCORE_REGION)",) \
 		$(if $(BFF_REGION),--bff-region "$(BFF_REGION)",)
+
+validate-version-metadata: ## Validate VERSION, CHANGELOG.md, and docs version metadata consistency
+	python3 terraform/scripts/validate_version_metadata.py
 
 policy-report: ## Generate policy and tag conformance report
 	@echo "Generating policy and tag conformance report..."
