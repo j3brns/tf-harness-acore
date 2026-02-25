@@ -61,6 +61,17 @@ jobs:
       - name: Validate VERSION, CHANGELOG, and docs version metadata consistency
         run: make validate-version-metadata
 
+  sdk-version-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unit test SDK drift report script
+        run: python3 terraform/tests/validation/test_report_sdk_drift.py
+      - name: Validate SDK version consistency across examples
+        run: make report-sdk-drift
+      - name: Ensure drift report is in sync and committed
+        run: git diff --exit-code -- docs/SDK_VERSION_DRIFT_REPORT.md
+
   openapi-client-drift:
     runs-on: ubuntu-latest
     steps:

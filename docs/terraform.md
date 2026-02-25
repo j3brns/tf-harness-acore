@@ -15,6 +15,7 @@
 |------|---------|
 | <a name="provider_aws"></a> [aws](#provider\_aws) | 6.33.0 |
 | <a name="provider_http"></a> [http](#provider\_http) | 3.5.0 |
+| <a name="provider_terraform"></a> [terraform](#provider\_terraform) | n/a |
 
 ## Modules
 
@@ -30,6 +31,7 @@
 
 | Name | Type |
 |------|------|
+| [terraform_data.agentcore_region_guardrails](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity) | data source |
 | [http_http.oidc_config](https://registry.terraform.io/providers/hashicorp/http/latest/docs/data-sources/http) | data source |
 
@@ -38,14 +40,16 @@
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_agent_dashboard_name"></a> [agent\_dashboard\_name](#input\_agent\_dashboard\_name) | Optional CloudWatch dashboard name override (defaults to <agent\_name>-dashboard when empty) | `string` | `""` | no |
-| <a name="input_agent_name"></a> [agent\_name](#input\_agent\_name) | Name of the agent | `string` | n/a | yes |
+| <a name="input_agent_name"></a> [agent\_name](#input\_agent\_name) | Internal agent identity used in physical AWS resource names (immutable). Use app\_id for the human-facing alias. | `string` | n/a | yes |
 | <a name="input_agentcore_region"></a> [agentcore\_region](#input\_agentcore\_region) | Optional AgentCore control-plane region override (defaults to region) | `string` | `""` | no |
 | <a name="input_alarm_sns_topic_arn"></a> [alarm\_sns\_topic\_arn](#input\_alarm\_sns\_topic\_arn) | Optional SNS topic ARN for CloudWatch alarm notifications | `string` | `""` | no |
-| <a name="input_app_id"></a> [app\_id](#input\_app\_id) | Application ID for multi-tenant isolation (North anchor). Defaults to agent\_name. | `string` | `""` | no |
+| <a name="input_allow_legacy_agent_name"></a> [allow\_legacy\_agent\_name](#input\_allow\_legacy\_agent\_name) | Temporary migration escape hatch. Set true only to preserve an already-deployed legacy agent\_name during transition to the ADR 0012 naming convention. | `bool` | `false` | no |
+| <a name="input_app_id"></a> [app\_id](#input\_app\_id) | Human-facing application alias for routing and multi-tenant isolation (North anchor). Defaults to agent\_name. | `string` | `""` | no |
 | <a name="input_bedrock_region"></a> [bedrock\_region](#input\_bedrock\_region) | Optional Bedrock region override for model-related resources (defaults to agentcore\_region) | `string` | `""` | no |
 | <a name="input_bff_acm_certificate_arn"></a> [bff\_acm\_certificate\_arn](#input\_bff\_acm\_certificate\_arn) | ARN of the ACM certificate for the custom domain. Must be in us-east-1 for CloudFront. | `string` | `""` | no |
 | <a name="input_bff_agentcore_runtime_arn"></a> [bff\_agentcore\_runtime\_arn](#input\_bff\_agentcore\_runtime\_arn) | AgentCore runtime ARN for the BFF proxy (required if enable\_bff is true and enable\_runtime is false) | `string` | `""` | no |
 | <a name="input_bff_agentcore_runtime_role_arn"></a> [bff\_agentcore\_runtime\_role\_arn](#input\_bff\_agentcore\_runtime\_role\_arn) | Optional runtime IAM role ARN for the BFF proxy to assume (set for cross-account runtime identity propagation) | `string` | `""` | no |
+| <a name="input_bff_cloudfront_access_logs_prefix"></a> [bff\_cloudfront\_access\_logs\_prefix](#input\_bff\_cloudfront\_access\_logs\_prefix) | S3 key prefix for BFF CloudFront standard access logs (no leading slash) | `string` | `"cloudfront-access-logs/"` | no |
 | <a name="input_bff_custom_domain_name"></a> [bff\_custom\_domain\_name](#input\_bff\_custom\_domain\_name) | Custom domain name for the BFF CloudFront distribution (e.g., agent.example.com). Requires bff\_acm\_certificate\_arn. | `string` | `""` | no |
 | <a name="input_bff_region"></a> [bff\_region](#input\_bff\_region) | Optional BFF/API Gateway region override (defaults to agentcore\_region) | `string` | `""` | no |
 | <a name="input_browser_network_mode"></a> [browser\_network\_mode](#input\_browser\_network\_mode) | Network mode for browser (PUBLIC, SANDBOX, VPC) | `string` | `"SANDBOX"` | no |
@@ -60,6 +64,7 @@
 | <a name="input_enable_agent_dashboards"></a> [enable\_agent\_dashboards](#input\_enable\_agent\_dashboards) | Enable Terraform-managed per-agent CloudWatch dashboards | `bool` | `false` | no |
 | <a name="input_enable_bff"></a> [enable\_bff](#input\_enable\_bff) | Enable the Serverless SPA/BFF module | `bool` | `false` | no |
 | <a name="input_enable_bff_audit_log_persistence"></a> [enable\_bff\_audit\_log\_persistence](#input\_enable\_bff\_audit\_log\_persistence) | Persist BFF proxy shadow audit logs to S3 and provision Athena/Glue query resources | `bool` | `false` | no |
+| <a name="input_enable_bff_cloudfront_access_logging"></a> [enable\_bff\_cloudfront\_access\_logging](#input\_enable\_bff\_cloudfront\_access\_logging) | Enable CloudFront standard access logging for the BFF distribution | `bool` | `true` | no |
 | <a name="input_enable_browser"></a> [enable\_browser](#input\_enable\_browser) | Enable web browser tool | `bool` | `false` | no |
 | <a name="input_enable_browser_recording"></a> [enable\_browser\_recording](#input\_enable\_browser\_recording) | Enable session recording for browser | `bool` | `false` | no |
 | <a name="input_enable_code_interpreter"></a> [enable\_code\_interpreter](#input\_enable\_code\_interpreter) | Enable Python code interpreter | `bool` | `true` | no |
@@ -99,6 +104,7 @@
 | <a name="input_kms_key_arn"></a> [kms\_key\_arn](#input\_kms\_key\_arn) | KMS key ARN for encryption | `string` | `""` | no |
 | <a name="input_lambda_architecture"></a> [lambda\_architecture](#input\_lambda\_architecture) | Architecture for agent runtime Lambda (x86\_64, arm64) | `string` | `"x86_64"` | no |
 | <a name="input_log_retention_days"></a> [log\_retention\_days](#input\_log\_retention\_days) | CloudWatch log retention in days | `number` | `30` | no |
+| <a name="input_manage_log_resource_policy"></a> [manage\_log\_resource\_policy](#input\_manage\_log\_resource\_policy) | Create the account-level CloudWatch log resource policy for Bedrock AgentCore. AWS allows a maximum of 10 per account/region. Set to false for every agent after the first in the same account/environment — the shared policy covers all agents. | `bool` | `true` | no |
 | <a name="input_mcp_targets"></a> [mcp\_targets](#input\_mcp\_targets) | MCP targets configuration. Use alias ARNs for version pinning and rollback capability. Recommended: use module.mcp\_servers.mcp\_targets output. | <pre>map(object({<br/>    name        = string<br/>    lambda_arn  = string           # Should be alias ARN (arn:...:function:name:alias)<br/>    version     = optional(string) # Lambda version number for audit trail<br/>    description = optional(string)<br/>  }))</pre> | `{}` | no |
 | <a name="input_memory_type"></a> [memory\_type](#input\_memory\_type) | Type of memory (SHORT\_TERM, LONG\_TERM, or BOTH) | `string` | `"BOTH"` | no |
 | <a name="input_oauth_return_urls"></a> [oauth\_return\_urls](#input\_oauth\_return\_urls) | OAuth2 return URLs for workload identity | `list(string)` | `[]` | no |
@@ -120,7 +126,8 @@
 | <a name="input_runtime_reserved_concurrency"></a> [runtime\_reserved\_concurrency](#input\_runtime\_reserved\_concurrency) | Reserved concurrent executions for the agent runtime Lambda | `number` | `10` | no |
 | <a name="input_runtime_role_arn"></a> [runtime\_role\_arn](#input\_runtime\_role\_arn) | IAM role ARN for agent runtime | `string` | `""` | no |
 | <a name="input_runtime_source_path"></a> [runtime\_source\_path](#input\_runtime\_source\_path) | Path to agent source code directory | `string` | `"./agent-code"` | no |
-| <a name="input_tags"></a> [tags](#input\_tags) | Additional tags to apply to all resources. Canonical tags (AppID, Environment, AgentName, ManagedBy, Owner) are always merged by the root module; values here supplement or override non-canonical keys only. | `map(string)` | `{}` | no |
+| <a name="input_tags"></a> [tags](#input\_tags) | Additional tags to apply to all resources. Canonical tags (AppID, AgentAlias, Environment, AgentName, ManagedBy, Owner) are always merged by the root module; values here supplement or override non-canonical keys only. | `map(string)` | `{}` | no |
+| <a name="input_xray_sampling_priority"></a> [xray\_sampling\_priority](#input\_xray\_sampling\_priority) | X-Ray sampling rule priority (1-9999). Assign unique values per agent when multiple agents share an account to ensure deterministic sampling order. | `number` | `100` | no |
 
 ## Outputs
 

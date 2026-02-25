@@ -91,7 +91,7 @@ tflint: ## Run TFLint for style checking
 	tflint --chdir=$(TERRAFORM_DIR) --format compact --config $(TERRAFORM_DIR)/.tflint.hcl
 
 # Documentation
-docs: generate-openapi generate-openapi-client ## Generate all documentation (Terraform + OpenAPI + TS client)
+docs: generate-openapi generate-openapi-client report-sdk-drift ## Generate all documentation (Terraform + OpenAPI + TS client + SDK Drift)
 	@echo "Generating Terraform documentation..."
 	terraform-docs markdown $(TERRAFORM_DIR) > docs/terraform.md
 	@echo "✓ Documentation generated to docs/terraform.md"
