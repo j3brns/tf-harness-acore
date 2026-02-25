@@ -137,6 +137,25 @@ module "agentcore_bff" {
 | **IP rate limiting** | Add a rate-based rule (threshold ≥ 2000 req/5 min per IP recommended as a starting baseline) to protect the `/auth/*` OIDC callback path. |
 | **Alert on BLOCK actions** | Create a CloudWatch metric filter on the WAF log group and alarm on `terminatingRuleType = REGULAR` action `BLOCK` to detect attack surges. |
 
+## CloudFront Cache & Origin Request Policies (Issue #65)
+
+The BFF CloudFront distribution uses explicit policy wiring instead of legacy per-behavior `forwarded_values`/TTL fields so cache behavior is easier to audit and reuse.
+
+### Current Policy Model
+
+- **Managed cache policy (`Managed-CachingDisabled`)** on SPA, `/api/*`, and `/auth/*` behaviors:
+  disables CloudFront caching (`min/default/max TTL = 0`) and preserves immediate visibility for SPA updates plus non-cacheable auth/API traffic.
+- **Managed origin request policy (`Managed-AllViewerExceptHostHeader`)** on `/api/*` and `/auth/*`:
+  forwards viewer headers/cookies/query strings while removing the viewer `Host` header (CloudFront restores the origin host), which is the AWS-recommended model for API Gateway origins.
+- **SPA default behavior** intentionally omits an origin request policy:
+  the disabled cache policy already preserves the prior "forward nothing" behavior (no cookies, no query strings, no viewer headers) for the S3 SPA origin.
+
+### Tradeoffs
+
+- **Caching**: The harness keeps CloudFront caching disabled for all BFF paths to avoid stale `index.html`, OIDC callback/session issues, and per-session `/api/chat` response leakage.
+- **Headers/Cookies/Query Strings (`/api/*`, `/auth/*`)**: The managed API Gateway-oriented origin request policy is broader than the previous hand-maintained header list, but avoids drift and preserves auth/CORS semantics without forwarding the viewer `Host` header.
+- **SPA (`/*`)**: Minimal forwarding to S3 keeps cache/origin behavior deterministic and avoids unnecessary variation in object requests.
+
 ## Checkov Classification (Issue #78)
 
 Issue `#78` classifies BFF Checkov findings that are intentional harness defaults and adds resource-level skips with explicit rationale.
