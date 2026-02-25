@@ -219,7 +219,7 @@ The SPA frontend template now includes a reusable, static-hosting-compatible com
 
 - **Runtime model:** Browser-loaded React + Tailwind (ES modules, no bundler required)
 - **Reusable blocks:** App shell, panels, metric cards, transcript, timeline, tool catalog, JSON preview, prompt composer
-- **DX integration:** The example app attempts to load `docs/api/mcp-tools-v1.openapi.json` to populate dashboard tool panels automatically, and the repo now also ships a generated typed client at `docs/api/mcp-tools-v1.client.ts` for frontend/integrator SDK usage
+- **DX integration:** The integrated example portal UI consumes the tenancy admin diagnostics/audit/timeline endpoints (`/api/tenancy/v1/admin/tenants/{tenantId}/*`) and attempts to load `docs/api/tenancy-admin-v1.openapi.json` (with MCP OpenAPI fallback) to populate API panels automatically. The repo also ships a generated typed client at `docs/api/mcp-tools-v1.client.ts` for frontend/integrator SDK usage.
 
 This keeps the BFF/Token Handler deployment model serverless and static while giving teams a composable UI base for role-specific consoles.
 

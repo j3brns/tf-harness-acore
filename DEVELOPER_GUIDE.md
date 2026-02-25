@@ -141,7 +141,7 @@ The library is intentionally static-hosting friendly:
 - Tailwind is loaded via CDN
 - Components are plain reusable blocks (`AppShell`, `Panel`, `MetricCard`, `Transcript`, `Timeline`, `ToolCatalog`, etc.)
 
-To customize a specialized dashboard, compose panels in `frontend/app.js` and keep shared primitives in `frontend/components.js`. The example app will try to load `docs/api/mcp-tools-v1.openapi.json` so issue `#33` OpenAPI output can drive tool panels, and issue `#51` adds a generated typed client at `docs/api/mcp-tools-v1.client.ts` for integrator/frontend SDK usage.
+To customize a specialized dashboard, compose panels in `frontend/app.js` and keep shared primitives in `frontend/components.js`. The integrated example now demonstrates a tenant-operations portal that calls the tenancy admin diagnostics/audit/timeline endpoints and tries to load `docs/api/tenancy-admin-v1.openapi.json` (with MCP OpenAPI fallback) so API panels can be driven from the contract. Issue `#51` also adds a generated typed client at `docs/api/mcp-tools-v1.client.ts` for integrator/frontend SDK usage.
 
 ```bash
 # Syntax validation

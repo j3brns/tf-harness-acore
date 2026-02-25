@@ -21,8 +21,14 @@ const html = htm.bind(React.createElement);
 
 const API_URL = '/api/chat';
 const AUTH_URL = '/auth/login';
-const OPENAPI_CANDIDATE_URLS = ['/docs/api/mcp-tools-v1.openapi.json', '/mcp-tools-v1.openapi.json'];
+const OPENAPI_CANDIDATE_URLS = [
+  '/docs/api/tenancy-admin-v1.openapi.json',
+  '/tenancy-admin-v1.openapi.json',
+  '/docs/api/mcp-tools-v1.openapi.json',
+  '/mcp-tools-v1.openapi.json',
+];
 const HTTP_METHODS = new Set(['get', 'post', 'put', 'patch', 'delete', 'options', 'head']);
+const TENANCY_ADMIN_BASE = '/api/tenancy/v1/admin/tenants';
 
 function nowStamp() {
   return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -109,14 +115,102 @@ function inferAuthState() {
   return document.cookie.includes('session_id') ? 'connected' : 'unauthorized';
 }
 
+function parseIntegerInput(value, fallback, { min = 1, max = 999 } = {}) {
+  const parsed = Number.parseInt(String(value || '').trim(), 10);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(min, parsed));
+}
+
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes) || bytes < 0) {
+    return 'Unknown';
+  }
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+
+  const units = ['KB', 'MB', 'GB', 'TB'];
+  let value = bytes;
+  let unitIndex = -1;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+
+  const rounded = value >= 100 ? value.toFixed(0) : value >= 10 ? value.toFixed(1) : value.toFixed(2);
+  return `${rounded} ${units[unitIndex]}`;
+}
+
+function formatIso(isoString) {
+  if (!isoString) {
+    return 'Unknown';
+  }
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) {
+    return isoString;
+  }
+  return date.toLocaleString();
+}
+
+function formatTimelineDetail(message, metadata) {
+  if (metadata && Object.keys(metadata).length) {
+    return `${message || ''}${message ? ' • ' : ''}${JSON.stringify(metadata)}`;
+  }
+  return message || '';
+}
+
+function timelineEventsToItems(events = []) {
+  return events.map((event) => ({
+    id: event.eventId || `${event.type || event.action || 'event'}-${event.timestamp || event.occurredAt || Date.now()}`,
+    label: event.type || event.action || 'EVENT',
+    detail: formatTimelineDetail(event.message, event.metadata) || event.actorId || '',
+    time: event.timestamp ? formatIso(event.timestamp) : event.occurredAt ? formatIso(event.occurredAt) : nowStamp(),
+  }));
+}
+
+async function parseResponseError(response) {
+  const text = await response.text();
+  if (!text) {
+    return `HTTP ${response.status}`;
+  }
+
+  try {
+    const parsed = JSON.parse(text);
+    return parsed.error || parsed.message || text;
+  } catch {
+    return text;
+  }
+}
+
 function App() {
   const [authState, setAuthState] = useState(inferAuthState());
   const [prompt, setPrompt] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [transportStatus, setTransportStatus] = useState('idle');
+  const [tenantId, setTenantId] = useState('acme-finance');
+  const [auditWindowHours, setAuditWindowHours] = useState('24');
+  const [timelineLimit, setTimelineLimit] = useState('10');
+  const [includeActors, setIncludeActors] = useState(true);
+  const [portalData, setPortalData] = useState({
+    diagnostics: null,
+    auditSummary: null,
+    timeline: null,
+  });
+  const [portalLoading, setPortalLoading] = useState({
+    diagnostics: false,
+    auditSummary: false,
+    timeline: false,
+  });
+  const [portalErrors, setPortalErrors] = useState({
+    diagnostics: '',
+    auditSummary: '',
+    timeline: '',
+  });
   const [messages, setMessages] = useState(() => [
     makeMessage('system', 'AgentCore frontend component library loaded.'),
-    makeMessage('system', 'Use these React/Tailwind panels to compose specialized dashboards.'),
+    makeMessage('system', 'Tenancy portal diagnostics and audit timeline panels are available below.'),
   ]);
   const [events, setEvents] = useState(() => [
     { id: 'boot', label: 'UI booted', detail: `Component library v${COMPONENT_LIBRARY_VERSION}`, time: nowStamp() },
@@ -132,7 +226,7 @@ function App() {
     setEvents((current) => [
       { id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, label, detail, time: nowStamp() },
       ...current,
-    ].slice(0, 14));
+    ].slice(0, 20));
   }
 
   function refreshAuth() {
@@ -141,9 +235,126 @@ function App() {
     return next;
   }
 
+  function normalizedTenantId() {
+    return tenantId.trim();
+  }
+
+  async function fetchTenantAdminResource(kind, url, successLabel) {
+    setPortalLoading((current) => ({ ...current, [kind]: true }));
+    setPortalErrors((current) => ({ ...current, [kind]: '' }));
+    addEvent('Portal request', `${successLabel}: ${url}`);
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        const errorMessage = await parseResponseError(response);
+        setAuthState('unauthorized');
+        setTransportStatus('unauthorized');
+        setPortalErrors((current) => ({ ...current, [kind]: errorMessage || `HTTP ${response.status}` }));
+        addEvent('Portal auth required', `${successLabel}: HTTP ${response.status}`);
+        return null;
+      }
+
+      if (!response.ok) {
+        const errorMessage = await parseResponseError(response);
+        setPortalErrors((current) => ({ ...current, [kind]: errorMessage || `HTTP ${response.status}` }));
+        addEvent('Portal request failed', `${successLabel}: HTTP ${response.status}`);
+        setTransportStatus('disconnected');
+        return null;
+      }
+
+      const data = await response.json();
+      setPortalData((current) => ({ ...current, [kind]: data }));
+      setLastPayload({ kind, url, response: data });
+      setAuthState('connected');
+      setTransportStatus((current) => (current === 'idle' ? 'connected' : current));
+      addEvent('Portal response', `${successLabel} loaded`);
+      return data;
+    } catch (error) {
+      setPortalErrors((current) => ({ ...current, [kind]: error.message }));
+      addEvent('Portal transport error', `${successLabel}: ${error.message}`);
+      setTransportStatus('disconnected');
+      return null;
+    } finally {
+      setPortalLoading((current) => ({ ...current, [kind]: false }));
+    }
+  }
+
+  async function loadTenantDiagnostics() {
+    const slug = normalizedTenantId();
+    if (!slug) {
+      setPortalErrors((current) => ({ ...current, diagnostics: 'Tenant ID is required' }));
+      return null;
+    }
+
+    return fetchTenantAdminResource(
+      'diagnostics',
+      `${TENANCY_ADMIN_BASE}/${encodeURIComponent(slug)}/diagnostics`,
+      `Diagnostics ${slug}`,
+    );
+  }
+
+  async function loadTenantAuditSummary() {
+    const slug = normalizedTenantId();
+    if (!slug) {
+      setPortalErrors((current) => ({ ...current, auditSummary: 'Tenant ID is required' }));
+      return null;
+    }
+
+    const windowHours = parseIntegerInput(auditWindowHours, 24, { min: 1, max: 168 });
+    const params = new URLSearchParams({
+      windowHours: String(windowHours),
+      includeActors: includeActors ? 'true' : 'false',
+    });
+
+    return fetchTenantAdminResource(
+      'auditSummary',
+      `${TENANCY_ADMIN_BASE}/${encodeURIComponent(slug)}/audit-summary?${params.toString()}`,
+      `Audit summary ${slug}`,
+    );
+  }
+
+  async function loadTenantTimeline() {
+    const slug = normalizedTenantId();
+    if (!slug) {
+      setPortalErrors((current) => ({ ...current, timeline: 'Tenant ID is required' }));
+      return null;
+    }
+
+    const limit = parseIntegerInput(timelineLimit, 10, { min: 1, max: 100 });
+    const params = new URLSearchParams({ limit: String(limit) });
+
+    return fetchTenantAdminResource(
+      'timeline',
+      `${TENANCY_ADMIN_BASE}/${encodeURIComponent(slug)}/timeline?${params.toString()}`,
+      `Timeline ${slug}`,
+    );
+  }
+
+  async function refreshTenantPortal() {
+    const slug = normalizedTenantId();
+    if (!slug) {
+      setPortalErrors({
+        diagnostics: 'Tenant ID is required',
+        auditSummary: 'Tenant ID is required',
+        timeline: 'Tenant ID is required',
+      });
+      addEvent('Portal validation', 'Tenant ID is required before loading portal data');
+      return;
+    }
+
+    addEvent('Portal refresh', `Loading diagnostics, audit summary, and timeline for ${slug}`);
+    await Promise.allSettled([loadTenantDiagnostics(), loadTenantAuditSummary(), loadTenantTimeline()]);
+  }
+
   async function loadToolCatalog() {
     setToolsLoading(true);
-    addEvent('Catalog lookup', 'Checking for generated MCP OpenAPI spec');
+    addEvent('Catalog lookup', 'Checking for generated Tenancy/MCP OpenAPI specs');
 
     for (const candidate of OPENAPI_CANDIDATE_URLS) {
       try {
@@ -320,11 +531,17 @@ function App() {
 
   const assistantMessages = messages.filter((msg) => msg.role === 'assistant').length;
   const errors = messages.filter((msg) => msg.role === 'error').length;
+  const portalErrorCount = Object.values(portalErrors).filter(Boolean).length;
+  const diagnostics = portalData.diagnostics;
+  const auditSummary = portalData.auditSummary;
+  const tenantTimeline = portalData.timeline;
+  const portalBusy = Object.values(portalLoading).some(Boolean);
+
   const metrics = [
     {
       label: 'Session State',
       value: authState === 'connected' ? 'Authorized' : 'Sign-In Needed',
-      detail: authState === 'connected' ? 'Cookie detected in browser context' : 'Use OIDC login to create session',
+      detail: authState === 'connected' ? 'API access confirmed in browser session' : 'Use OIDC login to create session',
       tone: authState === 'connected' ? 'success' : 'warning',
     },
     {
@@ -340,17 +557,29 @@ function App() {
       tone: isStreaming ? 'info' : 'neutral',
     },
     {
-      label: 'Tool Catalog Entries',
+      label: 'API Catalog Entries',
       value: String(toolCatalog.length),
       detail: toolSource,
       tone: toolCatalog.length ? 'success' : 'neutral',
+    },
+    {
+      label: 'Tenant Health',
+      value: diagnostics?.health || 'Not Loaded',
+      detail: diagnostics?.generatedAt ? `Generated ${formatIso(diagnostics.generatedAt)}` : 'Load tenant diagnostics',
+      tone: diagnostics?.health === 'HEALTHY' ? 'success' : diagnostics ? 'warning' : 'neutral',
+    },
+    {
+      label: 'Timeline Events',
+      value: String(tenantTimeline?.events?.length || 0),
+      detail: portalBusy ? 'Refreshing tenant portal data' : `${portalErrorCount} portal error(s)`,
+      tone: portalErrorCount ? 'warning' : tenantTimeline?.events?.length ? 'info' : 'neutral',
     },
   ];
 
   function clearTranscript() {
     setMessages([
       makeMessage('system', 'Transcript cleared.'),
-      makeMessage('system', 'Compose a new dashboard interaction. Components remain reusable.'),
+      makeMessage('system', 'Portal diagnostics and timeline data remain available until refreshed.'),
     ]);
     addEvent('Transcript cleared', 'Chat messages removed from local state');
   }
@@ -360,12 +589,81 @@ function App() {
     window.location.href = AUTH_URL;
   }
 
+  const diagnosticsMetrics = diagnostics
+    ? [
+        {
+          label: 'Health',
+          value: diagnostics.health || 'UNKNOWN',
+          detail: diagnostics.generatedAt ? `Generated ${formatIso(diagnostics.generatedAt)}` : 'No generation timestamp',
+          tone: diagnostics.health === 'HEALTHY' ? 'success' : 'warning',
+        },
+        {
+          label: 'Policy Version',
+          value: diagnostics.policyVersion || 'Unknown',
+          detail: diagnostics.appId ? `App ${diagnostics.appId}` : 'App scope unavailable',
+          tone: 'info',
+        },
+        {
+          label: 'Deployment SHA',
+          value: diagnostics.lastDeploymentSha ? String(diagnostics.lastDeploymentSha).slice(0, 12) : 'Unknown',
+          detail: diagnostics.lastDeploymentSha || 'No deployment SHA reported',
+          tone: 'neutral',
+        },
+        {
+          label: 'Memory Usage',
+          value: formatBytes(diagnostics.memoryUsage?.usedBytes),
+          detail: diagnostics.memoryUsage?.summary || 'No memory usage summary',
+          tone: 'neutral',
+        },
+      ]
+    : [];
+
+  const auditMetrics = auditSummary
+    ? [
+        {
+          label: 'Total Events',
+          value: String(auditSummary.summary?.totalEvents ?? 0),
+          detail: auditSummary.window ? `${auditSummary.window.hours}h window` : 'No window metadata',
+          tone: 'info',
+        },
+        {
+          label: 'Success / Failure',
+          value: `${auditSummary.summary?.successCount ?? 0} / ${auditSummary.summary?.failureCount ?? 0}`,
+          detail: auditSummary.generatedAt ? `Generated ${formatIso(auditSummary.generatedAt)}` : 'No generation timestamp',
+          tone: (auditSummary.summary?.failureCount ?? 0) > 0 ? 'warning' : 'success',
+        },
+        {
+          label: 'Credential Rotations',
+          value: String(auditSummary.summary?.credentialRotations ?? 0),
+          detail: 'Within selected window',
+          tone: 'neutral',
+        },
+        {
+          label: 'Suspensions',
+          value: String(auditSummary.summary?.suspensions ?? 0),
+          detail: 'Within selected window',
+          tone: (auditSummary.summary?.suspensions ?? 0) > 0 ? 'warning' : 'neutral',
+        },
+      ]
+    : [];
+
+  const timelineItems = timelineEventsToItems(tenantTimeline?.events || []);
+  const auditRecentItems = timelineEventsToItems(
+    (auditSummary?.lastEvents || []).map((item) => ({
+      eventId: item.eventId,
+      occurredAt: item.occurredAt,
+      action: `${item.action || 'AUDIT'}:${item.result || 'UNKNOWN'}`,
+      message: item.actorId ? `${item.actorType || 'ACTOR'} ${item.actorId}` : item.action,
+    })),
+  );
+
   const toolbar = html`
     <div className="flex flex-wrap items-center gap-2">
       <${StatusBadge} state=${statusState} label=${statusLabel} />
       <${ActionButton} label="Refresh Auth" onClick=${refreshAuth} />
-      <${ActionButton} label="Reload Tools" onClick=${loadToolCatalog} disabled=${toolsLoading} />
-      <${ActionButton} label="Clear" onClick=${clearTranscript} tone="danger" />
+      <${ActionButton} label="Reload API Catalog" onClick=${loadToolCatalog} disabled=${toolsLoading} />
+      <${ActionButton} label="Refresh Tenant" onClick=${refreshTenantPortal} disabled=${portalBusy} tone="primary" />
+      <${ActionButton} label="Clear Chat" onClick=${clearTranscript} tone="danger" />
     </div>
   `;
 
@@ -379,7 +677,7 @@ function App() {
       </div>
     </${Panel}>
 
-    <${Panel} title="Tool Catalog" subtitle="Auto-loads MCP OpenAPI output when available.">
+    <${Panel} title="API Catalog" subtitle="Auto-loads tenancy admin OpenAPI (or MCP fallback) when available.">
       <${ToolCatalog} tools=${toolCatalog} sourceLabel=${toolSource} loading=${toolsLoading} />
     </${Panel}>
 
@@ -394,25 +692,167 @@ function App() {
 
   return html`
     <${AppShell}
-      title="AgentCore Operator Console"
-      subtitle="Static-hosted dashboard shell using reusable React/Tailwind components (no bundler required)."
+      title="AgentCore Tenant Operations Portal"
+      subtitle="Static-hosted tenancy diagnostics and audit timeline UI built on the reusable React/Tailwind component library."
       status=${html``}
       toolbar=${toolbar}
       sidebar=${sidebar}
     >
       <${Panel}
         title="Session Overview"
-        subtitle="Composable cards for auth, metrics, and runtime state."
+        subtitle="Composable cards for auth, streaming, and tenancy operational state."
       >
         <div className="space-y-4">
           <${MetricGrid} items=${metrics} />
-          ${authState !== 'connected' ? html`<${AuthCard} onLogin=${handleLogin} />` : null}
+          ${authState !== 'connected' ? html`<${AuthCard} onLogin=${handleLogin} message="Authentication required to load tenant diagnostics and audit timeline data." />` : null}
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-white">Tenant Diagnostics Controls</p>
+                <p className="mt-1 text-xs text-slate-300/80">Consume C3 tenancy admin endpoints for diagnostics, bounded audit summary, and timeline views.</p>
+              </div>
+              ${portalBusy ? html`<${StatusBadge} state="streaming" label="LOADING" />` : html`<${StatusBadge} state="idle" label="READY" />`}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <label className="text-xs text-slate-200">
+                <span className="mb-1 block uppercase tracking-wide text-slate-300/75">Tenant ID</span>
+                <input
+                  type="text"
+                  value=${tenantId}
+                  onInput=${(event) => setTenantId(event.target.value)}
+                  placeholder="acme-finance"
+                  className="w-full rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-400/70 focus:border-sky-300/40"
+                />
+              </label>
+              <label className="text-xs text-slate-200">
+                <span className="mb-1 block uppercase tracking-wide text-slate-300/75">Audit Window (hours)</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="168"
+                  value=${auditWindowHours}
+                  onInput=${(event) => setAuditWindowHours(event.target.value)}
+                  className="w-full rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-sky-300/40"
+                />
+              </label>
+              <label className="text-xs text-slate-200">
+                <span className="mb-1 block uppercase tracking-wide text-slate-300/75">Timeline Limit</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value=${timelineLimit}
+                  onInput=${(event) => setTimelineLimit(event.target.value)}
+                  className="w-full rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-sky-300/40"
+                />
+              </label>
+              <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2 text-xs text-slate-200">
+                <input
+                  type="checkbox"
+                  checked=${includeActors}
+                  onChange=${(event) => setIncludeActors(event.target.checked)}
+                  className="h-4 w-4 rounded border-white/20 bg-slate-900 text-sky-300"
+                />
+                Include actor breakdown
+              </label>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <${ActionButton} label="Load All" onClick=${refreshTenantPortal} disabled=${portalBusy} tone="primary" />
+              <${ActionButton} label="Diagnostics" onClick=${loadTenantDiagnostics} disabled=${portalLoading.diagnostics} />
+              <${ActionButton} label="Audit Summary" onClick=${loadTenantAuditSummary} disabled=${portalLoading.auditSummary} />
+              <${ActionButton} label="Timeline" onClick=${loadTenantTimeline} disabled=${portalLoading.timeline} />
+            </div>
+            <div className="mt-3 text-xs text-slate-300/75">
+              Endpoints: <span className="font-mono">/diagnostics</span>, <span className="font-mono">/audit-summary</span>, <span className="font-mono">/timeline</span>
+            </div>
+          </div>
         </div>
       </${Panel}>
 
       <${Panel}
+        title="Tenant Diagnostics"
+        subtitle="Health, deployment SHA, policy version, and memory usage summary from the tenancy admin API."
+        bodyClassName="space-y-4"
+      >
+        ${portalErrors.diagnostics
+          ? html`<div className="rounded-xl border border-rose-300/20 bg-rose-300/5 px-3 py-2 text-xs text-rose-100">${portalErrors.diagnostics}</div>`
+          : null}
+        ${diagnostics
+          ? html`
+              <${MetricGrid} items=${diagnosticsMetrics} />
+              <${JsonPreview} data=${diagnostics} emptyLabel="No diagnostics response loaded." />
+            `
+          : html`<p className="text-xs text-slate-300/80">Load a tenant to populate diagnostics.</p>`}
+      </${Panel}>
+
+      <${Panel}
+        title="Tenant Audit Summary"
+        subtitle="Bounded audit counts and actor breakdown for the selected tenant."
+        bodyClassName="space-y-4"
+      >
+        ${portalErrors.auditSummary
+          ? html`<div className="rounded-xl border border-rose-300/20 bg-rose-300/5 px-3 py-2 text-xs text-rose-100">${portalErrors.auditSummary}</div>`
+          : null}
+        ${auditSummary
+          ? html`
+              <${MetricGrid} items=${auditMetrics} />
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <div className="text-xs uppercase tracking-wide text-slate-300/75">Window</div>
+                  <div className="mt-2 space-y-1 text-xs text-slate-200">
+                    <div><span className="text-slate-400">From:</span> ${formatIso(auditSummary.window?.from)}</div>
+                    <div><span className="text-slate-400">To:</span> ${formatIso(auditSummary.window?.to)}</div>
+                    <div><span className="text-slate-400">Generated:</span> ${formatIso(auditSummary.generatedAt)}</div>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <div className="text-xs uppercase tracking-wide text-slate-300/75">Actor Breakdown</div>
+                  ${(auditSummary.actorBreakdown || []).length
+                    ? html`
+                        <ul className="mt-2 space-y-2 text-xs">
+                          ${(auditSummary.actorBreakdown || []).map(
+                            (actor) => html`
+                              <li key=${actor.actorId} className="rounded-lg border border-white/10 bg-slate-950/50 px-3 py-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="font-mono text-slate-100">${actor.actorId}</span>
+                                  <span className="text-slate-300">${actor.count}</span>
+                                </div>
+                                <div className="mt-1 text-[11px] uppercase tracking-wide text-slate-400">${actor.actorType}</div>
+                              </li>
+                            `,
+                          )}
+                        </ul>
+                      `
+                    : html`<p className="mt-2 text-xs text-slate-300/80">No actor breakdown returned (toggle \"Include actor breakdown\").</p>`}
+                </div>
+              </div>
+              <div>
+                <div className="mb-2 text-xs uppercase tracking-wide text-slate-300/75">Recent Audit Events</div>
+                <${Timeline} events=${auditRecentItems} />
+              </div>
+            `
+          : html`<p className="text-xs text-slate-300/80">Load the audit summary to view counts and actor breakdown.</p>`}
+      </${Panel}>
+
+      <${Panel}
+        title="Tenant Audit Timeline"
+        subtitle="Timeline endpoint view consumable by portal operators and API clients."
+        bodyClassName="space-y-4"
+      >
+        ${portalErrors.timeline
+          ? html`<div className="rounded-xl border border-rose-300/20 bg-rose-300/5 px-3 py-2 text-xs text-rose-100">${portalErrors.timeline}</div>`
+          : null}
+        ${tenantTimeline
+          ? html`
+              <${Timeline} events=${timelineItems} />
+              <${JsonPreview} data=${tenantTimeline} emptyLabel="No timeline response loaded." />
+            `
+          : html`<p className="text-xs text-slate-300/80">Load the tenant timeline to inspect recent tenant events.</p>`}
+      </${Panel}>
+
+      <${Panel}
         title="Conversation"
-        subtitle="Drop this transcript panel into any specialist dashboard."
+        subtitle="Optional chat panel retained for streaming/BFF validation while using the portal UI."
         className="min-h-[22rem]"
         bodyClassName="space-y-4"
       >
