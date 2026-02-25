@@ -216,7 +216,7 @@ jobs:
       - name: Validate examples (local init via script)
         run: |
           cd terraform
-          bash scripts/validate_examples.sh || echo "WARN: Examples validation skipped or failed"
+          bash scripts/validate_examples.sh
 
   template-test:
     runs-on: ubuntu-latest
