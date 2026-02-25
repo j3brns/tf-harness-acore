@@ -87,6 +87,27 @@ make validate-version-metadata
 make docs
 ```
 
+#### AgentCore SDK API-Surface Smoke Tests (Issue #116)
+
+The deepresearch example depends on specific `bedrock_agentcore` import paths and API shapes.
+Smoke tests in `examples/3-deepresearch/agent-code/tests/unit/test_agentcore_sdk_smoke.py` verify that:
+- `bedrock_agentcore.BedrockAgentCoreApp` is importable, is a class, and exposes `entrypoint` and `run`
+- `bedrock_agentcore.memory.integrations.strands.config.AgentCoreMemoryConfig` is importable and has the expected Pydantic fields
+- `bedrock_agentcore.memory.integrations.strands.session_manager.AgentCoreMemorySessionManager` is importable and has the expected constructor signature
+
+These tests run offline (no AWS credentials or network calls):
+
+```bash
+cd examples/3-deepresearch/agent-code
+python3 -m pytest tests/unit/test_agentcore_sdk_smoke.py -v
+
+# Or run the full deepresearch unit suite (includes smoke tests):
+python3 -m pytest tests/unit -v
+
+# Or via make (from repo root):
+make test-python-unit
+```
+
 #### MCP Tools OpenAPI + Typed Client Generation
 
 The project includes a script to automatically generate an OpenAPI 3.1.0 specification from the MCP tools registry defined in `examples/mcp-servers/*/handler.py`.
