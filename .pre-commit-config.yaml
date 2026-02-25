@@ -141,6 +141,14 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: sdk-version-drift-check
+        name: Check SDK Version Consistency (Strands/AgentCore)
+        description: Detects version drift for Strands and AgentCore SDKs across examples
+        entry: python3 terraform/scripts/report_sdk_drift.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: scratch-ephemeral-check
         name: Block .scratch Commits
         description: Prevents committing ephemeral files from .scratch/
