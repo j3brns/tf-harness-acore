@@ -44,6 +44,16 @@ Sources:
 - https://docs.aws.amazon.com/general/latest/gr/bedrock_agentcore.html
 - https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-regions.html
 
+Regional source-of-truth policy (Issue #104, checked `2026-02-25`):
+- `agentcore_region` deployability: AWS General Reference AgentCore endpoints (control + data plane), enforced by `make validate-region`.
+- AgentCore feature coverage (`enable_policy_engine`, `enable_evaluations`): AgentCore feature-region matrix, enforced by Terraform preconditions.
+- `bedrock_region` compatibility: Amazon Bedrock model support + inference profile support + cross-Region inference (CRIS) docs/IAM/SCP requirements. `make validate-region` warns on split `bedrock_region` configs but does not validate model-specific support or CRIS destination-region permissions.
+Sources:
+- https://docs.aws.amazon.com/general/latest/gr/bedrock_agentcore.html
+- https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-regions.html
+- https://docs.aws.amazon.com/bedrock/latest/userguide/cross-region-inference.html
+- https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-support.html
+
 ## Development Workflow
 
 ### Making Changes
@@ -54,6 +64,8 @@ Sources:
 
 # 2. Validate locally (NO AWS needed)
 make validate-region TFVARS=../examples/1-hello-world/terraform.tfvars
+# Optional: test an explicit Bedrock split override (warning-only guidance, not model validation)
+make validate-region TFVARS=../examples/1-hello-world/terraform.tfvars BEDROCK_REGION=eu-west-2
 cd terraform
 terraform fmt -recursive
 terraform validate

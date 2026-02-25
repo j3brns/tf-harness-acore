@@ -211,11 +211,12 @@ test-all: test test-python ## Run all tests (Terraform + Python)
 streaming-load-test: ## Run BFF/AgentCore streaming load tester (pass ARGS='...')
 	python3 terraform/scripts/streaming_load_tester.py $(ARGS)
 
-validate-region: ## Validate AgentCore Runtime region deployability (TFVARS=... or REGION=/AGENTCORE_REGION=/BFF_REGION=...)
+validate-region: ## Validate AgentCore Runtime region deployability (TFVARS=... or REGION=/AGENTCORE_REGION=/BEDROCK_REGION=/BFF_REGION=...)
 	python3 terraform/scripts/validate_agentcore_runtime_region.py \
 		$(if $(TFVARS),--tfvars "$(TFVARS)",) \
 		$(if $(REGION),--region "$(REGION)",) \
 		$(if $(AGENTCORE_REGION),--agentcore-region "$(AGENTCORE_REGION)",) \
+		$(if $(BEDROCK_REGION),--bedrock-region "$(BEDROCK_REGION)",) \
 		$(if $(BFF_REGION),--bff-region "$(BFF_REGION)",)
 
 validate-version-metadata: ## Validate VERSION, CHANGELOG.md, and docs version metadata consistency

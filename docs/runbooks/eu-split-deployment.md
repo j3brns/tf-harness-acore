@@ -6,6 +6,19 @@ Deploy AgentCore in one EU region while using a different EU region for Bedrock 
 Use this split **only if** the AgentCore control plane is not available in your preferred region (for example, London).
 Always verify current regional availability before deciding to split.
 
+## Region Source-of-Truth Policy (checked `2026-02-25`)
+
+Use different AWS sources for different decisions:
+
+1. **AgentCore deployability in `agentcore_region` (hard fail in repo)**
+   Source of truth: AWS General Reference AgentCore endpoints (control + data plane) for this repo's deployability path.
+2. **AgentCore feature coverage in `agentcore_region` (hard fail in Terraform)**
+   Source of truth: AgentCore feature-region matrix (Runtime/Gateway/Policy/Evaluations/etc.).
+3. **Bedrock model/inference behavior in `bedrock_region` (operator check, repo warns only)**
+   Source of truth: Bedrock model support + inference profile support + cross-Region inference (CRIS) docs, including IAM/SCP destination-region requirements.
+
+This repo's `make validate-region` enforces (1), Terraform preconditions enforce common cases for (2), and `make validate-region` emits guidance warnings for split `bedrock_region` configs under (3) but does not validate model-specific Bedrock support.
+
 ## Recommended EU Mappings
 
 Common patterns:
@@ -37,7 +50,12 @@ bff_region       = ""
 ## Preconditions
 
 1. Confirm AgentCore availability in the chosen `agentcore_region` (check AWS regional availability).
+   Recommended repo check:
+   ```bash
+   make validate-region TFVARS=../examples/your-agent/terraform.tfvars
+   ```
 2. Confirm Bedrock model and inference profile availability in `bedrock_region`.
+   If using cross-Region inference (CRIS), confirm IAM/SCP permissions allow all destination Regions for the selected profile.
 3. Ensure MCP Lambda ARNs in `mcp_targets` exist in `agentcore_region`.
 4. If BFF is split, update OAuth redirect URIs for the BFF region domain.
 
@@ -77,3 +95,10 @@ aws apigateway get-rest-apis --region eu-west-2
 ## Rollback
 
 Set `agentcore_region`, `bedrock_region`, and `bff_region` to empty values and re-apply to return to single-region deployment.
+
+## Sources (checked `2026-02-25`)
+
+- AWS General Reference (AgentCore endpoints): https://docs.aws.amazon.com/general/latest/gr/bedrock_agentcore.html
+- AgentCore feature-region matrix: https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-regions.html
+- Amazon Bedrock cross-Region inference (CRIS): https://docs.aws.amazon.com/bedrock/latest/userguide/cross-region-inference.html
+- Amazon Bedrock inference profile region support: https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-support.html
