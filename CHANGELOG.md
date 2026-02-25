@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Added
 - Automated `make validate-version-metadata` guard (with CI + pre-commit enforcement) to keep `VERSION`, `CHANGELOG.md`, and docs version metadata aligned (Issue #103).
+- Frontend Playwright Smoke test workflow (`.github/workflows/frontend-playwright-smoke.yml`) for PR and main branch validation (Issue #101).
 - Policy and tag conformance report generation via `make policy-report` (Issue #61).
 - Automated IAM wildcard and tag taxonomy inventory script `terraform/scripts/generate_policy_conformance_report.py`.
 - Baseline governance report published at `docs/POLICY_CONFORMANCE_REPORT.md`.

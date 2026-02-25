@@ -9,9 +9,11 @@ This guide covers the development workflow for contributors. For initial account
 - Canonical repo version lives in `VERSION`.
 - Current release line is `0.1.x`.
 - Release tags are immutable and formatted as `vMAJOR.MINOR.PATCH` (example `v0.1.0`).
+- Checkpoint tags are non-release markers and MUST use a non-`v*` prefix (recommended: `checkpoint/<label>`).
 - When bumping version, update `VERSION` and `CHANGELOG.md` in the same commit.
 - Run `make validate-version-metadata` to verify `VERSION`, `CHANGELOG.md`, `README.md`, `DEVELOPER_GUIDE.md`, and `docs/architecture.md` stay in sync.
 - Push release refs to both remotes: `origin` (GitHub) and `gitlab` (GitLab).
+- Use `make push-tag-both TAG=v0.1.0` for releases and `make push-checkpoint-tag-both TAG=checkpoint/<label>` for checkpoints.
 
 ## Core Variables
 
@@ -490,6 +492,8 @@ pre-commit run --all-files
 
 ### GitHub Actions (validation only)
 - Runs docs/tests gate, Terraform fmt/validate, TFLint, Checkov, and example validation.
+- Runs `Frontend Playwright Smoke` tests on PRs and pushes to main affecting frontend or test paths.
+- `release-tag-guard` accepts only strict release tags (`vMAJOR.MINOR.PATCH`); use `checkpoint/*` for non-release checkpoints.
 - Uses `terraform init -backend=false` on the runner (local only, no AWS).
 - Uses shared GitHub Actions for Terraform, TFLint, and Checkov setup plus caching.
 - Caches Terraform plugins, TFLint plugins, and pip downloads to speed CI runs.
@@ -529,10 +533,18 @@ git push gitlab main
 **Prod**: Manual from tag
 ```bash
 # Tag the same commit SHA that passed main deploy:test + smoke-test:test
+# Release tags only: vMAJOR.MINOR.PATCH
 git tag v0.1.0
 git push origin v0.1.0
 git push gitlab v0.1.0
 # gate:prod-from-test must pass, then trigger deploy-prod manually
+```
+
+**Checkpoint tags**: Non-release markers (no GitLab prod promotion semantics)
+```bash
+# Use a non-v prefix so CI does not interpret it as a release tag
+git tag checkpoint/2026-02-25-ci-hardening
+make push-checkpoint-tag-both TAG=checkpoint/2026-02-25-ci-hardening
 ```
 
 ## Best Practices
