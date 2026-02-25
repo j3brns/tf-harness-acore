@@ -116,6 +116,8 @@ def test_contract_metadata_and_required_paths():
         ("/api/tenancy/v1/admin/tenants/{tenantId}:suspend", "post"),
         ("/api/tenancy/v1/admin/tenants/{tenantId}:rotate-credentials", "post"),
         ("/api/tenancy/v1/admin/tenants/{tenantId}/audit-summary", "get"),
+        ("/api/tenancy/v1/admin/tenants/{tenantId}/diagnostics", "get"),
+        ("/api/tenancy/v1/admin/tenants/{tenantId}/timeline", "get"),
     }
     found = {(path, method) for path, path_item in spec["paths"].items() for method in path_item.keys()}
     for item in required:
@@ -185,6 +187,20 @@ def test_request_and_response_fixtures_match_contract_schemas():
                 "200",
             ),
         ),
+        (
+            FIXTURES_DIR / "fetch-tenant-diagnostics.response.json",
+            _json_schema_from_media(
+                _operation(spec, "/api/tenancy/v1/admin/tenants/{tenantId}/diagnostics", "get"),
+                "200",
+            ),
+        ),
+        (
+            FIXTURES_DIR / "fetch-tenant-timeline.response.json",
+            _json_schema_from_media(
+                _operation(spec, "/api/tenancy/v1/admin/tenants/{tenantId}/timeline", "get"),
+                "200",
+            ),
+        ),
     ]
 
     for fixture_path, schema in fixture_map:
@@ -205,3 +221,22 @@ def test_fetch_audit_summary_request_fixture_matches_parameter_contract():
 
     _assert_matches_schema(spec, window_schema, request_fixture["query"]["windowHours"], "$.query.windowHours")
     _assert_matches_schema(spec, include_schema, request_fixture["query"]["includeActors"], "$.query.includeActors")
+
+
+def test_fetch_diagnostics_request_fixture_matches_parameter_contract():
+    spec = _spec()
+    request_fixture = _load_json(FIXTURES_DIR / "fetch-tenant-diagnostics.request.json")
+    assert request_fixture["path"]["tenantId"] == "acme-finance"
+
+
+def test_fetch_timeline_request_fixture_matches_parameter_contract():
+    spec = _spec()
+    request_fixture = _load_json(FIXTURES_DIR / "fetch-tenant-timeline.request.json")
+    op = _operation(spec, "/api/tenancy/v1/admin/tenants/{tenantId}/timeline", "get")
+
+    assert request_fixture["path"]["tenantId"] == "acme-finance"
+
+    params = {p["name"]: p for p in op["parameters"] if "name" in p}
+    limit_schema = params["limit"]["schema"]
+
+    _assert_matches_schema(spec, limit_schema, request_fixture["query"]["limit"], "$.query.limit")

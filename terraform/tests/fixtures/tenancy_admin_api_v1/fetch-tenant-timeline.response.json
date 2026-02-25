@@ -1,0 +1,31 @@
+{
+  "tenantId": "acme-finance",
+  "appId": "agent-core-app-1",
+  "events": [
+    {
+      "eventId": "evt-001",
+      "timestamp": "2026-02-25T11:55:00Z",
+      "type": "CHAT_SESSION_STARTED",
+      "message": "Chat session started for tenant acme-finance",
+      "metadata": {
+        "sessionId": "session-123"
+      }
+    },
+    {
+      "eventId": "evt-002",
+      "timestamp": "2026-02-25T11:30:00Z",
+      "type": "POLICY_UPDATED",
+      "message": "Access policy updated to v1.2.3",
+      "metadata": {
+        "version": "v1.2.3"
+      }
+    },
+    {
+      "eventId": "evt-003",
+      "timestamp": "2026-02-24T15:00:00Z",
+      "type": "ONBOARDING_COMPLETE",
+      "message": "Onboarding process completed successfully"
+    }
+  ],
+  "generatedAt": "2026-02-25T12:00:00Z"
+}

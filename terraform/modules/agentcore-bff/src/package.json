@@ -5,6 +5,7 @@
     "test": "jest --verbose"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.0.0",
     "@aws-sdk/client-sts": "^3.0.0",
     "@aws-sdk/credential-provider-node": "^3.0.0",
     "@smithy/signature-v4": "^2.0.0",

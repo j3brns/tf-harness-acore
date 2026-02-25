@@ -24,7 +24,13 @@ resource "aws_api_gateway_deployment" "bff" {
       aws_api_gateway_resource.api,
       aws_api_gateway_method.login,
       aws_api_gateway_method.callback,
-      aws_api_gateway_method.chat
+      aws_api_gateway_method.chat,
+      aws_api_gateway_method.create_tenant,
+      aws_api_gateway_method.suspend_tenant,
+      aws_api_gateway_method.rotate_tenant_credentials,
+      aws_api_gateway_method.fetch_tenant_audit_summary,
+      aws_api_gateway_method.fetch_tenant_diagnostics,
+      aws_api_gateway_method.fetch_tenant_timeline
     ]))
   }
 
@@ -38,7 +44,19 @@ resource "aws_api_gateway_deployment" "bff" {
     aws_api_gateway_method.callback,
     aws_api_gateway_integration.callback,
     aws_api_gateway_method.chat,
-    aws_api_gateway_integration.chat
+    aws_api_gateway_integration.chat,
+    aws_api_gateway_method.create_tenant,
+    aws_api_gateway_integration.create_tenant,
+    aws_api_gateway_method.suspend_tenant,
+    aws_api_gateway_integration.suspend_tenant,
+    aws_api_gateway_method.rotate_tenant_credentials,
+    aws_api_gateway_integration.rotate_tenant_credentials,
+    aws_api_gateway_method.fetch_tenant_audit_summary,
+    aws_api_gateway_integration.fetch_tenant_audit_summary,
+    aws_api_gateway_method.fetch_tenant_diagnostics,
+    aws_api_gateway_integration.fetch_tenant_diagnostics,
+    aws_api_gateway_method.fetch_tenant_timeline,
+    aws_api_gateway_integration.fetch_tenant_timeline
   ]
 }
 
@@ -135,6 +153,78 @@ resource "aws_api_gateway_resource" "chat" {
   path_part   = "chat"
 }
 
+# --- Tenancy Admin API ---
+
+resource "aws_api_gateway_resource" "tenancy" {
+  count       = var.enable_bff ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.bff[0].id
+  parent_id   = aws_api_gateway_resource.api[0].id
+  path_part   = "tenancy"
+}
+
+resource "aws_api_gateway_resource" "tenancy_v1" {
+  count       = var.enable_bff ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.bff[0].id
+  parent_id   = aws_api_gateway_resource.tenancy[0].id
+  path_part   = "v1"
+}
+
+resource "aws_api_gateway_resource" "tenancy_admin" {
+  count       = var.enable_bff ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.bff[0].id
+  parent_id   = aws_api_gateway_resource.tenancy_v1[0].id
+  path_part   = "admin"
+}
+
+resource "aws_api_gateway_resource" "tenants" {
+  count       = var.enable_bff ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.bff[0].id
+  parent_id   = aws_api_gateway_resource.tenancy_admin[0].id
+  path_part   = "tenants"
+}
+
+resource "aws_api_gateway_resource" "tenant_item" {
+  count       = var.enable_bff ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.bff[0].id
+  parent_id   = aws_api_gateway_resource.tenants[0].id
+  path_part   = "{tenantId}"
+}
+
+resource "aws_api_gateway_resource" "tenant_diagnostics" {
+  count       = var.enable_bff ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.bff[0].id
+  parent_id   = aws_api_gateway_resource.tenant_item[0].id
+  path_part   = "diagnostics"
+}
+
+resource "aws_api_gateway_resource" "tenant_timeline" {
+  count       = var.enable_bff ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.bff[0].id
+  parent_id   = aws_api_gateway_resource.tenant_item[0].id
+  path_part   = "timeline"
+}
+
+resource "aws_api_gateway_resource" "tenant_audit_summary" {
+  count       = var.enable_bff ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.bff[0].id
+  parent_id   = aws_api_gateway_resource.tenant_item[0].id
+  path_part   = "audit-summary"
+}
+
+resource "aws_api_gateway_resource" "tenant_suspend" {
+  count       = var.enable_bff ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.bff[0].id
+  parent_id   = aws_api_gateway_resource.tenants[0].id
+  path_part   = "{tenantId}:suspend"
+}
+
+resource "aws_api_gateway_resource" "tenant_rotate_credentials" {
+  count       = var.enable_bff ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.bff[0].id
+  parent_id   = aws_api_gateway_resource.tenants[0].id
+  path_part   = "{tenantId}:rotate-credentials"
+}
+
 # --- Authorizer ---
 
 resource "aws_api_gateway_authorizer" "token_handler" {
@@ -214,4 +304,138 @@ resource "aws_api_gateway_integration" "chat" {
   credentials             = aws_iam_role.apigw_proxy[0].arn
   response_transfer_mode  = "STREAM"
   timeout_milliseconds    = 900000
+}
+
+# --- Tenancy Admin API Methods ---
+
+# POST /api/tenancy/v1/admin/tenants
+resource "aws_api_gateway_method" "create_tenant" {
+  count         = var.enable_bff ? 1 : 0
+  rest_api_id   = aws_api_gateway_rest_api.bff[0].id
+  resource_id   = aws_api_gateway_resource.tenants[0].id
+  http_method   = "POST"
+  authorization = "CUSTOM"
+  authorizer_id = aws_api_gateway_authorizer.token_handler[0].id
+}
+
+resource "aws_api_gateway_integration" "create_tenant" {
+  count                   = var.enable_bff ? 1 : 0
+  rest_api_id             = aws_api_gateway_rest_api.bff[0].id
+  resource_id             = aws_api_gateway_resource.tenants[0].id
+  http_method             = aws_api_gateway_method.create_tenant[0].http_method
+  integration_http_method = "POST"
+  type                    = "HTTP_PROXY"
+  uri                     = aws_lambda_function_url.proxy[0].function_url
+  connection_type         = "INTERNET"
+  credentials             = aws_iam_role.apigw_proxy[0].arn
+}
+
+# POST /api/tenancy/v1/admin/tenants/{tenantId}:suspend
+resource "aws_api_gateway_method" "suspend_tenant" {
+  count         = var.enable_bff ? 1 : 0
+  rest_api_id   = aws_api_gateway_rest_api.bff[0].id
+  resource_id   = aws_api_gateway_resource.tenant_suspend[0].id
+  http_method   = "POST"
+  authorization = "CUSTOM"
+  authorizer_id = aws_api_gateway_authorizer.token_handler[0].id
+}
+
+resource "aws_api_gateway_integration" "suspend_tenant" {
+  count                   = var.enable_bff ? 1 : 0
+  rest_api_id             = aws_api_gateway_rest_api.bff[0].id
+  resource_id             = aws_api_gateway_resource.tenant_suspend[0].id
+  http_method             = aws_api_gateway_method.suspend_tenant[0].http_method
+  integration_http_method = "POST"
+  type                    = "HTTP_PROXY"
+  uri                     = aws_lambda_function_url.proxy[0].function_url
+  connection_type         = "INTERNET"
+  credentials             = aws_iam_role.apigw_proxy[0].arn
+}
+
+# POST /api/tenancy/v1/admin/tenants/{tenantId}:rotate-credentials
+resource "aws_api_gateway_method" "rotate_tenant_credentials" {
+  count         = var.enable_bff ? 1 : 0
+  rest_api_id   = aws_api_gateway_rest_api.bff[0].id
+  resource_id   = aws_api_gateway_resource.tenant_rotate_credentials[0].id
+  http_method   = "POST"
+  authorization = "CUSTOM"
+  authorizer_id = aws_api_gateway_authorizer.token_handler[0].id
+}
+
+resource "aws_api_gateway_integration" "rotate_tenant_credentials" {
+  count                   = var.enable_bff ? 1 : 0
+  rest_api_id             = aws_api_gateway_rest_api.bff[0].id
+  resource_id             = aws_api_gateway_resource.tenant_rotate_credentials[0].id
+  http_method             = aws_api_gateway_method.rotate_tenant_credentials[0].http_method
+  integration_http_method = "POST"
+  type                    = "HTTP_PROXY"
+  uri                     = aws_lambda_function_url.proxy[0].function_url
+  connection_type         = "INTERNET"
+  credentials             = aws_iam_role.apigw_proxy[0].arn
+}
+
+# GET /api/tenancy/v1/admin/tenants/{tenantId}/audit-summary
+resource "aws_api_gateway_method" "fetch_tenant_audit_summary" {
+  count         = var.enable_bff ? 1 : 0
+  rest_api_id   = aws_api_gateway_rest_api.bff[0].id
+  resource_id   = aws_api_gateway_resource.tenant_audit_summary[0].id
+  http_method   = "GET"
+  authorization = "CUSTOM"
+  authorizer_id = aws_api_gateway_authorizer.token_handler[0].id
+}
+
+resource "aws_api_gateway_integration" "fetch_tenant_audit_summary" {
+  count                   = var.enable_bff ? 1 : 0
+  rest_api_id             = aws_api_gateway_rest_api.bff[0].id
+  resource_id             = aws_api_gateway_resource.tenant_audit_summary[0].id
+  http_method             = aws_api_gateway_method.fetch_tenant_audit_summary[0].http_method
+  integration_http_method = "POST"
+  type                    = "HTTP_PROXY"
+  uri                     = aws_lambda_function_url.proxy[0].function_url
+  connection_type         = "INTERNET"
+  credentials             = aws_iam_role.apigw_proxy[0].arn
+}
+
+# GET /api/tenancy/v1/admin/tenants/{tenantId}/diagnostics
+resource "aws_api_gateway_method" "fetch_tenant_diagnostics" {
+  count         = var.enable_bff ? 1 : 0
+  rest_api_id   = aws_api_gateway_rest_api.bff[0].id
+  resource_id   = aws_api_gateway_resource.tenant_diagnostics[0].id
+  http_method   = "GET"
+  authorization = "CUSTOM"
+  authorizer_id = aws_api_gateway_authorizer.token_handler[0].id
+}
+
+resource "aws_api_gateway_integration" "fetch_tenant_diagnostics" {
+  count                   = var.enable_bff ? 1 : 0
+  rest_api_id             = aws_api_gateway_rest_api.bff[0].id
+  resource_id             = aws_api_gateway_resource.tenant_diagnostics[0].id
+  http_method             = aws_api_gateway_method.fetch_tenant_diagnostics[0].http_method
+  integration_http_method = "POST"
+  type                    = "HTTP_PROXY"
+  uri                     = aws_lambda_function_url.proxy[0].function_url
+  connection_type         = "INTERNET"
+  credentials             = aws_iam_role.apigw_proxy[0].arn
+}
+
+# GET /api/tenancy/v1/admin/tenants/{tenantId}/timeline
+resource "aws_api_gateway_method" "fetch_tenant_timeline" {
+  count         = var.enable_bff ? 1 : 0
+  rest_api_id   = aws_api_gateway_rest_api.bff[0].id
+  resource_id   = aws_api_gateway_resource.tenant_timeline[0].id
+  http_method   = "GET"
+  authorization = "CUSTOM"
+  authorizer_id = aws_api_gateway_authorizer.token_handler[0].id
+}
+
+resource "aws_api_gateway_integration" "fetch_tenant_timeline" {
+  count                   = var.enable_bff ? 1 : 0
+  rest_api_id             = aws_api_gateway_rest_api.bff[0].id
+  resource_id             = aws_api_gateway_resource.tenant_timeline[0].id
+  http_method             = aws_api_gateway_method.fetch_tenant_timeline[0].http_method
+  integration_http_method = "POST"
+  type                    = "HTTP_PROXY"
+  uri                     = aws_lambda_function_url.proxy[0].function_url
+  connection_type         = "INTERNET"
+  credentials             = aws_iam_role.apigw_proxy[0].arn
 }

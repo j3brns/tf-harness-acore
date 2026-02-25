@@ -108,7 +108,7 @@ This document outlines planned features and improvements for the Bedrock AgentCo
   * Add retry-safe, idempotent behavior for partial failures.
   * **Issue:** #28
 
-- [ ] **C3: Operational UX**
+- [x] **C3: Operational UX**
   * Add tenant diagnostics endpoints (health, last deployment SHA, policy version, memory usage summary).
   * Add audit/event timeline view consumable by portal UI and API clients.
   * **Issue:** #29

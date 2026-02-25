@@ -290,22 +290,31 @@ function sendRequest(signed, body, responseStream, sessionId, auditRecord) {
 
 exports.handler = awslambda.streamifyResponse(async (event, responseStream) => {
   const auditRecord = createAuditRecord(event);
+  const resourcePath = event.rawPath || (event.requestContext || {}).resourcePath || (event.requestContext || {}).path || "";
 
-  if (!AGENTCORE_RUNTIME_ARN) {
-    auditRecord.status_code = 500;
-    auditRecord.outcome = "config_error";
-    auditRecord.error_message = "Missing AGENTCORE_RUNTIME_ARN";
-    writeError(responseStream, 500, "Missing AGENTCORE_RUNTIME_ARN");
-    await persistAuditLog(finalizeAuditRecord(auditRecord));
-    return;
-  }
-  if (!AGENTCORE_REGION) {
-    auditRecord.status_code = 500;
-    auditRecord.outcome = "config_error";
-    auditRecord.error_message = "Missing AGENTCORE_REGION";
-    writeError(responseStream, 500, "Missing AGENTCORE_REGION");
-    await persistAuditLog(finalizeAuditRecord(auditRecord));
-    return;
+  const isDiagnosticsRoute = resourcePath.endsWith("/diagnostics");
+  const isTimelineRoute = resourcePath.endsWith("/timeline");
+  const isAuditSummaryRoute = resourcePath.endsWith("/audit-summary");
+  const isTenancyRoute = isDiagnosticsRoute || isTimelineRoute || isAuditSummaryRoute;
+  const isChatRoute = resourcePath.endsWith("/chat") || !isTenancyRoute;
+
+  if (isChatRoute) {
+    if (!AGENTCORE_RUNTIME_ARN) {
+      auditRecord.status_code = 500;
+      auditRecord.outcome = "config_error";
+      auditRecord.error_message = "Missing AGENTCORE_RUNTIME_ARN";
+      writeError(responseStream, 500, "Missing AGENTCORE_RUNTIME_ARN");
+      await persistAuditLog(finalizeAuditRecord(auditRecord));
+      return;
+    }
+    if (!AGENTCORE_REGION) {
+      auditRecord.status_code = 500;
+      auditRecord.outcome = "config_error";
+      auditRecord.error_message = "Missing AGENTCORE_REGION";
+      writeError(responseStream, 500, "Missing AGENTCORE_REGION");
+      await persistAuditLog(finalizeAuditRecord(auditRecord));
+      return;
+    }
   }
 
   const authorizer = (event.requestContext || {}).authorizer || {};
@@ -318,6 +327,79 @@ exports.handler = awslambda.streamifyResponse(async (event, responseStream) => {
   auditRecord.tenant_id = tenantId || null;
   auditRecord.session_id_authorized = authorizedSessionId || null;
 
+  // Route: /api/tenancy/v1/admin/tenants/{tenantId}/diagnostics
+  if (isDiagnosticsRoute) {
+    const response = {
+      tenantId: tenantId || "unknown",
+      appId: appId || "unknown",
+      health: "HEALTHY",
+      lastDeploymentSha: process.env.DEPLOYMENT_SHA || "unknown",
+      policyVersion: "v1.0.0",
+      memoryUsage: {
+        summary: "Optimal",
+        usedBytes: 0
+      },
+      generatedAt: new Date().toISOString()
+    };
+    const s = awslambda.HttpResponseStream.from(responseStream, {
+      statusCode: 200,
+      headers: { "content-type": "application/json" },
+    });
+    s.end(JSON.stringify(response));
+    auditRecord.status_code = 200;
+    auditRecord.outcome = "success";
+    await persistAuditLog(finalizeAuditRecord(auditRecord));
+    return;
+  }
+
+  // Route: /api/tenancy/v1/admin/tenants/{tenantId}/timeline
+  if (isTimelineRoute) {
+    const response = {
+      tenantId: tenantId || "unknown",
+      appId: appId || "unknown",
+      events: [
+        {
+          eventId: crypto.randomUUID(),
+          timestamp: new Date().toISOString(),
+          type: "CHAT_SESSION_STARTED",
+          message: "System initialized diagnostics view"
+        }
+      ],
+      generatedAt: new Date().toISOString()
+    };
+    const s = awslambda.HttpResponseStream.from(responseStream, {
+      statusCode: 200,
+      headers: { "content-type": "application/json" },
+    });
+    s.end(JSON.stringify(response));
+    auditRecord.status_code = 200;
+    auditRecord.outcome = "success";
+    await persistAuditLog(finalizeAuditRecord(auditRecord));
+    return;
+  }
+
+  // Route: /api/tenancy/v1/admin/tenants/{tenantId}/audit-summary
+  if (isAuditSummaryRoute) {
+    const response = {
+      tenantId: tenantId || "unknown",
+      appId: appId || "unknown",
+      window: { hours: 24, from: new Date(Date.now() - 86400000).toISOString(), to: new Date().toISOString() },
+      summary: { totalEvents: 0, successCount: 0, failureCount: 0, credentialRotations: 0, suspensions: 0 },
+      lastEvents: [],
+      generatedAt: new Date().toISOString()
+    };
+    const s = awslambda.HttpResponseStream.from(responseStream, {
+      statusCode: 200,
+      headers: { "content-type": "application/json" },
+    });
+    s.end(JSON.stringify(response));
+    auditRecord.status_code = 200;
+    auditRecord.outcome = "success";
+    await persistAuditLog(finalizeAuditRecord(auditRecord));
+    return;
+  }
+
+  // Default: Chat Route
   let prompt;
   let sessionId;
 

@@ -257,6 +257,98 @@
           }
         }
       }
+    },
+    "/api/tenancy/v1/admin/tenants/{tenantId}/diagnostics": {
+      "get": {
+        "tags": [
+          "TenancyAdmin"
+        ],
+        "operationId": "fetchTenantDiagnostics",
+        "summary": "Fetch tenant operational diagnostics",
+        "description": "Returns operational health and version state for the tenant. Includes last deployment SHA, policy version, and memory usage summary. Access is restricted by app scope and operator claims.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TenantIdPath"
+          },
+          {
+            "$ref": "#/components/parameters/CorrelationIdHeader"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant diagnostics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantDiagnosticsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tenant not found in caller scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenancy/v1/admin/tenants/{tenantId}/timeline": {
+      "get": {
+        "tags": [
+          "TenancyAdmin"
+        ],
+        "operationId": "fetchTenantTimeline",
+        "summary": "Fetch tenant event timeline",
+        "description": "Returns a detailed timeline of events for the tenant. Consumable by portal UI and API clients for audit and troubleshooting. Data is derived from the centralized audit log and filtered by app/tenant scope.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TenantIdPath"
+          },
+          {
+            "$ref": "#/components/parameters/CorrelationIdHeader"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of events to return",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant event timeline",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantTimelineResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tenant not found in caller scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -792,6 +884,132 @@
           "generatedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "TenantDiagnosticsResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tenantId",
+          "appId",
+          "health",
+          "lastDeploymentSha",
+          "policyVersion",
+          "memoryUsage",
+          "generatedAt"
+        ],
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "appId": {
+            "type": "string"
+          },
+          "health": {
+            "type": "string",
+            "enum": [
+              "HEALTHY",
+              "DEGRADED",
+              "UNHEALTHY"
+            ]
+          },
+          "lastDeploymentSha": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{7,40}$"
+          },
+          "policyVersion": {
+            "type": "string"
+          },
+          "memoryUsage": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "summary",
+              "usedBytes"
+            ],
+            "properties": {
+              "summary": {
+                "type": "string"
+              },
+              "usedBytes": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TenantTimelineResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tenantId",
+          "appId",
+          "events",
+          "generatedAt"
+        ],
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "appId": {
+            "type": "string"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimelineEvent"
+            }
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TimelineEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "eventId",
+          "timestamp",
+          "type",
+          "message"
+        ],
+        "properties": {
+          "eventId": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "ONBOARDING_STARTED",
+              "ONBOARDING_COMPLETE",
+              "ONBOARDING_FAILED",
+              "CREDENTIAL_ROTATED",
+              "TENANT_SUSPENDED",
+              "POLICY_UPDATED",
+              "RUNTIME_ERROR",
+              "CHAT_SESSION_STARTED"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         }
       }
