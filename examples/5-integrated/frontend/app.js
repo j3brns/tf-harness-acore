@@ -184,6 +184,59 @@ async function parseResponseError(response) {
   }
 }
 
+function isScopeMismatchErrorMessage(message) {
+  const value = String(message || '').toLowerCase();
+  return [
+    'tenant mismatch',
+    'tenant isolation violation',
+    'path tenant does not match authenticated tenant',
+    'scope mismatch',
+    'app scope',
+    'missing tenant context',
+  ].some((needle) => value.includes(needle));
+}
+
+function classifyAuthFailure(status, rawMessage, channel) {
+  const message = String(rawMessage || '').trim();
+  const lower = message.toLowerCase();
+
+  if (isScopeMismatchErrorMessage(message)) {
+    return {
+      kind: 'scope-mismatch',
+      title: 'Tenant/App Scope Mismatch',
+      userMessage:
+        'Your current session does not match the selected tenant or app scope. Sign in with the correct role/context, then retry.',
+      panelMessage: 'Access denied: selected tenant/app scope does not match the authenticated session.',
+      transcriptMessage: 'Access denied: tenant/app scope mismatch. Sign in with the correct role or tenant context, then retry.',
+      eventLabel: channel === 'portal' ? 'Portal scope mismatch' : 'Chat scope mismatch',
+    };
+  }
+
+  if (status === 401 || lower.includes('expired') || lower.includes('session') || lower.includes('invalid token')) {
+    return {
+      kind: 'session-expired',
+      title: 'Session Expired',
+      userMessage: 'Your sign-in session expired or is no longer valid. Sign in again, then retry the request.',
+      panelMessage: 'Authentication required: your portal session expired or is invalid. Sign in again and retry.',
+      transcriptMessage: 'Session expired or invalid. Sign in again, then retry your request.',
+      eventLabel: channel === 'portal' ? 'Portal session expired' : 'Chat session expired',
+    };
+  }
+
+  return {
+    kind: 'auth-required',
+    title: 'Authentication Required',
+    userMessage: 'Authentication is required for this action. Sign in again and retry.',
+    panelMessage: 'Authentication required for this request. Sign in again and retry.',
+    transcriptMessage: 'Authentication required. Sign in again, then retry your request.',
+    eventLabel: channel === 'portal' ? 'Portal auth required' : 'Chat auth required',
+  };
+}
+
+function userFacingApiError(status, contextLabel) {
+  return `${contextLabel} failed (HTTP ${status}). Retry the request. If it continues, check the Activity panel for timing/context.`;
+}
+
 function App() {
   const [authState, setAuthState] = useState(inferAuthState());
   const [prompt, setPrompt] = useState('');
@@ -208,6 +261,12 @@ function App() {
     auditSummary: '',
     timeline: '',
   });
+  const [portalErrorKinds, setPortalErrorKinds] = useState({
+    diagnostics: '',
+    auditSummary: '',
+    timeline: '',
+  });
+  const [authNotice, setAuthNotice] = useState(null);
   const [messages, setMessages] = useState(() => [
     makeMessage('system', 'AgentCore frontend component library loaded.'),
     makeMessage('system', 'Tenancy portal diagnostics and audit timeline panels are available below.'),
@@ -220,6 +279,8 @@ function App() {
   const [toolsLoading, setToolsLoading] = useState(false);
   const [lastPayload, setLastPayload] = useState(null);
   const streamedCharsRef = useRef(0);
+  const lastPortalRetryRef = useRef(null);
+  const lastFailedChatPromptRef = useRef('');
   const [, forceMetricsTick] = useState(0);
 
   function addEvent(label, detail = '') {
@@ -232,6 +293,9 @@ function App() {
   function refreshAuth() {
     const next = inferAuthState();
     setAuthState(next);
+    if (next === 'connected') {
+      setAuthNotice(null);
+    }
     return next;
   }
 
@@ -239,9 +303,34 @@ function App() {
     return tenantId.trim();
   }
 
+  function setPortalError(kind, category, message) {
+    setPortalErrors((current) => ({ ...current, [kind]: message }));
+    setPortalErrorKinds((current) => ({ ...current, [kind]: category }));
+  }
+
+  function clearPortalError(kind) {
+    setPortalError(kind, '', '');
+  }
+
+  function showAuthNotice(details, retryAction, retryLabel) {
+    lastPortalRetryRef.current = retryAction || null;
+    setAuthNotice({
+      kind: details.kind,
+      title: details.title,
+      message: details.userMessage,
+      retryLabel: retryLabel || '',
+    });
+  }
+
+  function retryLastPortalAction() {
+    if (typeof lastPortalRetryRef.current === 'function') {
+      lastPortalRetryRef.current();
+    }
+  }
+
   async function fetchTenantAdminResource(kind, url, successLabel) {
     setPortalLoading((current) => ({ ...current, [kind]: true }));
-    setPortalErrors((current) => ({ ...current, [kind]: '' }));
+    clearPortalError(kind);
     addEvent('Portal request', `${successLabel}: ${url}`);
 
     try {
@@ -252,19 +341,32 @@ function App() {
       });
 
       if (response.status === 401 || response.status === 403) {
-        const errorMessage = await parseResponseError(response);
+        const rawErrorMessage = await parseResponseError(response);
+        const classified = classifyAuthFailure(response.status, rawErrorMessage, 'portal');
         setAuthState('unauthorized');
         setTransportStatus('unauthorized');
-        setPortalErrors((current) => ({ ...current, [kind]: errorMessage || `HTTP ${response.status}` }));
-        addEvent('Portal auth required', `${successLabel}: HTTP ${response.status}`);
+        setPortalError(kind, 'auth', classified.panelMessage);
+        showAuthNotice(classified, () => fetchTenantAdminResource(kind, url, successLabel), `Retry ${successLabel}`);
+        setLastPayload({
+          kind: 'portal-auth-error',
+          resource: kind,
+          status: response.status,
+          category: classified.kind,
+        });
+        addEvent(classified.eventLabel, `${successLabel}: HTTP ${response.status}`);
         return null;
       }
 
       if (!response.ok) {
-        const errorMessage = await parseResponseError(response);
-        setPortalErrors((current) => ({ ...current, [kind]: errorMessage || `HTTP ${response.status}` }));
+        await parseResponseError(response);
+        setPortalError(kind, 'api', userFacingApiError(response.status, `${successLabel} request`));
         addEvent('Portal request failed', `${successLabel}: HTTP ${response.status}`);
         setTransportStatus('disconnected');
+        setLastPayload({
+          kind: 'portal-api-error',
+          resource: kind,
+          status: response.status,
+        });
         return null;
       }
 
@@ -272,13 +374,19 @@ function App() {
       setPortalData((current) => ({ ...current, [kind]: data }));
       setLastPayload({ kind, url, response: data });
       setAuthState('connected');
+      setAuthNotice(null);
       setTransportStatus((current) => (current === 'idle' ? 'connected' : current));
       addEvent('Portal response', `${successLabel} loaded`);
       return data;
     } catch (error) {
-      setPortalErrors((current) => ({ ...current, [kind]: error.message }));
+      setPortalError(kind, 'api', `${successLabel} request failed before a response was received. Retry the request.`);
       addEvent('Portal transport error', `${successLabel}: ${error.message}`);
       setTransportStatus('disconnected');
+      setLastPayload({
+        kind: 'portal-transport-error',
+        resource: kind,
+        message: 'Network or transport failure while loading tenant portal data',
+      });
       return null;
     } finally {
       setPortalLoading((current) => ({ ...current, [kind]: false }));
@@ -288,7 +396,7 @@ function App() {
   async function loadTenantDiagnostics() {
     const slug = normalizedTenantId();
     if (!slug) {
-      setPortalErrors((current) => ({ ...current, diagnostics: 'Tenant ID is required' }));
+      setPortalError('diagnostics', 'validation', 'Tenant ID is required');
       return null;
     }
 
@@ -302,7 +410,7 @@ function App() {
   async function loadTenantAuditSummary() {
     const slug = normalizedTenantId();
     if (!slug) {
-      setPortalErrors((current) => ({ ...current, auditSummary: 'Tenant ID is required' }));
+      setPortalError('auditSummary', 'validation', 'Tenant ID is required');
       return null;
     }
 
@@ -322,7 +430,7 @@ function App() {
   async function loadTenantTimeline() {
     const slug = normalizedTenantId();
     if (!slug) {
-      setPortalErrors((current) => ({ ...current, timeline: 'Tenant ID is required' }));
+      setPortalError('timeline', 'validation', 'Tenant ID is required');
       return null;
     }
 
@@ -343,6 +451,11 @@ function App() {
         diagnostics: 'Tenant ID is required',
         auditSummary: 'Tenant ID is required',
         timeline: 'Tenant ID is required',
+      });
+      setPortalErrorKinds({
+        diagnostics: 'validation',
+        auditSummary: 'validation',
+        timeline: 'validation',
       });
       addEvent('Portal validation', 'Tenant ID is required before loading portal data');
       return;
@@ -403,6 +516,7 @@ function App() {
 
     setPrompt('');
     setMessages((current) => [...current, makeMessage('user', text)]);
+    lastFailedChatPromptRef.current = text;
     setLastPayload({ prompt: text });
     addEvent('Request queued', 'Sending prompt to /api/chat');
 
@@ -420,22 +534,44 @@ function App() {
       });
 
       if (response.status === 401 || response.status === 403) {
-        setMessages((current) => [...current, makeMessage('error', 'SESSION_EXPIRED')]);
+        const rawErrorMessage = await parseResponseError(response);
+        const classified = classifyAuthFailure(response.status, rawErrorMessage, 'chat');
+        setMessages((current) => [...current, makeMessage('error', classified.transcriptMessage)]);
         setAuthState('unauthorized');
-        addEvent('Auth required', `HTTP ${response.status}`);
+        setAuthNotice({
+          kind: classified.kind,
+          title: classified.title,
+          message: `${classified.userMessage} Your prompt has been restored for retry.`,
+          retryLabel: 'Restore Prompt',
+        });
+        addEvent(classified.eventLabel, `HTTP ${response.status}`);
         setTransportStatus('unauthorized');
+        setPrompt(text);
+        setLastPayload({
+          kind: 'chat-auth-error',
+          status: response.status,
+          category: classified.kind,
+        });
         return;
       }
 
       if (!response.ok) {
-        const errorText = await response.text();
-        setMessages((current) => [...current, makeMessage('error', errorText || `HTTP ${response.status}`)]);
+        await parseResponseError(response);
+        setMessages((current) => [
+          ...current,
+          makeMessage('error', userFacingApiError(response.status, 'Chat request')),
+        ]);
         addEvent('Request failed', `HTTP ${response.status}`);
         setTransportStatus('disconnected');
+        setLastPayload({
+          kind: 'chat-api-error',
+          status: response.status,
+        });
         return;
       }
 
       setAuthState('connected');
+      setAuthNotice(null);
       addEvent('Request accepted', response.body ? 'Streaming response available' : 'JSON response fallback');
 
       assistantId = `assistant-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -589,6 +725,32 @@ function App() {
     window.location.href = AUTH_URL;
   }
 
+  function handleRetryAuthNotice() {
+    if (!authNotice?.retryLabel) {
+      return;
+    }
+    if (authNotice.retryLabel === 'Restore Prompt') {
+      if (lastFailedChatPromptRef.current) {
+        setPrompt(lastFailedChatPromptRef.current);
+      }
+      addEvent('Prompt restored', 'Restored last prompt after authentication failure');
+      return;
+    }
+    retryLastPortalAction();
+  }
+
+  function renderPortalError(kind) {
+    const message = portalErrors[kind];
+    if (!message) {
+      return null;
+    }
+    const toneClass =
+      portalErrorKinds[kind] === 'auth'
+        ? 'border-amber-300/20 bg-amber-300/5 text-amber-100'
+        : 'border-rose-300/20 bg-rose-300/5 text-rose-100';
+    return html`<div className=${`rounded-xl border px-3 py-2 text-xs ${toneClass}`}>${message}</div>`;
+  }
+
   const diagnosticsMetrics = diagnostics
     ? [
         {
@@ -690,6 +852,29 @@ function App() {
     </${Panel}>
   `;
 
+  const authNoticeBanner = authNotice
+    ? html`
+        <div className=${`rounded-xl border px-4 py-3 ${
+          authNotice.kind === 'scope-mismatch'
+            ? 'border-rose-300/20 bg-rose-300/5 text-rose-100'
+            : 'border-amber-300/20 bg-amber-300/5 text-amber-100'
+        }`}>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <div className="text-sm font-semibold">${authNotice.title}</div>
+              <p className="mt-1 text-xs opacity-90">${authNotice.message}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <${ActionButton} label="Sign in again" onClick=${handleLogin} tone="primary" />
+              ${authNotice.retryLabel
+                ? html`<${ActionButton} label=${authNotice.retryLabel} onClick=${handleRetryAuthNotice} />`
+                : null}
+            </div>
+          </div>
+        </div>
+      `
+    : null;
+
   return html`
     <${AppShell}
       title="AgentCore Tenant Operations Portal"
@@ -704,6 +889,7 @@ function App() {
       >
         <div className="space-y-4">
           <${MetricGrid} items=${metrics} />
+          ${authNoticeBanner}
           ${authState !== 'connected' ? html`<${AuthCard} onLogin=${handleLogin} message="Authentication required to load tenant diagnostics and audit timeline data." />` : null}
           <div className="rounded-xl border border-white/10 bg-white/5 p-4">
             <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -774,9 +960,7 @@ function App() {
         subtitle="Health, deployment SHA, policy version, and memory usage summary from the tenancy admin API."
         bodyClassName="space-y-4"
       >
-        ${portalErrors.diagnostics
-          ? html`<div className="rounded-xl border border-rose-300/20 bg-rose-300/5 px-3 py-2 text-xs text-rose-100">${portalErrors.diagnostics}</div>`
-          : null}
+        ${renderPortalError('diagnostics')}
         ${diagnostics
           ? html`
               <${MetricGrid} items=${diagnosticsMetrics} />
@@ -790,9 +974,7 @@ function App() {
         subtitle="Bounded audit counts and actor breakdown for the selected tenant."
         bodyClassName="space-y-4"
       >
-        ${portalErrors.auditSummary
-          ? html`<div className="rounded-xl border border-rose-300/20 bg-rose-300/5 px-3 py-2 text-xs text-rose-100">${portalErrors.auditSummary}</div>`
-          : null}
+        ${renderPortalError('auditSummary')}
         ${auditSummary
           ? html`
               <${MetricGrid} items=${auditMetrics} />
@@ -839,9 +1021,7 @@ function App() {
         subtitle="Timeline endpoint view consumable by portal operators and API clients."
         bodyClassName="space-y-4"
       >
-        ${portalErrors.timeline
-          ? html`<div className="rounded-xl border border-rose-300/20 bg-rose-300/5 px-3 py-2 text-xs text-rose-100">${portalErrors.timeline}</div>`
-          : null}
+        ${renderPortalError('timeline')}
         ${tenantTimeline
           ? html`
               <${Timeline} events=${timelineItems} />

@@ -143,6 +143,8 @@ The library is intentionally static-hosting friendly:
 
 To customize a specialized dashboard, compose panels in `frontend/app.js` and keep shared primitives in `frontend/components.js`. The integrated example now demonstrates a tenant-operations portal that calls the tenancy admin diagnostics/audit/timeline endpoints and tries to load `docs/api/tenancy-admin-v1.openapi.json` (with MCP OpenAPI fallback) so API panels can be driven from the contract. Issue `#51` also adds a generated typed client at `docs/api/mcp-tools-v1.client.ts` for integrator/frontend SDK usage.
 
+Portal UX note: the integrated tenant-operations portal now classifies auth failures into session-expiry vs tenant/app scope-mismatch states, shows explicit re-auth/retry affordances, and renders sanitized user-facing auth/API errors instead of raw backend payload text.
+
 ```bash
 # Syntax validation
 terraform validate
