@@ -20,6 +20,11 @@ jobs:
       - name: Ensure tag matches VERSION and CHANGELOG
         run: |
           set -euo pipefail
+          if ! printf '%s' "${GITHUB_REF_NAME}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "ERROR: Release tags must match vMAJOR.MINOR.PATCH (for example v0.1.0)."
+            echo "ERROR: Non-release checkpoints must use a non-v prefix (recommended: checkpoint/<label>)."
+            exit 1
+          fi
           TAG_VERSION="${GITHUB_REF_NAME#v}"
           REPO_VERSION="$(cat VERSION)"
           if [ "$TAG_VERSION" != "$REPO_VERSION" ]; then

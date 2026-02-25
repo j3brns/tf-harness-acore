@@ -41,3 +41,12 @@ def test_prod_gate_requires_gate_evidence_and_test_success():
     assert 'job_success "deploy:test"' in content
     assert 'job_success "smoke-test:test"' in content
     assert "promote:dev/promote:test evidence plus deploy:test + smoke-test:test" in content
+
+
+def test_prod_jobs_are_release_tag_only_not_any_tag():
+    content = _gitlab_ci_text()
+
+    release_tag_rule = "CI_COMMIT_TAG =~ /^v[0-9]+\\.[0-9]+\\.[0-9]+$/"
+    assert content.count(release_tag_rule) >= 4
+    assert content.count("- when: never") >= 4
+    assert "Prod promotion gate only applies to release tags (vMAJOR.MINOR.PATCH)." in content
