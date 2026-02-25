@@ -36,6 +36,23 @@ class TestOfflineDemoMode:
         assert result["framework"] == "strands"
 
 
+class TestHandler:
+    """
+    Backward-compatible smoke test name for the SDK compatibility matrix harness.
+
+    The harness currently targets this exact node id for Example 1.
+    """
+
+    def test_handler_success_with_buckets(self):
+        from runtime import handler
+
+        result = handler({"prompt": "What is 2 + 3?", "offline": True}, None)
+
+        assert result["status"] == "success"
+        assert result["framework"] == "strands"
+        assert any(call["tool"] == "add_numbers" for call in result["tool_calls"])
+
+
 class TestAgentConstruction:
     def test_build_agent_uses_strands_constructor(self, monkeypatch):
         import runtime
