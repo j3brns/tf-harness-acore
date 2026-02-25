@@ -1,4 +1,4 @@
-.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both push-checkpoint-tag-both ci-status-both streaming-load-test policy-report validate-region validate-version-metadata
+.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both push-checkpoint-tag-both ci-status-both streaming-load-test policy-report validate-region validate-version-metadata report-sdk-drift
 
 # Variables
 ROOT_DIR := $(abspath .)
@@ -220,6 +220,11 @@ validate-region: ## Validate AgentCore Runtime region deployability (TFVARS=... 
 
 validate-version-metadata: ## Validate VERSION, CHANGELOG.md, and docs version metadata consistency
 	python3 terraform/scripts/validate_version_metadata.py
+
+report-sdk-drift: ## Report version drift for Strands and AgentCore SDKs across examples
+	@echo "Generating SDK version drift report..."
+	python3 terraform/scripts/report_sdk_drift.py --output docs/SDK_VERSION_DRIFT_REPORT.md
+	@echo "✓ Report generated to docs/SDK_VERSION_DRIFT_REPORT.md"
 
 policy-report: ## Generate policy and tag conformance report
 	@echo "Generating policy and tag conformance report..."

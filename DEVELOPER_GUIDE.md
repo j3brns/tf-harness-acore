@@ -80,6 +80,9 @@ terraform fmt -check -recursive
 # Generate policy and tag conformance report (Inventory + Governance)
 make policy-report
 
+# Report version drift for Strands and AgentCore SDKs across examples
+make report-sdk-drift
+
 # Validate VERSION / CHANGELOG / docs version metadata consistency
 make validate-version-metadata
 
