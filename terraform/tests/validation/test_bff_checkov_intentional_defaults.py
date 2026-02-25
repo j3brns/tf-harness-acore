@@ -18,6 +18,18 @@ def test_bff_checkov_intentional_default_skips_are_explicit_and_scoped():
     assert "checkov:skip=CKV_AWS_120" in apigw_tf
     assert "checkov:skip=CKV_AWS_225" in apigw_tf
     assert apigw_tf.count("checkov:skip=CKV_AWS_59") == 2
+    assert apigw_tf.count("checkov:skip=CKV2_AWS_53") == 9
+    assert "Rule 14.1 tenant-scope checks" in apigw_tf
+
+    for method_name in (
+        "create_tenant",
+        "suspend_tenant",
+        "rotate_tenant_credentials",
+        "fetch_tenant_audit_summary",
+        "fetch_tenant_diagnostics",
+        "fetch_tenant_timeline",
+    ):
+        assert f'resource "aws_api_gateway_method" "{method_name}" {{\n  # checkov:skip=CKV2_AWS_53:' in apigw_tf
 
     assert "checkov:skip=CKV_AWS_310" in cloudfront_tf
     assert "checkov:skip=CKV_AWS_374" in cloudfront_tf
@@ -36,8 +48,10 @@ def test_bff_readme_documents_issue_78_classification_and_issue_79_hardening_han
     assert "CKV_AWS_225" in readme
     assert "CKV_AWS_237" in readme
     assert "CKV_AWS_59" in readme
+    assert "CKV2_AWS_53" in readme
     assert "CKV_AWS_310" in readme
     assert "CKV_AWS_374" in readme
+    assert "#91" in readme
     assert "#79" in readme
     assert "CKV_AWS_86" in readme
     assert "CKV_AWS_50" in readme
