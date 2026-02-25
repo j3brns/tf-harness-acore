@@ -1,242 +1,47 @@
-# Agent Runtime - CLI-based provisioning with SSM Persistence (Rule 5)
-# Note: Native aws_bedrockagentcore_agent_runtime and aws_bedrockagentcore_memory are available
-# in AWS provider 6.33+, but Rule 4 keeps these resources on the CLI pattern until v2 migration.
-
-resource "null_resource" "agent_runtime" {
+# Agent Runtime - Native Provider Resource (v6.33.0)
+resource "aws_bedrockagentcore_agent_runtime" "this" {
   count = var.enable_runtime ? 1 : 0
 
-  triggers = {
-    agent_name        = var.agent_name
-    region            = var.region
-    deployment_hash   = local.source_hash
-    config_hash       = sha256(jsonencode(var.runtime_config))
-    deployment_bucket = local.deployment_bucket
-    deployment_key    = local.deployment_key
+  agent_runtime_name = "${var.agent_name}-runtime"
+  role_arn           = var.runtime_role_arn != "" ? var.runtime_role_arn : aws_iam_role.runtime[0].arn
+
+  agent_runtime_artifact {
+    code_configuration {
+      source_s3_uri = "s3://${local.deployment_bucket}/${local.deployment_key}"
+    }
   }
 
-  provisioner "local-exec" {
-    command = replace(<<-EOT
-      set -e
-
-      echo "Creating agent runtime for ${self.triggers.agent_name}..."
-      mkdir -p "${path.module}/.terraform"
-
-      # Get deployment package from S3
-      DEPLOYMENT_S3_URI="s3://${local.deployment_bucket}"
-
-      # Create runtime using AWS CLI
-      aws bedrock-agentcore-control create-agent-runtime \
-        --name "${self.triggers.agent_name}-runtime" \
-        --agent-name "${self.triggers.agent_name}" \
-        --role-arn "${var.runtime_role_arn != "" ? var.runtime_role_arn : aws_iam_role.runtime[0].arn}" \
-        --artifact-s3-uri "$DEPLOYMENT_S3_URI" \
-        --artifact-s3-key "${local.deployment_key}" \
-        --execution-role-arn "${var.runtime_role_arn != "" ? var.runtime_role_arn : aws_iam_role.runtime[0].arn}" \
-        --region ${self.triggers.region} \
-        --output json > "${path.module}/.terraform/runtime_output.json"
-
-      # Rule 1.2: Fail Fast
-      if [ ! -s "${path.module}/.terraform/runtime_output.json" ]; then
-        echo "ERROR: Failed to create runtime - no output file generated"
-        exit 1
-      fi
-
-      # Check for error in output
-      if grep -q '"error"' "${path.module}/.terraform/runtime_output.json"; then
-        echo "ERROR: Runtime creation failed:"
-        cat "${path.module}/.terraform/runtime_output.json"
-        exit 1
-      fi
-
-      # Extract runtime ID and ARN
-      RUNTIME_ID=$(jq -r '.agentRuntimeId // .runtimeId // empty' < "${path.module}/.terraform/runtime_output.json")
-      RUNTIME_ARN=$(jq -r '.agentRuntimeArn // .runtimeArn // empty' < "${path.module}/.terraform/runtime_output.json")
-
-      if [ -z "$RUNTIME_ID" ]; then
-        echo "ERROR: Runtime ID missing from output"
-        exit 1
-      fi
-
-      # Rule 5.1: SSM Persistence
-      echo "Persisting Runtime ID to SSM..."
-      aws ssm put-parameter \
-        --name "/agentcore/${self.triggers.agent_name}/runtime/id" \
-        --value "$RUNTIME_ID" \
-        --type "String" \
-        --overwrite \
-        --region ${self.triggers.region}
-
-      if [ -z "$RUNTIME_ARN" ]; then
-        echo "ERROR: Runtime ARN missing from output"
-        exit 1
-      fi
-
-      aws ssm put-parameter \
-        --name "/agentcore/${self.triggers.agent_name}/runtime/arn" \
-        --value "$RUNTIME_ARN" \
-        --type "String" \
-        --overwrite \
-        --region ${self.triggers.region}
-
-      echo "$RUNTIME_ID" > "${path.module}/.terraform/runtime_id.txt"
-      echo "$RUNTIME_ARN" > "${path.module}/.terraform/runtime_arn.txt"
-      echo "Agent runtime created successfully"
-    EOT
-    , "\r", "")
-
-    interpreter = ["bash", "-c"]
+  network_configuration {
+    # Default SANDBOX mode aligns with previous CLI behavior
+    execution_mode = "SANDBOX"
   }
 
-  # Rule 6.1: Cleanup Hooks
-  provisioner "local-exec" {
-    when = destroy
-    command = replace(<<-EOT
-      set +e
-      RUNTIME_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/runtime/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
-
-      if [ -n "$RUNTIME_ID" ]; then
-        echo "Deleting Runtime $RUNTIME_ID..."
-        aws bedrock-agentcore-control delete-agent-runtime --runtime-identifier "$RUNTIME_ID" --region ${self.triggers.region}
-        aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/runtime/id" --region ${self.triggers.region}
-        aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/runtime/arn" --region ${self.triggers.region}
-      fi
-    EOT
-    , "\r", "")
-
-    interpreter = ["bash", "-c"]
+  lifecycle_configuration {
+    status = "DRAFT"
   }
+
+  tags = var.tags
 
   depends_on = [
-    aws_iam_role.runtime,
     null_resource.package_code
   ]
 }
 
-# Agent Memory - CLI-based provisioning
+# Agent Memory - Native Provider Resource (v6.33.0)
+resource "aws_bedrockagentcore_memory" "short_term" {
+  count = var.enable_memory && (var.memory_type == "SHORT_TERM" || var.memory_type == "BOTH") ? 1 : 0
 
-resource "null_resource" "agent_memory" {
-  count = var.enable_memory ? 1 : 0
+  name                  = "${var.agent_name}-short-term"
+  event_expiry_duration = 7 # Min 7 days for native resource
 
-  triggers = {
-    agent_name  = var.agent_name
-    region      = var.region
-    memory_type = var.memory_type
-  }
-
-  provisioner "local-exec" {
-    command = replace(<<-EOT
-      set -e
-
-      echo "Setting up agent memory for ${self.triggers.agent_name}..."
-      mkdir -p "${path.module}/.terraform"
-
-      # Short-term memory
-      if [[ "${self.triggers.memory_type}" == "SHORT_TERM" || "${self.triggers.memory_type}" == "BOTH" ]]; then
-        aws bedrock-agentcore-control create-memory \
-          --name "${self.triggers.agent_name}-short-term-memory" \
-          --agent-name "${self.triggers.agent_name}" \
-          --memory-type "SHORT_TERM" \
-          --storage-type "IN_MEMORY" \
-          --ttl-minutes 60 \
-          --region ${self.triggers.region} \
-          --output json > "${path.module}/.terraform/short_term_memory.json"
-
-        if [ ! -s "${path.module}/.terraform/short_term_memory.json" ]; then
-          echo "ERROR: Failed to create short-term memory"
-          exit 1
-        fi
-
-        ST_MEMORY_ID=$(jq -r '.memoryId' < "${path.module}/.terraform/short_term_memory.json")
-        aws ssm put-parameter \
-          --name "/agentcore/${self.triggers.agent_name}/memory/short-term/id" \
-          --value "$ST_MEMORY_ID" \
-          --type "String" \
-          --overwrite \
-          --region ${self.triggers.region}
-      fi
-
-      # Long-term memory
-      if [[ "${self.triggers.memory_type}" == "LONG_TERM" || "${self.triggers.memory_type}" == "BOTH" ]]; then
-        aws bedrock-agentcore-control create-memory \
-          --name "${self.triggers.agent_name}-long-term-memory" \
-          --agent-name "${self.triggers.agent_name}" \
-          --memory-type "LONG_TERM" \
-          --storage-type "PERSISTENT" \
-          --region ${self.triggers.region} \
-          --output json > "${path.module}/.terraform/long_term_memory.json"
-
-        if [ ! -s "${path.module}/.terraform/long_term_memory.json" ]; then
-          echo "ERROR: Failed to create long-term memory"
-          exit 1
-        fi
-
-        LT_MEMORY_ID=$(jq -r '.memoryId' < "${path.module}/.terraform/long_term_memory.json")
-        aws ssm put-parameter \
-          --name "/agentcore/${self.triggers.agent_name}/memory/long-term/id" \
-          --value "$LT_MEMORY_ID" \
-          --type "String" \
-          --overwrite \
-          --region ${self.triggers.region}
-      fi
-
-      echo "Agent memory setup complete"
-    EOT
-    , "\r", "")
-
-    interpreter = ["bash", "-c"]
-  }
-
-  provisioner "local-exec" {
-    when = destroy
-    command = replace(<<-EOT
-      set +e
-      # Short-term memory cleanup
-      ST_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/memory/short-term/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
-      if [ -n "$ST_ID" ]; then
-        echo "Deleting Short-term Memory $ST_ID..."
-        aws bedrock-agentcore-control delete-memory --memory-identifier "$ST_ID" --region ${self.triggers.region}
-        aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/memory/short-term/id" --region ${self.triggers.region}
-      fi
-
-      # Long-term memory cleanup
-      LT_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/memory/long-term/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
-      if [ -n "$LT_ID" ]; then
-        echo "Deleting Long-term Memory $LT_ID..."
-        aws bedrock-agentcore-control delete-memory --memory-identifier "$LT_ID" --region ${self.triggers.region}
-        aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/memory/long-term/id" --region ${self.triggers.region}
-      fi
-    EOT
-    , "\r", "")
-
-    interpreter = ["bash", "-c"]
-  }
-
-  depends_on = [
-    null_resource.agent_runtime
-  ]
+  tags = var.tags
 }
 
-# Data source to read runtime output
-data "external" "runtime_output" {
-  count = var.enable_runtime ? 1 : 0
+resource "aws_bedrockagentcore_memory" "long_term" {
+  count = var.enable_memory && (var.memory_type == "LONG_TERM" || var.memory_type == "BOTH") ? 1 : 0
 
-  program = ["bash", "-c", "if [ -f ${path.module}/.terraform/runtime_output.json ]; then cat ${path.module}/.terraform/runtime_output.json; else echo '{}'; fi"]
+  name                  = "${var.agent_name}-long-term"
+  event_expiry_duration = 365
 
-  depends_on = [null_resource.agent_runtime]
-}
-
-# Data source to read memory outputs
-data "external" "memory_outputs" {
-  count = var.enable_memory ? 1 : 0
-
-  program = ["bash", "-c", <<-EOT
-    if [ -f "${path.module}/.terraform/short_term_memory.json" ]; then
-      cat ${path.module}/.terraform/short_term_memory.json
-    else
-      echo '{}'
-    fi
-    EOT
-  ]
-
-  depends_on = [null_resource.agent_memory]
+  tags = var.tags
 }

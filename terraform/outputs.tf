@@ -67,6 +67,12 @@ output "agentcore_gateway_role_arn" {
   sensitive   = true
 }
 
+output "agentcore_workload_identity_arn" {
+  description = "AgentCore workload identity ARN (useful for 3rd-party IdP trust relationships)"
+  value       = module.agentcore_foundation.workload_identity_arn
+  sensitive   = true
+}
+
 output "agentcore_dashboard_name" {
   description = "CloudWatch dashboard name for per-agent observability"
   value       = module.agentcore_foundation.agent_dashboard_name

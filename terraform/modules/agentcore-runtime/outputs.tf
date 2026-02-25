@@ -15,25 +15,25 @@ output "runtime_role_arn" {
 
 output "runtime_id" {
   description = "Agent runtime ID"
-  value       = var.enable_runtime ? try(data.external.runtime_output[0].result.agentRuntimeId, data.external.runtime_output[0].result.runtimeId, null) : null
+  value       = var.enable_runtime ? aws_bedrockagentcore_agent_runtime.this[0].agent_runtime_id : null
   sensitive   = true
 }
 
 output "runtime_arn" {
   description = "Agent runtime ARN"
-  value       = var.enable_runtime ? try(data.external.runtime_output[0].result.agentRuntimeArn, data.external.runtime_output[0].result.runtimeArn, null) : null
+  value       = var.enable_runtime ? aws_bedrockagentcore_agent_runtime.this[0].agent_runtime_arn : null
   sensitive   = true
 }
 
 output "short_term_memory_id" {
   description = "Short-term memory ID"
-  value       = var.enable_memory && (var.memory_type == "SHORT_TERM" || var.memory_type == "BOTH") ? try(data.external.memory_outputs[0].result.memoryId, null) : null
+  value       = var.enable_memory && (var.memory_type == "SHORT_TERM" || var.memory_type == "BOTH") ? aws_bedrockagentcore_memory.short_term[0].id : null
   sensitive   = true
 }
 
 output "long_term_memory_id" {
   description = "Long-term memory ID"
-  value       = var.enable_memory && (var.memory_type == "LONG_TERM" || var.memory_type == "BOTH") ? try(data.external.memory_outputs[0].result.memoryId, null) : null
+  value       = var.enable_memory && (var.memory_type == "LONG_TERM" || var.memory_type == "BOTH") ? aws_bedrockagentcore_memory.long_term[0].id : null
   sensitive   = true
 }
 

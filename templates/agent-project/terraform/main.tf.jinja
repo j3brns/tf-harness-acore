@@ -25,12 +25,12 @@ locals {
 # -----------------------------------------------------------------------------
 
 module "agentcore_foundation" {
-  source = "github.com/j3brns/tf-harness-acore//terraform/modules/agentcore-foundation?ref=main"
+  source = "github.com/j3brns/tf-harness-acore//terraform/modules/agentcore-foundation?ref=v0.1.1"
 
-  agent_name  = var.agent_name
-  region      = var.region
+  agent_name     = var.agent_name
+  region         = var.region
   bedrock_region = var.region
-  environment = var.environment
+  environment    = var.environment
 
   # Gateway configuration
   enable_gateway      = true
@@ -38,7 +38,8 @@ module "agentcore_foundation" {
   gateway_search_type = "HYBRID"
 
   # Identity configuration
-  enable_identity   = false
+  enable_identity = {{ enable_identity | lower if enable_identity is defined else 'false' }}
+  oidc_issuer     = var.oidc_issuer
 
   # Observability
   enable_observability = true
@@ -47,7 +48,7 @@ module "agentcore_foundation" {
 }
 
 module "agentcore_tools" {
-  source = "github.com/j3brns/tf-harness-acore//terraform/modules/agentcore-tools?ref=main"
+  source = "github.com/j3brns/tf-harness-acore//terraform/modules/agentcore-tools?ref=v0.1.1"
 
   agent_name = var.agent_name
   region     = var.region
@@ -57,26 +58,31 @@ module "agentcore_tools" {
   code_interpreter_network_mode = "SANDBOX"
 
   # Browser
-  enable_browser              = false
-  browser_network_mode        = "SANDBOX"
+  enable_browser       = false
+  browser_network_mode = "SANDBOX"
 }
 
 module "agentcore_runtime" {
-  source = "github.com/j3brns/tf-harness-acore//terraform/modules/agentcore-runtime?ref=main"
+  source = "github.com/j3brns/tf-harness-acore//terraform/modules/agentcore-runtime?ref=v0.1.1"
 
-  agent_name = var.agent_name
-  app_id     = var.app_id
-  region     = var.region
+  agent_name     = var.agent_name
+  app_id         = var.app_id
+  region         = var.region
   bedrock_region = var.region
-  environment = var.environment
+  environment    = var.environment
 
   # Runtime configuration
-  enable_runtime          = true
-  runtime_source_path     = "${path.module}/../agent-code"
+  enable_runtime      = true
+  runtime_source_path = "${path.module}/../agent-code"
 
   # Memory configuration
   enable_memory = true
   memory_type   = "BOTH"
+
+  # Integration
+  logging_bucket_id     = module.agentcore_foundation.access_logs_bucket_id
+  inference_profile_arn = module.agentcore_foundation.inference_profile_arn
+  proxy_role_arn        = module.agentcore_bff.proxy_role_arn
 
   # Packaging
   enable_packaging = true
@@ -88,22 +94,22 @@ module "agentcore_runtime" {
 }
 
 module "agentcore_governance" {
-  source = "github.com/j3brns/tf-harness-acore//terraform/modules/agentcore-governance?ref=main"
+  source = "github.com/j3brns/tf-harness-acore//terraform/modules/agentcore-governance?ref=v0.1.1"
 
-  agent_name = var.agent_name
-  region     = var.region
+  agent_name     = var.agent_name
+  region         = var.region
   bedrock_region = var.region
 
   # Policy engine
-  enable_policy_engine   = false
+  enable_policy_engine = false
 
   # Guardrails
-  enable_guardrails                   = {{ enable_guardrails | lower }}
-  guardrail_name                      = "${var.agent_name}-guardrail"
-  guardrail_description               = "Safety guardrail for ${var.agent_name}"
+  enable_guardrails     = {{ enable_guardrails | lower }}
+  guardrail_name        = "${var.agent_name}-guardrail"
+  guardrail_description = "Safety guardrail for ${var.agent_name}"
 
   # Evaluations
-  enable_evaluations  = false
+  enable_evaluations = false
 
   depends_on = [
     module.agentcore_foundation,
@@ -112,14 +118,14 @@ module "agentcore_governance" {
 }
 
 module "agentcore_bff" {
-  source = "github.com/j3brns/tf-harness-acore//terraform/modules/agentcore-bff?ref=main"
+  source = "github.com/j3brns/tf-harness-acore//terraform/modules/agentcore-bff?ref=v0.1.1"
 
-  enable_bff  = {{ enable_bff | lower }}
-  agent_name  = var.agent_name
-  app_id      = var.app_id
-  region      = var.region
-  agentcore_region = var.region
-  environment = var.environment
+  enable_bff            = {{ enable_bff | lower }}
+  agent_name            = var.agent_name
+  app_id                = var.app_id
+  region                = var.region
+  agentcore_region      = var.region
+  environment           = var.environment
   agentcore_runtime_arn = module.agentcore_runtime.runtime_arn
 
   # Auth Configuration
@@ -129,7 +135,8 @@ module "agentcore_bff" {
   oidc_client_id              = var.oidc_client_id
   oidc_client_secret_arn      = var.oidc_client_secret_arn
 
-  depends_on = [
-    module.agentcore_foundation
-  ]
+  # Integration
+  logging_bucket_id          = module.agentcore_foundation.access_logs_bucket_id
+  waf_acl_arn                = module.agentcore_foundation.waf_acl_arn
+  agentcore_runtime_role_arn = module.agentcore_runtime.runtime_role_arn
 }

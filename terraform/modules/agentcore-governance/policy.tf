@@ -157,89 +157,40 @@ resource "null_resource" "cedar_policies" {
   ]
 }
 
-# Bedrock Guardrails
-resource "null_resource" "guardrail" {
+# Bedrock Guardrails - Native Provider Resource (v6.33.0)
+resource "aws_bedrock_guardrail" "this" {
   count = var.enable_guardrails ? 1 : 0
 
-  triggers = {
-    agent_name     = var.agent_name
-    region         = var.region
-    bedrock_region = local.bedrock_region
-    name           = var.guardrail_name != "" ? var.guardrail_name : "${var.agent_name}-guardrail"
-    config_hash = sha256(jsonencode({
-      filters                = var.guardrail_filters
-      sensitive_info_filters = var.guardrail_sensitive_info_filters
-      input_msg              = var.guardrail_blocked_input_messaging
-      output_msg             = var.guardrail_blocked_outputs_messaging
-    }))
+  name                      = var.guardrail_name != "" ? var.guardrail_name : "${var.agent_name}-guardrail"
+  description               = var.guardrail_description
+  blocked_input_messaging   = var.guardrail_blocked_input_messaging
+  blocked_outputs_messaging = var.guardrail_blocked_outputs_messaging
+
+  content_policy_config {
+    dynamic "filters_config" {
+      for_each = var.guardrail_filters
+      content {
+        type            = filters_config.value.type
+        input_strength  = filters_config.value.input_strength
+        output_strength = filters_config.value.output_strength
+      }
+    }
   }
 
-  provisioner "local-exec" {
-    command = <<-EOT
-      set -e
-      mkdir -p "${path.module}/.terraform"
-
-      echo "Creating Bedrock Guardrail ${self.triggers.name}..."
-
-      # Prepare content filters JSON
-      CONTENT_FILTERS=$(echo '${jsonencode([for f in var.guardrail_filters : { type = f.type, inputStrength = f.input_strength, outputStrength = f.output_strength }])}')
-
-      # Create guardrail
-      aws bedrock create-guardrail \
-        --name "${self.triggers.name}" \
-        --description "${var.guardrail_description}" \
-        --blocked-input-messaging "${var.guardrail_blocked_input_messaging}" \
-        --blocked-outputs-messaging "${var.guardrail_blocked_outputs_messaging}" \
-        --content-policy "filters=$CONTENT_FILTERS" \
-        --region ${self.triggers.bedrock_region} \
-        --output json > "${path.module}/.terraform/guardrail.json"
-
-      # Extract Guardrail ID
-      GUARDRAIL_ID=$(jq -r '.guardrailId' < "${path.module}/.terraform/guardrail.json")
-
-      # Create initial version
-      aws bedrock create-guardrail-version \
-        --guardrail-identifier "$GUARDRAIL_ID" \
-        --region ${self.triggers.bedrock_region} \
-        --output json > "${path.module}/.terraform/guardrail_version.json"
-
-      VERSION=$(jq -r '.version' < "${path.module}/.terraform/guardrail_version.json")
-
-      # Persist to SSM
-      aws ssm put-parameter \
-        --name "/agentcore/${self.triggers.agent_name}/guardrail/id" \
-        --value "$GUARDRAIL_ID" \
-        --type "String" \
-        --overwrite \
-        --region ${self.triggers.region}
-
-      aws ssm put-parameter \
-        --name "/agentcore/${self.triggers.agent_name}/guardrail/version" \
-        --value "$VERSION" \
-        --type "String" \
-        --overwrite \
-        --region ${self.triggers.region}
-    EOT
-
-    interpreter = ["bash", "-c"]
+  dynamic "sensitive_information_policy_config" {
+    for_each = length(var.guardrail_sensitive_info_filters) > 0 ? [1] : []
+    content {
+      dynamic "pii_entities_config" {
+        for_each = var.guardrail_sensitive_info_filters
+        content {
+          type   = pii_entities_config.value.type
+          action = pii_entities_config.value.action
+        }
+      }
+    }
   }
 
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<-EOT
-      set +e
-      GUARDRAIL_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/guardrail/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
-
-      if [ -n "$GUARDRAIL_ID" ]; then
-        echo "Deleting Guardrail $GUARDRAIL_ID..."
-        aws bedrock delete-guardrail --guardrail-identifier "$GUARDRAIL_ID" --region ${self.triggers.bedrock_region}
-        aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/guardrail/id" --region ${self.triggers.region}
-        aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/guardrail/version" --region ${self.triggers.region}
-      fi
-    EOT
-
-    interpreter = ["bash", "-c"]
-  }
+  tags = var.tags
 }
 
 # CloudWatch log group for policy engine

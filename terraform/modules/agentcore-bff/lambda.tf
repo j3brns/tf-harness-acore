@@ -2,22 +2,25 @@
 data "archive_file" "auth_handler" {
   count       = var.enable_bff ? 1 : 0
   type        = "zip"
-  source_file = "${path.module}/src/auth_handler.py"
+  source_dir  = "${path.module}/src"
   output_path = "${path.module}/.terraform/auth_handler.zip"
+  excludes    = ["proxy.js", "node_modules", "package.json", "package-lock.json", "__mocks__", "proxy.test.js"]
 }
 
 data "archive_file" "authorizer" {
   count       = var.enable_bff ? 1 : 0
   type        = "zip"
-  source_file = "${path.module}/src/authorizer.py"
+  source_dir  = "${path.module}/src"
   output_path = "${path.module}/.terraform/authorizer.zip"
+  excludes    = ["proxy.js", "node_modules", "package.json", "package-lock.json", "__mocks__", "proxy.test.js"]
 }
 
 data "archive_file" "proxy" {
   count       = var.enable_bff ? 1 : 0
   type        = "zip"
-  source_file = "${path.module}/src/proxy.js"
+  source_dir  = "${path.module}/src"
   output_path = "${path.module}/.terraform/proxy.zip"
+  excludes    = ["auth_handler.py", "authorizer.py", "__mocks__", "proxy.test.js", "__pycache__"]
 }
 
 # --- Functions ---

@@ -32,12 +32,6 @@ variable "bff_cloudfront_access_logs_prefix" {
   }
 }
 
-variable "oidc_issuer" {
-  description = "OIDC Issuer URL"
-  type        = string
-  default     = ""
-}
-
 variable "oidc_authorization_endpoint" {
   description = "Override OIDC authorization endpoint (discovers if empty)"
   type        = string

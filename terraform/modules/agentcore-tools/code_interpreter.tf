@@ -1,75 +1,25 @@
-# Code Interpreter - CLI-based provisioning with SSM Persistence (Rule 5)
-resource "null_resource" "code_interpreter" {
+# Code Interpreter - Native Provider Resource (v6.33.0)
+resource "aws_bedrockagentcore_code_interpreter" "this" {
   count = var.enable_code_interpreter ? 1 : 0
 
-  triggers = {
-    agent_name         = var.agent_name
-    region             = var.region
-    name               = "${var.agent_name}-code-interpreter"
-    execution_role_arn = aws_iam_role.code_interpreter[0].arn
+  name               = "${var.agent_name}-code-interpreter"
+  execution_role_arn = aws_iam_role.code_interpreter[0].arn
+
+  network_configuration {
+    execution_mode = var.code_interpreter_network_mode
+    dynamic "vpc_configuration" {
+      for_each = var.code_interpreter_vpc_config != null ? [var.code_interpreter_vpc_config] : []
+      content {
+        subnet_ids          = vpc_configuration.value.subnet_ids
+        security_group_ids  = vpc_configuration.value.security_group_ids
+        associate_public_ip = vpc_configuration.value.associate_public_ip
+      }
+    }
   }
 
-  provisioner "local-exec" {
-    command = <<-EOT
-      set -e
-      mkdir -p "${path.module}/.terraform"
-
-      aws bedrock-agentcore-control create-code-interpreter \
-        --name "${self.triggers.name}" \
-        --role-arn "${self.triggers.execution_role_arn}" \
-        --region ${self.triggers.region} \
-        --output json > "${path.module}/.terraform/interpreter_output.json"
-
-      # Rule 1.2: Fail Fast
-      if [ ! -s "${path.module}/.terraform/interpreter_output.json" ]; then
-        echo "ERROR: Failed to create code interpreter"
-        exit 1
-      fi
-
-      INTERPRETER_ID=$(jq -r '.interpreterId' < "${path.module}/.terraform/interpreter_output.json")
-      INTERPRETER_ARN=$(jq -r '.interpreterArn' < "${path.module}/.terraform/interpreter_output.json")
-
-      # Rule 5.1: SSM Persistence
-      echo "Persisting Interpreter metadata to SSM..."
-      aws ssm put-parameter --name "/agentcore/${self.triggers.agent_name}/interpreter/id" --value "$INTERPRETER_ID" --type "String" --overwrite --region ${self.triggers.region}
-      aws ssm put-parameter --name "/agentcore/${self.triggers.agent_name}/interpreter/arn" --value "$INTERPRETER_ARN" --type "String" --overwrite --region ${self.triggers.region}
-    EOT
-
-    interpreter = ["bash", "-c"]
-  }
-
-  # Rule 6.1: Cleanup Hooks
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<-EOT
-      set +e
-      INTERPRETER_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/interpreter/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
-
-      if [ -n "$INTERPRETER_ID" ]; then
-        echo "Deleting Code Interpreter $INTERPRETER_ID..."
-        aws bedrock-agentcore-control delete-code-interpreter --interpreter-identifier "$INTERPRETER_ID" --region ${self.triggers.region}
-        aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/interpreter/id" --region ${self.triggers.region}
-      fi
-    EOT
-
-    interpreter = ["bash", "-c"]
-  }
+  tags = var.tags
 
   depends_on = [aws_iam_role.code_interpreter]
-}
-
-data "aws_ssm_parameter" "interpreter_id" {
-  count = var.enable_code_interpreter ? 1 : 0
-  name  = "/agentcore/${var.agent_name}/interpreter/id"
-
-  depends_on = [null_resource.code_interpreter]
-}
-
-data "aws_ssm_parameter" "interpreter_arn" {
-  count = var.enable_code_interpreter ? 1 : 0
-  name  = "/agentcore/${var.agent_name}/interpreter/arn"
-
-  depends_on = [null_resource.code_interpreter]
 }
 
 # CloudWatch Log Group for Code Interpreter

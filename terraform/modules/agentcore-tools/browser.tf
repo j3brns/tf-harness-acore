@@ -1,75 +1,33 @@
-# Browser - CLI-based provisioning with SSM Persistence (Rule 5)
-resource "null_resource" "browser" {
+# Browser - Native Provider Resource (v6.33.0)
+resource "aws_bedrockagentcore_browser" "this" {
   count = var.enable_browser ? 1 : 0
 
-  triggers = {
-    agent_name         = var.agent_name
-    region             = var.region
-    name               = "${var.agent_name}-browser"
-    execution_role_arn = aws_iam_role.browser[0].arn
+  name               = "${var.agent_name}-browser"
+  execution_role_arn = aws_iam_role.browser[0].arn
+
+  network_configuration {
+    execution_mode = var.browser_network_mode
+    dynamic "vpc_configuration" {
+      for_each = var.browser_vpc_config != null ? [var.browser_vpc_config] : []
+      content {
+        subnet_ids          = vpc_configuration.value.subnet_ids
+        security_group_ids  = vpc_configuration.value.security_group_ids
+        associate_public_ip = vpc_configuration.value.associate_public_ip
+      }
+    }
   }
 
-  provisioner "local-exec" {
-    command = <<-EOT
-      set -e
-      mkdir -p "${path.module}/.terraform"
-
-      aws bedrock-agentcore-control create-browser \
-        --name "${self.triggers.name}" \
-        --role-arn "${self.triggers.execution_role_arn}" \
-        --region ${self.triggers.region} \
-        --output json > "${path.module}/.terraform/browser_output.json"
-
-      # Rule 1.2: Fail Fast
-      if [ ! -s "${path.module}/.terraform/browser_output.json" ]; then
-        echo "ERROR: Failed to create browser"
-        exit 1
-      fi
-
-      BROWSER_ID=$(jq -r '.browserId' < "${path.module}/.terraform/browser_output.json")
-      BROWSER_ARN=$(jq -r '.browserArn' < "${path.module}/.terraform/browser_output.json")
-
-      # Rule 5.1: SSM Persistence
-      echo "Persisting Browser metadata to SSM..."
-      aws ssm put-parameter --name "/agentcore/${self.triggers.agent_name}/browser/id" --value "$BROWSER_ID" --type "String" --overwrite --region ${self.triggers.region}
-      aws ssm put-parameter --name "/agentcore/${self.triggers.agent_name}/browser/arn" --value "$BROWSER_ARN" --type "String" --overwrite --region ${self.triggers.region}
-    EOT
-
-    interpreter = ["bash", "-c"]
+  dynamic "recording" {
+    for_each = var.enable_browser_recording && var.browser_recording_s3_bucket != "" ? [1] : []
+    content {
+      s3_bucket_name = var.browser_recording_s3_bucket
+      s3_key_prefix  = var.browser_recording_s3_prefix
+    }
   }
 
-  # Rule 6.1: Cleanup Hooks
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<-EOT
-      set +e
-      BROWSER_ID=$(aws ssm get-parameter --name "/agentcore/${self.triggers.agent_name}/browser/id" --query "Parameter.Value" --output text --region ${self.triggers.region} 2>/dev/null)
-
-      if [ -n "$BROWSER_ID" ]; then
-        echo "Deleting Browser $BROWSER_ID..."
-        aws bedrock-agentcore-control delete-browser --browser-identifier "$BROWSER_ID" --region ${self.triggers.region}
-        aws ssm delete-parameter --name "/agentcore/${self.triggers.agent_name}/browser/id" --region ${self.triggers.region}
-      fi
-    EOT
-
-    interpreter = ["bash", "-c"]
-  }
+  tags = var.tags
 
   depends_on = [aws_iam_role.browser]
-}
-
-data "aws_ssm_parameter" "browser_id" {
-  count = var.enable_browser ? 1 : 0
-  name  = "/agentcore/${var.agent_name}/browser/id"
-
-  depends_on = [null_resource.browser]
-}
-
-data "aws_ssm_parameter" "browser_arn" {
-  count = var.enable_browser ? 1 : 0
-  name  = "/agentcore/${var.agent_name}/browser/arn"
-
-  depends_on = [null_resource.browser]
 }
 
 # CloudWatch Log Group for Browser

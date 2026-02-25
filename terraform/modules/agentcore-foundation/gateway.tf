@@ -8,7 +8,17 @@ resource "aws_bedrockagentcore_gateway" "this" {
   name            = var.gateway_name != "" ? var.gateway_name : "${var.agent_name}-gateway"
   role_arn        = aws_iam_role.gateway[0].arn
   protocol_type   = "MCP"
-  authorizer_type = "AWS_IAM"
+  authorizer_type = var.enable_identity ? "CUSTOM_JWT" : "AWS_IAM"
+
+  dynamic "authorizer_configuration" {
+    for_each = var.enable_identity ? [1] : []
+    content {
+      custom_jwt_authorizer {
+        # OIDC Discovery URL for AgentCore Identity (must end with .well-known/openid-configuration)
+        discovery_url = endswith(var.oidc_issuer, "/.well-known/openid-configuration") ? var.oidc_issuer : "${trimsuffix(var.oidc_issuer, "/")}/.well-known/openid-configuration"
+      }
+    }
+  }
 
   protocol_configuration {
     mcp {

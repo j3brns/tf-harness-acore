@@ -21,6 +21,7 @@ module "agentcore_foundation" {
   # Identity configuration
   enable_identity   = var.enable_identity
   oauth_return_urls = var.oauth_return_urls
+  oidc_issuer       = var.oidc_issuer
 
   # Observability
   enable_observability                    = var.enable_observability
@@ -107,7 +108,7 @@ module "agentcore_runtime" {
   enable_s3_encryption   = var.enable_s3_encryption
   enable_observability   = var.enable_observability
   logging_bucket_id      = module.agentcore_foundation.access_logs_bucket_id
-  proxy_role_arn         = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/agentcore-bff-proxy-${var.agent_name}-${var.environment}"
+  proxy_role_arn         = module.agentcore_bff.proxy_role_arn
 
   # Packaging
   enable_packaging     = var.enable_packaging
@@ -194,16 +195,14 @@ module "agentcore_bff" {
 
   oidc_token_endpoint = var.oidc_token_endpoint != "" ? var.oidc_token_endpoint : try(local.oidc_discovery.token_endpoint, "")
 
-  oidc_client_id         = var.oidc_client_id
-  oidc_client_secret_arn = var.oidc_client_secret_arn
-  custom_domain_name     = var.bff_custom_domain_name
-  acm_certificate_arn    = var.bff_acm_certificate_arn
-  logging_bucket_id      = module.agentcore_foundation.access_logs_bucket_id
-  reserved_concurrency   = var.proxy_reserved_concurrency
-  waf_acl_arn            = module.agentcore_foundation.waf_acl_arn
-  agentcore_runtime_role_arn = var.bff_agentcore_runtime_role_arn != "" ? var.bff_agentcore_runtime_role_arn : (
-    var.enable_runtime ? "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.agent_name}-runtime-role-${var.environment}" : ""
-  )
+  oidc_client_id             = var.oidc_client_id
+  oidc_client_secret_arn     = var.oidc_client_secret_arn
+  custom_domain_name         = var.bff_custom_domain_name
+  acm_certificate_arn        = var.bff_acm_certificate_arn
+  logging_bucket_id          = module.agentcore_foundation.access_logs_bucket_id
+  reserved_concurrency       = var.proxy_reserved_concurrency
+  waf_acl_arn                = module.agentcore_foundation.waf_acl_arn
+  agentcore_runtime_role_arn = var.bff_agentcore_runtime_role_arn != "" ? var.bff_agentcore_runtime_role_arn : module.agentcore_runtime.runtime_role_arn
 
   # Integration
   agentcore_runtime_arn  = var.bff_agentcore_runtime_arn != "" ? var.bff_agentcore_runtime_arn : module.agentcore_runtime.runtime_arn

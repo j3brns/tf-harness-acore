@@ -22,12 +22,12 @@ output "gateway_role_arn" {
 
 output "workload_identity_id" {
   description = "ID of the workload identity"
-  value       = var.enable_identity ? data.aws_ssm_parameter.workload_identity_id[0].value : null
+  value       = var.enable_identity ? aws_bedrockagentcore_workload_identity.this[0].workload_identity_id : null
 }
 
 output "workload_identity_arn" {
   description = "ARN of the workload identity"
-  value       = var.enable_identity ? data.aws_ssm_parameter.workload_identity_arn[0].value : null
+  value       = var.enable_identity ? aws_bedrockagentcore_workload_identity.this[0].workload_identity_arn : null
   sensitive   = true
 }
 

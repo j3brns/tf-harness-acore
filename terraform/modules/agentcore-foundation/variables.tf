@@ -106,6 +106,12 @@ variable "oauth_return_urls" {
   default     = []
 }
 
+variable "oidc_issuer" {
+  description = "OIDC Issuer URL for custom JWT authorizer"
+  type        = string
+  default     = ""
+}
+
 # Observability configuration
 variable "enable_observability" {
   description = "Enable CloudWatch and X-Ray observability"
