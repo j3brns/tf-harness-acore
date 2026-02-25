@@ -56,6 +56,26 @@ variable "logging_bucket_id" {
   default     = ""
 }
 
+variable "enable_cloudfront_access_logging" {
+  description = "Enable CloudFront standard access logging for the BFF distribution"
+  type        = bool
+  default     = true
+}
+
+variable "cloudfront_access_logs_prefix" {
+  description = "S3 key prefix for CloudFront standard access logs (no leading slash)"
+  type        = string
+  default     = "cloudfront-access-logs/"
+
+  validation {
+    condition = (
+      trimspace(var.cloudfront_access_logs_prefix) != "" &&
+      !startswith(trimspace(var.cloudfront_access_logs_prefix), "/")
+    )
+    error_message = "cloudfront_access_logs_prefix must be non-empty and must not start with '/'."
+  }
+}
+
 variable "enable_audit_log_persistence" {
   description = "Persist BFF proxy audit shadow JSON to S3 and provision Athena/Glue metadata"
   type        = bool

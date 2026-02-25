@@ -141,6 +141,9 @@ module "agentcore" {
   oidc_issuer            = "https://example.com"
   oidc_client_id         = "test-client"
   oidc_client_secret_arn = "arn:aws:secretsmanager:${var.region}:123456789012:secret:test-secret"
+  # Optional CloudFront standard access logging controls (Issue #64)
+  # enable_bff_cloudfront_access_logging = false
+  # bff_cloudfront_access_logs_prefix    = "cloudfront-access-logs/examples/5-integrated/"
 
   tags = {
     Example = "5-integrated"

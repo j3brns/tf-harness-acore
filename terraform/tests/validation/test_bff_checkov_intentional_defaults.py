@@ -42,3 +42,32 @@ def test_bff_readme_documents_issue_78_classification_and_issue_79_hardening_han
     assert "CKV_AWS_86" in readme
     assert "CKV_AWS_50" in readme
     assert "CKV_AWS_272" in readme
+
+
+def test_bff_cloudfront_access_logging_is_explicitly_configurable_with_default_enabled():
+    module_vars = _read("terraform/modules/agentcore-bff/variables.tf")
+    module_locals = _read("terraform/modules/agentcore-bff/locals.tf")
+    cloudfront_tf = _read("terraform/modules/agentcore-bff/cloudfront.tf")
+    root_vars = _read("terraform/variables_bff.tf")
+    root_main = _read("terraform/main.tf")
+    readme = _read("terraform/modules/agentcore-bff/README.md")
+
+    assert 'variable "enable_cloudfront_access_logging"' in module_vars
+    assert 'variable "cloudfront_access_logs_prefix"' in module_vars
+    assert "cloudfront_access_logs_prefix must be non-empty" in module_vars
+
+    assert "cloudfront_access_logging_enabled = var.enable_bff && var.enable_cloudfront_access_logging" in module_locals
+    assert "trimsuffix(trimspace(var.cloudfront_access_logs_prefix), \"/\")" in module_locals
+
+    assert 'dynamic "logging_config"' in cloudfront_tf
+    assert "for_each = local.cloudfront_access_logging_enabled ? [1] : []" in cloudfront_tf
+
+    assert 'variable "enable_bff_cloudfront_access_logging"' in root_vars
+    assert 'variable "bff_cloudfront_access_logs_prefix"' in root_vars
+    assert "bff_cloudfront_access_logs_prefix must be non-empty" in root_vars
+
+    assert "enable_cloudfront_access_logging = var.enable_bff_cloudfront_access_logging" in root_main
+    assert "cloudfront_access_logs_prefix    = var.bff_cloudfront_access_logs_prefix" in root_main
+
+    assert "## Optional CloudFront Access Logging (Issue #64)" in readme
+    assert "Delivery semantics" in readme

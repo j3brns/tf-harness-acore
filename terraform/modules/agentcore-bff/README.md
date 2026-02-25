@@ -33,6 +33,10 @@ module "agentcore_bff" {
   # Optional compliance feature (Issue #30)
   logging_bucket_id             = module.agentcore_foundation.access_logs_bucket_id
   enable_audit_log_persistence  = true
+
+  # Optional CloudFront access logging controls (Issue #64)
+  # enable_cloudfront_access_logging = false
+  # cloudfront_access_logs_prefix    = "cloudfront-access-logs/bff/"
 }
 ```
 
@@ -74,6 +78,58 @@ Useful outputs:
 - `audit_logs_athena_database`
 - `audit_logs_athena_table`
 - `audit_logs_athena_workgroup`
+
+## Optional CloudFront Access Logging (Issue #64)
+
+The BFF CloudFront distribution supports **standard access logging** with explicit Terraform controls:
+
+- `enable_cloudfront_access_logging` (default `true` to preserve current harness behavior)
+- `cloudfront_access_logs_prefix` (default `cloudfront-access-logs/`)
+
+When enabled, the module writes CloudFront standard logs to:
+
+- the shared `logging_bucket_id` bucket (if provided), or
+- the SPA bucket (fallback)
+
+### Usage
+
+```hcl
+module "agentcore_bff" {
+  source = "./modules/agentcore-bff"
+
+  enable_bff = true
+  # ... other required variables ...
+
+  # Explicitly disable CloudFront standard access logs
+  enable_cloudfront_access_logging = false
+}
+```
+
+```hcl
+module "agentcore_bff" {
+  source = "./modules/agentcore-bff"
+
+  enable_bff = true
+  # ... other required variables ...
+
+  # Keep logging enabled (default) and customize the S3 prefix
+  cloudfront_access_logs_prefix = "cloudfront-access-logs/edge/"
+}
+```
+
+### Operational Considerations
+
+| Topic | Guidance |
+|---|---|
+| **Delivery semantics** | CloudFront standard logs are best-effort and can arrive late; use them for troubleshooting/analysis rather than exact billing reconciliation. |
+| **Destination bucket requirements** | CloudFront standard logging (legacy S3 delivery used by `logging_config`) requires an S3 destination that supports ACLs; buckets with S3 Object Ownership set to **Bucket owner enforced** cannot receive these logs. |
+| **Bucket separation** | AWS recommends a separate S3 bucket (or at least a separate prefix) for CloudFront logs, especially if you also use CloudFront standard logging v2 or other log producers. |
+| **Retention / cost** | CloudFront does not charge to enable standard logs, but S3 storage/requests and downstream analytics (Athena/Glue/Firehose) incur cost. Apply lifecycle retention to the destination bucket/prefix. |
+| **Analytics integration** | You can analyze CloudFront standard logs with Athena and co-locate them under a distinct prefix alongside BFF audit logs/WAF logs for shared observability workflows. |
+
+References:
+- AWS CloudFront Access Logs: https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/AccessLogs.html
+- AWS CloudFront Standard Logging (legacy, S3): https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/standard-logging-legacy-s3.html
 
 ## Optional CloudFront WAF Association (Issue #54)
 
@@ -174,7 +230,7 @@ These skips preserve current harness behavior and document where enterprise cont
 
 Issue `#79` completes the remaining BFF Checkov hardening set from `#78`:
 
-- `CKV_AWS_86` (CloudFront access logging): remediated by enabling `logging_config` on the distribution (reusing the shared logging bucket when configured, otherwise the SPA bucket).
+- `CKV_AWS_86` (CloudFront access logging): remediated by default-enabled `logging_config` on the distribution, with an explicit opt-out toggle for deployments that must disable or defer CloudFront standard logging.
 - `CKV_AWS_50` (Lambda X-Ray tracing): remediated by enabling `tracing_config { mode = "Active" }` on the auth handler, authorizer, and proxy Lambdas.
 - `CKV_AWS_272` (Lambda code signing): documented as a resource-level skip because signer profile/trust setup is an external dependency and not a harness default.
 

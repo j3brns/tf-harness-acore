@@ -12,6 +12,26 @@ variable "enable_bff_audit_log_persistence" {
   default     = false
 }
 
+variable "enable_bff_cloudfront_access_logging" {
+  description = "Enable CloudFront standard access logging for the BFF distribution"
+  type        = bool
+  default     = true
+}
+
+variable "bff_cloudfront_access_logs_prefix" {
+  description = "S3 key prefix for BFF CloudFront standard access logs (no leading slash)"
+  type        = string
+  default     = "cloudfront-access-logs/"
+
+  validation {
+    condition = (
+      trimspace(var.bff_cloudfront_access_logs_prefix) != "" &&
+      !startswith(trimspace(var.bff_cloudfront_access_logs_prefix), "/")
+    )
+    error_message = "bff_cloudfront_access_logs_prefix must be non-empty and must not start with '/'."
+  }
+}
+
 variable "oidc_issuer" {
   description = "OIDC Issuer URL"
   type        = string

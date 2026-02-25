@@ -112,10 +112,13 @@ resource "aws_cloudfront_distribution" "bff" {
   is_ipv6_enabled     = true
   default_root_object = "index.html"
 
-  logging_config {
-    bucket          = local.cloudfront_access_logs_bucket_domain
-    include_cookies = false
-    prefix          = "${local.cloudfront_access_logs_prefix}${var.agent_name}/${var.environment}/"
+  dynamic "logging_config" {
+    for_each = local.cloudfront_access_logging_enabled ? [1] : []
+    content {
+      bucket          = local.cloudfront_access_logs_bucket_domain
+      include_cookies = false
+      prefix          = "${local.cloudfront_access_logs_prefix}${var.agent_name}/${var.environment}/"
+    }
   }
 
   # Default Behavior: S3 (Frontend)
