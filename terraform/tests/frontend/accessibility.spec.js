@@ -3,7 +3,7 @@ const AxeBuilder = require('@axe-core/playwright').default;
 
 test.describe('Accessibility Regression Tests', () => {
   test('component preview page should have no automatically detectable accessibility violations', async ({ page }) => {
-    await page.goto('/preview.html');
+    await page.goto('/terraform/tests/frontend/preview/preview.html');
 
     // Wait for the React app to hydrate and render.
     // We check for the presence of the AppShell title.
