@@ -1,4 +1,4 @@
-.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both ci-status-both streaming-load-test policy-report validate-region
+.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both push-checkpoint-tag-both ci-status-both streaming-load-test policy-report validate-region
 
 # Variables
 ROOT_DIR := $(abspath .)
@@ -294,6 +294,13 @@ push-main-both: ## Push main to both origin (GitHub) and gitlab remotes
 
 push-tag-both: ## Push TAG=vX.Y.Z to both origin and gitlab remotes
 	@test -n "$(TAG)" || (echo "ERROR: Provide TAG, e.g. make push-tag-both TAG=v0.1.0" && exit 1)
+	@printf '%s\n' "$(TAG)" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$$' || (echo "ERROR: Release TAG must match vMAJOR.MINOR.PATCH (e.g. v0.1.0)" && exit 1)
+	git push origin $(TAG)
+	git push gitlab $(TAG)
+
+push-checkpoint-tag-both: ## Push TAG=checkpoint/<label> to both origin and gitlab remotes (validation only, no prod promotion semantics)
+	@test -n "$(TAG)" || (echo "ERROR: Provide TAG, e.g. make push-checkpoint-tag-both TAG=checkpoint/2026-02-25-ci-checkpoint" && exit 1)
+	@printf '%s\n' "$(TAG)" | grep -Eq '^checkpoint/.+$$' || (echo "ERROR: Checkpoint TAG must match checkpoint/<label>" && exit 1)
 	git push origin $(TAG)
 	git push gitlab $(TAG)
 

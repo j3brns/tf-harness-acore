@@ -753,6 +753,15 @@ gate:prod-from-test:
   script:
     - |
       set -euo pipefail
+      RELEASE_TAG_REGEX='^v[0-9]+\.[0-9]+\.[0-9]+$'
+      if [ -z "${CI_COMMIT_TAG:-}" ]; then
+        echo "ERROR: gate:prod-from-test requires CI_COMMIT_TAG."
+        exit 1
+      fi
+      if ! printf '%s' "${CI_COMMIT_TAG}" | grep -Eq "${RELEASE_TAG_REGEX}"; then
+        echo "ERROR: Prod promotion gate only applies to release tags (vMAJOR.MINOR.PATCH). Use checkpoint/* tags for checkpoints."
+        exit 1
+      fi
       echo "Checking promotion gate for tag ${CI_COMMIT_TAG:-<none>} at SHA ${CI_COMMIT_SHA}"
       PIPELINES_JSON=$(curl -sS --fail --header "JOB-TOKEN: $CI_JOB_TOKEN" \
         "$CI_API_V4_URL/projects/$CI_PROJECT_ID/pipelines?sha=$CI_COMMIT_SHA&status=success&per_page=100")
@@ -817,7 +826,8 @@ gate:prod-from-test:
       - promotion-evidence/
     expire_in: 90 days
   rules:
-    - if: $CI_COMMIT_TAG
+    - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+$/'
+    - when: never
 
 # =============================================================================
 # STAGE 12: PLAN PROD (Mandatory review before prod deploy)
@@ -854,7 +864,8 @@ plan:prod:
       - $TF_ROOT/prod-plan.txt
     expire_in: 4 hours
   rules:
-    - if: $CI_COMMIT_TAG
+    - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+$/'
+    - when: never
 
 # =============================================================================
 # STAGE 13: DEPLOY PROD (Manual - operator reviews plan output before approving)
@@ -895,7 +906,8 @@ deploy:prod:
     expire_in: 90 days
   when: manual
   rules:
-    - if: $CI_COMMIT_TAG
+    - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+$/'
+    - when: never
 
 smoke-test:prod:
   stage: smoke-test-prod
@@ -908,8 +920,9 @@ smoke-test:prod:
     - cd $TF_ROOT
     - python scripts/validate_bff.py
   rules:
-    - if: $CI_COMMIT_TAG
+    - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+$/'
       when: on_success
+    - when: never
 
 # =============================================================================
 # SCHEDULED: DRIFT DETECTION (all environments)

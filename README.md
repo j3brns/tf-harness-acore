@@ -546,6 +546,7 @@ bff_agentcore_runtime_role_arn = "arn:aws:iam::222222222222:role/my-runtime-role
 
 - Canonical repository version is stored in `VERSION` (current line: `0.1.x`).
 - Official releases are immutable tags in the format `vMAJOR.MINOR.PATCH` (for example `v0.1.0`).
+- Checkpoint tags are non-release markers and MUST NOT use the `v*` prefix. Use `checkpoint/<label>` (for example `checkpoint/2026-02-25-ci-hardening`).
 - `main` is the integration branch.
 - `main` is the promotion branch for dev and test (manual/API pipeline gates for test).
 - Forks are not part of release promotion.
@@ -564,7 +565,16 @@ git push gitlab main
 git tag v0.1.0
 git push origin v0.1.0
 git push gitlab v0.1.0
+
+# Checkpoint tag (non-release; no GitLab prod promotion semantics)
+git tag checkpoint/2026-02-25-ci-hardening
+git push origin checkpoint/2026-02-25-ci-hardening
+git push gitlab checkpoint/2026-02-25-ci-hardening
 ```
+
+Helper targets:
+- `make push-tag-both TAG=v0.1.0` (release tags only; strict SemVer)
+- `make push-checkpoint-tag-both TAG=checkpoint/2026-02-25-ci-hardening`
 
 ---
 
@@ -590,8 +600,8 @@ The GitLab pipeline spans 13 stages across three environments, with every stage 
 | `plan:dev` -> `deploy:dev` -> `smoke-test:dev` | Dev | Push to `main` after `promote:dev` | Chained dev deployment flow; `deploy:dev` is blocked until promotion is approved |
 | `promote:test` | Test Gate | Manual/API pipeline on `main` | Manual promotion gate; requires successful `deploy:dev` + `smoke-test:dev` in the same pipeline |
 | `plan:test` -> `deploy:test` -> `smoke-test:test` | Test | Same manual/API `main` pipeline after `promote:test` | Explicit chained DAG; test-environment jobs are never created on push pipelines |
-| `gate:prod-from-test` | -- | Git tag | Verifies same SHA has successful `deploy:test` + `smoke-test:test` in a successful `main` pipeline |
-| `plan:prod` + `deploy:prod` + `smoke-test:prod` | Prod | Git tag | Manual deploy to prod account (with approval) |
+| `gate:prod-from-test` | -- | Release tag (`vMAJOR.MINOR.PATCH`) | Verifies same SHA has successful `deploy:test` + `smoke-test:test` in a successful `main` pipeline |
+| `plan:prod` + `deploy:prod` + `smoke-test:prod` | Prod | Release tag (`vMAJOR.MINOR.PATCH`) | Manual deploy to prod account (with approval) |
 
 Scheduled pipelines run drift detection across all environments using `terraform plan -detailed-exitcode`. If infrastructure has diverged from state, the pipeline flags the drift and optionally sends a Slack notification.
 
@@ -740,6 +750,8 @@ resource "gitlab_project_protected_environment" "production" {
 ### GitHub Actions (Validation Only)
 
 The GitHub Actions workflow runs on every pull request, push to `main`, and `v*` tag push. It executes formatting checks, `terraform validate`, TFLint, Checkov, example validation, OpenAPI/documentation checks, Copier template generation, and Frontend Playwright Smoke tests. It does not deploy to AWS and requires no cloud credentials.
+
+For tag pushes, `release-tag-guard` treats only strict release tags (`vMAJOR.MINOR.PATCH`) as valid release candidates. If you need a checkpoint marker, use `checkpoint/*` so it does not look like a release tag and does not trigger GitLab prod promotion jobs.
 
 GitLab CI is the deployment pipeline. It runs validation/lint/test stages and then handles environment promotion gates for deploy.
 
