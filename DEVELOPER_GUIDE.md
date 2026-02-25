@@ -44,6 +44,16 @@ Sources:
 - https://docs.aws.amazon.com/general/latest/gr/bedrock_agentcore.html
 - https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-regions.html
 
+Regional source-of-truth policy (Issue #104, checked `2026-02-25`):
+- `agentcore_region` deployability: AWS General Reference AgentCore endpoints (control + data plane), enforced by `make validate-region`.
+- AgentCore feature coverage (`enable_policy_engine`, `enable_evaluations`): AgentCore feature-region matrix, enforced by Terraform preconditions.
+- `bedrock_region` compatibility: Amazon Bedrock model support + inference profile support + cross-Region inference (CRIS) docs/IAM/SCP requirements. `make validate-region` warns on split `bedrock_region` configs but does not validate model-specific support or CRIS destination-region permissions.
+Sources:
+- https://docs.aws.amazon.com/general/latest/gr/bedrock_agentcore.html
+- https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-regions.html
+- https://docs.aws.amazon.com/bedrock/latest/userguide/cross-region-inference.html
+- https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-support.html
+
 ## Development Workflow
 
 ### Making Changes
@@ -54,6 +64,8 @@ Sources:
 
 # 2. Validate locally (NO AWS needed)
 make validate-region TFVARS=../examples/1-hello-world/terraform.tfvars
+# Optional: test an explicit Bedrock split override (warning-only guidance, not model validation)
+make validate-region TFVARS=../examples/1-hello-world/terraform.tfvars BEDROCK_REGION=eu-west-2
 cd terraform
 terraform fmt -recursive
 terraform validate
@@ -80,15 +92,107 @@ terraform fmt -check -recursive
 # Generate policy and tag conformance report (Inventory + Governance)
 make policy-report
 
-# Report version drift for Strands and AgentCore SDKs across examples
-make report-sdk-drift
-
 # Validate VERSION / CHANGELOG / docs version metadata consistency
 make validate-version-metadata
+
+# Fast SDK compatibility smoke matrix (Strands + Bedrock AgentCore)
+make validate-sdk-compat-matrix
+
+# Validate SDK dependency combination compatibility (issue #122)
+make validate-deps
 
 # Generate all documentation (including MCP Tools OpenAPI + typed client)
 make docs
 ```
+
+#### AgentCore SDK API-Surface Smoke Tests (Issue #116)
+
+The deepresearch example depends on specific `bedrock_agentcore` import paths and API shapes.
+Smoke tests in `examples/3-deepresearch/agent-code/tests/unit/test_agentcore_sdk_smoke.py` verify that:
+- `bedrock_agentcore.BedrockAgentCoreApp` is importable, is a class, and exposes `entrypoint` and `run`
+- `bedrock_agentcore.memory.integrations.strands.config.AgentCoreMemoryConfig` is importable and has the expected Pydantic fields
+- `bedrock_agentcore.memory.integrations.strands.session_manager.AgentCoreMemorySessionManager` is importable and has the expected constructor signature
+
+These tests run offline (no AWS credentials or network calls):
+
+```bash
+cd examples/3-deepresearch/agent-code
+python3 -m pytest tests/unit/test_agentcore_sdk_smoke.py -v
+
+# Or run the full deepresearch unit suite (includes smoke tests):
+python3 -m pytest tests/unit -v
+
+# Or via make (from repo root):
+make test-python-unit
+```
+
+#### SDK Compatibility Matrix (Issue #115)
+
+Use the SDK compatibility smoke matrix to catch Strands / Bedrock AgentCore dependency regressions across example agents without running full deploys.
+On Debian/Ubuntu, ensure Python venv support is installed first (for example `python3.12-venv`).
+
+```bash
+# Run one CI lane locally
+make validate-sdk-compat-matrix LANE=repo-floors
+
+# Reproduce a single lane/example failure from CI
+make validate-sdk-compat-matrix LANE=latest-compatible EXAMPLE=3-deepresearch
+
+# Inspect lane definitions and pinned package sets
+make validate-sdk-compat-matrix ARGS='--list-lanes'
+```
+
+Lane strategy:
+- `repo-floors`: exact pins are auto-derived from example `pyproject.toml` minimums for tracked Strands/AgentCore SDK packages
+- `curated-stable`: explicit repo-maintained pins in `terraform/scripts/validate_sdk_compatibility_matrix.py` (`CURATED_STABLE_PINS`) for reproducible CI triage
+- `latest-compatible`: no constraints file; resolver installs newest versions compatible with each example's declared ranges
+
+When updating lanes:
+- update example dependency minimums in the relevant `examples/*/agent-code/pyproject.toml` files (the `repo-floors` lane updates automatically for tracked packages)
+- update `CURATED_STABLE_PINS` when re-baselining the curated lane
+- rerun `make validate-sdk-compat-matrix` (or at least the changed lane) and include results in issue/PR evidence
+
+#### Python SDK Dependency Compatibility Validation (Issue #122)
+
+The repo combines rapidly evolving SDKs (`strands-agents*`, `bedrock-agentcore`) and
+optional extras (for example OTEL) whose transitive graphs can conflict even when
+packages appear to work independently. `make validate-deps` tests three validated
+combinations on Python 3.12:
+
+| Combo | Packages |
+| :--- | :--- |
+| `strands-core` | `strands-agents` + `bedrock-agentcore` |
+| `strands-otel` | `strands-agents[otel]` + `bedrock-agentcore` |
+| `strands-deepresearch` | `strands-deep-agents` + `strands-agents-tools` + `bedrock-agentcore` |
+
+Each combination is validated in an isolated virtual environment; `pip check` is run
+after install to catch transitive incompatibilities.
+
+**Local reproduction:**
+
+```bash
+# Run all three combinations (uses python3.12 or python3 as fallback)
+make validate-deps
+
+# Run the script directly (override Python interpreter if needed)
+PYTHON=python3.12 bash terraform/scripts/validate_deps.sh
+
+# Faster alternative using uv (if installed)
+uv pip install --dry-run bedrock-agentcore>=1.0.7 strands-agents>=1.18.0
+```
+
+**Triage guide** — if `make validate-deps` fails:
+
+1. The failing combination name is printed in the summary.
+2. The full `pip install` output (including resolver conflict details) is shown
+   above the summary — look for `ResolutionImpossible` or `incompatible` lines.
+3. `pip check` output shows which installed packages have broken requirements.
+4. Installed SDK/OTEL package versions are printed for cross-referencing with
+   upstream changelogs (`strands-agents`, `bedrock-agentcore`, `opentelemetry-*`).
+5. Common fix: tighten or loosen `>=` floor constraints in the relevant
+   `examples/*/agent-code/pyproject.toml`, then re-run `make validate-deps`.
+
+The CI job `deps-validate` runs this script on every PR and push to `main`.
 
 #### MCP Tools OpenAPI + Typed Client Generation
 
@@ -495,6 +599,8 @@ pre-commit run --all-files
 
 ### GitHub Actions (validation only)
 - Runs docs/tests gate, Terraform fmt/validate, TFLint, Checkov, and example validation.
+- Runs the SDK compatibility smoke matrix (`repo-floors`, `curated-stable`, `latest-compatible`) with lane-labeled jobs for Strands + Bedrock AgentCore example dependency regression coverage.
+- Runs the SDK dependency combination validation (`deps-validate`) for Strands/AgentCore/OTEL combinations on Python 3.12.
 - Runs `Frontend Playwright Smoke` tests on PRs and pushes to main affecting frontend or test paths.
 - `release-tag-guard` accepts only strict release tags (`vMAJOR.MINOR.PATCH`); use `checkpoint/*` for non-release checkpoints.
 - Uses `terraform init -backend=false` on the runner (local only, no AWS).

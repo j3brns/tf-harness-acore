@@ -1,4 +1,4 @@
-.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both push-checkpoint-tag-both ci-status-both streaming-load-test policy-report validate-region validate-version-metadata report-sdk-drift
+.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both push-checkpoint-tag-both ci-status-both streaming-load-test policy-report validate-region validate-version-metadata validate-sdk-compat-matrix validate-deps
 
 # Variables
 ROOT_DIR := $(abspath .)
@@ -211,20 +211,27 @@ test-all: test test-python ## Run all tests (Terraform + Python)
 streaming-load-test: ## Run BFF/AgentCore streaming load tester (pass ARGS='...')
 	python3 terraform/scripts/streaming_load_tester.py $(ARGS)
 
-validate-region: ## Validate AgentCore Runtime region deployability (TFVARS=... or REGION=/AGENTCORE_REGION=/BFF_REGION=...)
+validate-region: ## Validate AgentCore Runtime region deployability (TFVARS=... or REGION=/AGENTCORE_REGION=/BEDROCK_REGION=/BFF_REGION=...)
 	python3 terraform/scripts/validate_agentcore_runtime_region.py \
 		$(if $(TFVARS),--tfvars "$(TFVARS)",) \
 		$(if $(REGION),--region "$(REGION)",) \
 		$(if $(AGENTCORE_REGION),--agentcore-region "$(AGENTCORE_REGION)",) \
+		$(if $(BEDROCK_REGION),--bedrock-region "$(BEDROCK_REGION)",) \
 		$(if $(BFF_REGION),--bff-region "$(BFF_REGION)",)
 
 validate-version-metadata: ## Validate VERSION, CHANGELOG.md, and docs version metadata consistency
 	python3 terraform/scripts/validate_version_metadata.py
 
-report-sdk-drift: ## Report version drift for Strands and AgentCore SDKs across examples
-	@echo "Generating SDK version drift report..."
-	python3 terraform/scripts/report_sdk_drift.py --output docs/SDK_VERSION_DRIFT_REPORT.md
-	@echo "✓ Report generated to docs/SDK_VERSION_DRIFT_REPORT.md"
+validate-sdk-compat-matrix: ## Run SDK compatibility smoke matrix for example agents (LANE=... EXAMPLE=... ARGS='...')
+	python3 terraform/scripts/validate_sdk_compatibility_matrix.py \
+		$(if $(LANE),--lane "$(LANE)",) \
+		$(if $(EXAMPLE),--example "$(EXAMPLE)",) \
+		$(if $(REUSE_VENV),--reuse-venv,) \
+		$(if $(SKIP_PIP_UPGRADE),--skip-pip-upgrade,) \
+		$(ARGS)
+
+validate-deps: ## Validate SDK dependency combination compatibility (Python 3.12, issue #122)
+	bash $(TERRAFORM_DIR)/scripts/validate_deps.sh
 
 policy-report: ## Generate policy and tag conformance report
 	@echo "Generating policy and tag conformance report..."

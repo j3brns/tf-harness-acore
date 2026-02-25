@@ -194,6 +194,16 @@ Sources:
 - https://docs.aws.amazon.com/general/latest/gr/bedrock_agentcore.html
 - https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-regions.html
 
+Region source-of-truth policy (checked `2026-02-25`):
+- `agentcore_region` deployability for this repo is gated by AWS General Reference AgentCore endpoint coverage (control + data plane) and is enforced by `make validate-region`.
+- AgentCore optional feature toggles (`Policy`, `Evaluations`) are gated by the AgentCore feature-region matrix and Terraform preconditions.
+- `bedrock_region` compatibility is a separate Bedrock concern (model availability, application inference profile support, and cross-Region inference profile/IAM/SCP requirements). `make validate-region` now warns on Bedrock split-region configs but does not prove model-specific or CRIS destination-region compatibility.
+Sources:
+- https://docs.aws.amazon.com/general/latest/gr/bedrock_agentcore.html
+- https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-regions.html
+- https://docs.aws.amazon.com/bedrock/latest/userguide/cross-region-inference.html
+- https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-support.html
+
 ### 3. Deploy
 
 ```bash
@@ -245,9 +255,24 @@ make watch   # auto-restart on file changes (inotifywait)
 
 ### The Makefile
 
-The root Makefile exposes the full development surface through forty-odd targets. `make quickstart` gets a new team member from clone to validated in under a minute. `make plan-dev` through `make plan-research` let you plan against any example configuration without remembering tfvars paths. `make validate-region` provides a non-interactive AgentCore Runtime deployability guard (and `make plan*` / `make apply*` call it automatically). `make validate-version-metadata` enforces consistency between `VERSION`, `CHANGELOG.md`, and documented version metadata before release/docs drift reaches CI. `make test-all` runs every Terraform and Python validation in sequence. `make security-scan` runs Checkov. `make logs-gateway` through `make logs-evaluator` tail CloudWatch logs per component. `make docs` regenerates terraform-docs plus MCP OpenAPI/typed-client artifacts, `make generate-openapi-client` regenerates the TypeScript SDK from the MCP OpenAPI spec, `make check-openapi-client` validates generated-client drift, and `make openapi-contract-diff OLD=<baseline.json>` produces a classified contract diff/changelog summary (potentially breaking vs additive vs documentation-only) for PR/release review. `make streaming-load-test` runs the automated NDJSON streaming connectivity/load tester for validating the 15-minute (900s) streaming wall through the BFF proxy. `make debug` runs a plan with `TF_LOG=DEBUG` for when things go sideways.
+The root Makefile exposes the full development surface through forty-odd targets. `make quickstart` gets a new team member from clone to validated in under a minute. `make plan-dev` through `make plan-research` let you plan against any example configuration without remembering tfvars paths. `make validate-region` provides a non-interactive AgentCore Runtime deployability guard (and `make plan*` / `make apply*` call it automatically). `make validate-version-metadata` enforces consistency between `VERSION`, `CHANGELOG.md`, and documented version metadata before release/docs drift reaches CI. `make validate-sdk-compat-matrix` runs a fast SDK compatibility smoke matrix across example agents (Strands + Bedrock AgentCore focused) using lane labels (`repo-floors`, `curated-stable`, `latest-compatible`) with actionable lane/example failure output. `make test-all` runs every Terraform and Python validation in sequence. `make security-scan` runs Checkov. `make logs-gateway` through `make logs-evaluator` tail CloudWatch logs per component. `make docs` regenerates terraform-docs plus MCP OpenAPI/typed-client artifacts, `make generate-openapi-client` regenerates the TypeScript SDK from the MCP OpenAPI spec, `make check-openapi-client` validates generated-client drift, and `make openapi-contract-diff OLD=<baseline.json>` produces a classified contract diff/changelog summary (potentially breaking vs additive vs documentation-only) for PR/release review. `make streaming-load-test` runs the automated NDJSON streaming connectivity/load tester for validating the 15-minute (900s) streaming wall through the BFF proxy. `make debug` runs a plan with `TF_LOG=DEBUG` for when things go sideways.
 
 No target requires AWS credentials except those that explicitly deploy or read live infrastructure. Formatting, validation, security scanning, linting, and Python unit tests all run locally and offline.
+
+For dependency drift/regression checks across example agents, run:
+
+```bash
+# All lanes (repo floors, curated stable, latest-compatible resolver)
+make validate-sdk-compat-matrix
+
+# Reproduce a single failing lane/example from CI
+make validate-sdk-compat-matrix LANE=repo-floors EXAMPLE=3-deepresearch
+
+# Inspect current lane definitions and pinned package sets
+make validate-sdk-compat-matrix ARGS='--list-lanes'
+```
+
+Linux note: install Python venv support first if `python -m venv` reports missing `ensurepip` (for example `python3.12-venv` on Debian/Ubuntu).
 
 ### Streaming Wall Verification (Issue #32)
 
