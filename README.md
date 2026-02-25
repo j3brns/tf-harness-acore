@@ -533,7 +533,7 @@ Operational verification points:
 
 | Example | Purpose | Features Enabled |
 |---------|---------|-----------------|
-| `1-hello-world` | Minimal standalone agent demonstrating basic AgentCore capabilities | Runtime, Observability, Packaging |
+| `1-hello-world` | Minimal Strands baseline demo (FAST-style parity) for single-agent chat/tool flow | Runtime, Observability, Packaging |
 | `2-gateway-tool` | MCP gateway integration with a Titanic dataset analysis Lambda | Gateway, Code Interpreter (SANDBOX), Runtime, Packaging |
 | `3-deepresearch` | Full-featured research agent with Strands DeepAgents | Gateway, Code Interpreter, Browser, Memory (BOTH), Observability |
 | `4-research` | Research agent with governance and quality evaluation | Gateway, Code Interpreter, Browser, Memory, Evaluations (REASONING) |
@@ -546,6 +546,8 @@ cd terraform
 terraform init -backend=false
 terraform plan -var-file=../examples/3-deepresearch/terraform.tfvars
 ```
+
+For a minimal Strands baseline that is easier to compare against other frameworks, start with `examples/1-hello-world/`. Use `examples/3-deepresearch/` for advanced multi-agent Strands patterns and `examples/5-integrated/` for full infrastructure composition with MCP servers and BFF/SPA components.
 
 ---
 
