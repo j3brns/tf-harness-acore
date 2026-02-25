@@ -98,6 +98,9 @@ make validate-version-metadata
 # Fast SDK compatibility smoke matrix (Strands + Bedrock AgentCore)
 make validate-sdk-compat-matrix
 
+# Validate SDK dependency combination compatibility (issue #122)
+make validate-deps
+
 # Generate all documentation (including MCP Tools OpenAPI + typed client)
 make docs
 ```
@@ -148,6 +151,48 @@ When updating lanes:
 - update example dependency minimums in the relevant `examples/*/agent-code/pyproject.toml` files (the `repo-floors` lane updates automatically for tracked packages)
 - update `CURATED_STABLE_PINS` when re-baselining the curated lane
 - rerun `make validate-sdk-compat-matrix` (or at least the changed lane) and include results in issue/PR evidence
+
+#### Python SDK Dependency Compatibility Validation (Issue #122)
+
+The repo combines rapidly evolving SDKs (`strands-agents*`, `bedrock-agentcore`) and
+optional extras (for example OTEL) whose transitive graphs can conflict even when
+packages appear to work independently. `make validate-deps` tests three validated
+combinations on Python 3.12:
+
+| Combo | Packages |
+| :--- | :--- |
+| `strands-core` | `strands-agents` + `bedrock-agentcore` |
+| `strands-otel` | `strands-agents[otel]` + `bedrock-agentcore` |
+| `strands-deepresearch` | `strands-deep-agents` + `strands-agents-tools` + `bedrock-agentcore` |
+
+Each combination is validated in an isolated virtual environment; `pip check` is run
+after install to catch transitive incompatibilities.
+
+**Local reproduction:**
+
+```bash
+# Run all three combinations (uses python3.12 or python3 as fallback)
+make validate-deps
+
+# Run the script directly (override Python interpreter if needed)
+PYTHON=python3.12 bash terraform/scripts/validate_deps.sh
+
+# Faster alternative using uv (if installed)
+uv pip install --dry-run bedrock-agentcore>=1.0.7 strands-agents>=1.18.0
+```
+
+**Triage guide** — if `make validate-deps` fails:
+
+1. The failing combination name is printed in the summary.
+2. The full `pip install` output (including resolver conflict details) is shown
+   above the summary — look for `ResolutionImpossible` or `incompatible` lines.
+3. `pip check` output shows which installed packages have broken requirements.
+4. Installed SDK/OTEL package versions are printed for cross-referencing with
+   upstream changelogs (`strands-agents`, `bedrock-agentcore`, `opentelemetry-*`).
+5. Common fix: tighten or loosen `>=` floor constraints in the relevant
+   `examples/*/agent-code/pyproject.toml`, then re-run `make validate-deps`.
+
+The CI job `deps-validate` runs this script on every PR and push to `main`.
 
 #### MCP Tools OpenAPI + Typed Client Generation
 
@@ -555,6 +600,7 @@ pre-commit run --all-files
 ### GitHub Actions (validation only)
 - Runs docs/tests gate, Terraform fmt/validate, TFLint, Checkov, and example validation.
 - Runs the SDK compatibility smoke matrix (`repo-floors`, `curated-stable`, `latest-compatible`) with lane-labeled jobs for Strands + Bedrock AgentCore example dependency regression coverage.
+- Runs the SDK dependency combination validation (`deps-validate`) for Strands/AgentCore/OTEL combinations on Python 3.12.
 - Runs `Frontend Playwright Smoke` tests on PRs and pushes to main affecting frontend or test paths.
 - `release-tag-guard` accepts only strict release tags (`vMAJOR.MINOR.PATCH`); use `checkpoint/*` for non-release checkpoints.
 - Uses `terraform init -backend=false` on the runner (local only, no AWS).

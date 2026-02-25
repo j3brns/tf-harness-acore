@@ -1,4 +1,4 @@
-.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both push-checkpoint-tag-both ci-status-both streaming-load-test policy-report validate-region validate-version-metadata validate-sdk-compat-matrix
+.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both push-checkpoint-tag-both ci-status-both streaming-load-test policy-report validate-region validate-version-metadata validate-sdk-compat-matrix validate-deps
 
 # Variables
 ROOT_DIR := $(abspath .)
@@ -229,6 +229,9 @@ validate-sdk-compat-matrix: ## Run SDK compatibility smoke matrix for example ag
 		$(if $(REUSE_VENV),--reuse-venv,) \
 		$(if $(SKIP_PIP_UPGRADE),--skip-pip-upgrade,) \
 		$(ARGS)
+
+validate-deps: ## Validate SDK dependency combination compatibility (Python 3.12, issue #122)
+	bash $(TERRAFORM_DIR)/scripts/validate_deps.sh
 
 policy-report: ## Generate policy and tag conformance report
 	@echo "Generating policy and tag conformance report..."
