@@ -1,0 +1,8 @@
+{
+  "path": {
+    "tenantId": "acme-finance"
+  },
+  "query": {
+    "limit": 20
+  }
+}

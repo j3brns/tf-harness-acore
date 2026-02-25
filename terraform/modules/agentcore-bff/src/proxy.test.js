@@ -427,6 +427,76 @@ describe("proxy.js", () => {
     });
   });
 
+  describe("Tenancy Admin API", () => {
+    test("returns diagnostics mock response", async () => {
+      const stream = mockResponseStream();
+      const event = {
+        rawPath: "/api/tenancy/v1/admin/tenants/acme-finance/diagnostics",
+        requestContext: {
+          authorizer: {
+            tenant_id: "acme-finance",
+            app_id: "app-1"
+          }
+        }
+      };
+
+      await handler(event, stream);
+
+      expect(global.awslambda.HttpResponseStream.from).toHaveBeenCalledWith(stream, {
+        statusCode: 200,
+        headers: { "content-type": "application/json" },
+      });
+      const response = JSON.parse(mockStreamEnd.mock.calls[0][0]);
+      expect(response.tenantId).toBe("acme-finance");
+      expect(response.health).toBe("HEALTHY");
+    });
+
+    test("returns timeline mock response", async () => {
+      const stream = mockResponseStream();
+      const event = {
+        rawPath: "/api/tenancy/v1/admin/tenants/acme-finance/timeline",
+        requestContext: {
+          authorizer: {
+            tenant_id: "acme-finance",
+            app_id: "app-1"
+          }
+        }
+      };
+
+      await handler(event, stream);
+
+      expect(global.awslambda.HttpResponseStream.from).toHaveBeenCalledWith(stream, {
+        statusCode: 200,
+        headers: { "content-type": "application/json" },
+      });
+      const response = JSON.parse(mockStreamEnd.mock.calls[0][0]);
+      expect(response.events).toBeInstanceOf(Array);
+      expect(response.events.length).toBeGreaterThan(0);
+    });
+
+    test("returns audit-summary mock response", async () => {
+      const stream = mockResponseStream();
+      const event = {
+        rawPath: "/api/tenancy/v1/admin/tenants/acme-finance/audit-summary",
+        requestContext: {
+          authorizer: {
+            tenant_id: "acme-finance",
+            app_id: "app-1"
+          }
+        }
+      };
+
+      await handler(event, stream);
+
+      expect(global.awslambda.HttpResponseStream.from).toHaveBeenCalledWith(stream, {
+        statusCode: 200,
+        headers: { "content-type": "application/json" },
+      });
+      const response = JSON.parse(mockStreamEnd.mock.calls[0][0]);
+      expect(response.summary).toBeDefined();
+    });
+  });
+
   describe("writeError helper", () => {
     test("writes structured JSON error to response stream", () => {
       const stream = mockResponseStream();
