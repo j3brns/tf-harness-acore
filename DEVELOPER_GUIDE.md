@@ -486,6 +486,7 @@ pre-commit run --all-files
 
 ### GitHub Actions (validation only)
 - Runs docs/tests gate, Terraform fmt/validate, TFLint, Checkov, and example validation.
+- Runs `Frontend Playwright Smoke` tests on PRs and pushes to main affecting frontend or test paths.
 - Uses `terraform init -backend=false` on the runner (local only, no AWS).
 - Uses shared GitHub Actions for Terraform, TFLint, and Checkov setup plus caching.
 - Caches Terraform plugins, TFLint plugins, and pip downloads to speed CI runs.
