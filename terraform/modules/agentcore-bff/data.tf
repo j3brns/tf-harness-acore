@@ -48,6 +48,29 @@ resource "aws_s3_bucket" "spa" {
   tags = var.tags
 }
 
+# CloudFront standard logging (distribution logging_config) requires an ACL-enabled
+# S3 destination bucket, so keep SPA fallback bucket ACL-compatible.
+resource "aws_s3_bucket_ownership_controls" "spa" {
+  # checkov:skip=CKV2_AWS_65: CloudFront standard logging (legacy logging_config) requires ACL-compatible S3 destination buckets
+  count  = var.enable_bff ? 1 : 0
+  bucket = aws_s3_bucket.spa[0].id
+
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+resource "aws_s3_bucket_acl" "spa" {
+  count  = var.enable_bff ? 1 : 0
+  bucket = aws_s3_bucket.spa[0].id
+  acl    = "private"
+
+  depends_on = [
+    aws_s3_bucket_ownership_controls.spa,
+    aws_s3_bucket_public_access_block.spa
+  ]
+}
+
 # S3 Access Logging
 resource "aws_s3_bucket_logging" "spa" {
   count  = var.enable_bff && var.logging_bucket_id != null && var.logging_bucket_id != "" ? 1 : 0

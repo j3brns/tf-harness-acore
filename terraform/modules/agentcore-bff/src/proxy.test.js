@@ -12,6 +12,13 @@ jest.mock("@aws-sdk/client-sts", () => ({
   AssumeRoleCommand: jest.fn((args) => args),
 }));
 
+// --- Mock S3 (audit persistence) ---
+const mockS3Send = jest.fn();
+jest.mock("@aws-sdk/client-s3", () => ({
+  S3Client: jest.fn(() => ({ send: mockS3Send })),
+  PutObjectCommand: jest.fn((args) => args),
+}));
+
 function setupAwsLambdaGlobal() {
   global.awslambda = {
     HttpResponseStream: {
@@ -90,6 +97,7 @@ describe("proxy.js", () => {
     mockStreamEnd.mockClear();
     mockHttpsRequest.mockClear();
     mockStsSend.mockClear();
+    mockS3Send.mockClear();
     setupAwsLambdaGlobal();
   });
 
@@ -433,6 +441,7 @@ describe("proxy.js", () => {
       const event = {
         rawPath: "/api/tenancy/v1/admin/tenants/acme-finance/diagnostics",
         requestContext: {
+          http: { method: "GET" },
           authorizer: {
             tenant_id: "acme-finance",
             app_id: "app-1"
@@ -449,13 +458,40 @@ describe("proxy.js", () => {
       const response = JSON.parse(mockStreamEnd.mock.calls[0][0]);
       expect(response.tenantId).toBe("acme-finance");
       expect(response.health).toBe("HEALTHY");
+      expect(mockHttpsRequest).not.toHaveBeenCalled();
+    });
+
+    test("rejects tenant admin route when path tenant does not match authorizer tenant", async () => {
+      const stream = mockResponseStream();
+      const event = {
+        rawPath: "/api/tenancy/v1/admin/tenants/acme-finance/diagnostics",
+        requestContext: {
+          http: { method: "GET" },
+          authorizer: {
+            tenant_id: "other-tenant",
+            app_id: "app-1"
+          }
+        }
+      };
+
+      await handler(event, stream);
+
+      expect(global.awslambda.HttpResponseStream.from).toHaveBeenCalledWith(stream, {
+        statusCode: 403,
+        headers: { "content-type": "application/json" },
+      });
+      expect(mockStreamEnd).toHaveBeenCalledWith(
+        JSON.stringify({ error: "Tenant isolation violation: path tenant does not match authenticated tenant" })
+      );
     });
 
     test("returns timeline mock response", async () => {
       const stream = mockResponseStream();
       const event = {
         rawPath: "/api/tenancy/v1/admin/tenants/acme-finance/timeline",
+        rawQueryString: "limit=1",
         requestContext: {
+          http: { method: "GET" },
           authorizer: {
             tenant_id: "acme-finance",
             app_id: "app-1"
@@ -471,14 +507,16 @@ describe("proxy.js", () => {
       });
       const response = JSON.parse(mockStreamEnd.mock.calls[0][0]);
       expect(response.events).toBeInstanceOf(Array);
-      expect(response.events.length).toBeGreaterThan(0);
+      expect(response.events.length).toBe(1);
     });
 
     test("returns audit-summary mock response", async () => {
       const stream = mockResponseStream();
       const event = {
         rawPath: "/api/tenancy/v1/admin/tenants/acme-finance/audit-summary",
+        rawQueryString: "windowHours=12&includeActors=true",
         requestContext: {
+          http: { method: "GET" },
           authorizer: {
             tenant_id: "acme-finance",
             app_id: "app-1"
@@ -494,6 +532,304 @@ describe("proxy.js", () => {
       });
       const response = JSON.parse(mockStreamEnd.mock.calls[0][0]);
       expect(response.summary).toBeDefined();
+      expect(response.window.hours).toBe(12);
+      expect(response.actorBreakdown).toEqual([]);
+    });
+
+    test("returns create-tenant stub response and does not fall through to chat", async () => {
+      const stream = mockResponseStream();
+      const event = {
+        rawPath: "/api/tenancy/v1/admin/tenants",
+        requestContext: {
+          http: { method: "POST" },
+          authorizer: {
+            tenant_id: "admin-tenant",
+            app_id: "portal-prod"
+          }
+        },
+        body: JSON.stringify({
+          tenantSlug: "acme-finance",
+          displayName: "Acme Finance",
+          owner: { email: "owner@acme.example" },
+          credentialProfile: { mode: "PORTAL_CLIENT_SECRET" }
+        }),
+        isBase64Encoded: false
+      };
+
+      await handler(event, stream);
+
+      expect(global.awslambda.HttpResponseStream.from).toHaveBeenCalledWith(stream, {
+        statusCode: 201,
+        headers: { "content-type": "application/json" },
+      });
+      const response = JSON.parse(mockStreamEnd.mock.calls[0][0]);
+      expect(response.tenantId).toBe("acme-finance");
+      expect(response.appId).toBe("portal-prod");
+      expect(response.status).toBe("PENDING_ONBOARDING");
+      expect(mockHttpsRequest).not.toHaveBeenCalled();
+    });
+
+    test("returns 422 when create-tenant body includes authoritative tenant fields", async () => {
+      const stream = mockResponseStream();
+      const event = {
+        rawPath: "/api/tenancy/v1/admin/tenants",
+        requestContext: {
+          http: { method: "POST" },
+          authorizer: {
+            tenant_id: "admin-tenant",
+            app_id: "portal-prod"
+          }
+        },
+        body: JSON.stringify({
+          tenantId: "should-not-be-accepted",
+          tenantSlug: "acme-finance",
+          displayName: "Acme Finance",
+          owner: { email: "owner@acme.example" },
+          credentialProfile: { mode: "PORTAL_CLIENT_SECRET" }
+        }),
+        isBase64Encoded: false
+      };
+
+      await handler(event, stream);
+
+      expect(global.awslambda.HttpResponseStream.from).toHaveBeenCalledWith(stream, {
+        statusCode: 422,
+        headers: { "content-type": "application/json" },
+      });
+      expect(mockStreamEnd).toHaveBeenCalledWith(
+        JSON.stringify({ error: "request body must not include authoritative tenantId/appId" })
+      );
+      expect(mockHttpsRequest).not.toHaveBeenCalled();
+    });
+
+    test("returns suspend-tenant stub response", async () => {
+      const stream = mockResponseStream();
+      const event = {
+        rawPath: "/api/tenancy/v1/admin/tenants/acme-finance:suspend",
+        requestContext: {
+          http: { method: "POST" },
+          authorizer: {
+            tenant_id: "acme-finance",
+            app_id: "portal-prod"
+          }
+        },
+        body: JSON.stringify({
+          reasonCode: "SECURITY",
+          invalidateSessions: true
+        }),
+        isBase64Encoded: false
+      };
+
+      await handler(event, stream);
+
+      expect(global.awslambda.HttpResponseStream.from).toHaveBeenCalledWith(stream, {
+        statusCode: 200,
+        headers: { "content-type": "application/json" },
+      });
+      const response = JSON.parse(mockStreamEnd.mock.calls[0][0]);
+      expect(response.tenantId).toBe("acme-finance");
+      expect(response.status).toBe("SUSPENDED");
+      expect(response.invalidateSessions).toBe(true);
+      expect(mockHttpsRequest).not.toHaveBeenCalled();
+    });
+
+    test("returns 403 for tenant-targeted admin route when authorizer tenant is missing", async () => {
+      const stream = mockResponseStream();
+      const event = {
+        rawPath: "/api/tenancy/v1/admin/tenants/acme-finance:suspend",
+        requestContext: {
+          http: { method: "POST" },
+          authorizer: { app_id: "portal-prod" }
+        },
+        body: JSON.stringify({ reasonCode: "SECURITY" }),
+        isBase64Encoded: false
+      };
+
+      await handler(event, stream);
+
+      expect(global.awslambda.HttpResponseStream.from).toHaveBeenCalledWith(stream, {
+        statusCode: 403,
+        headers: { "content-type": "application/json" },
+      });
+      expect(mockStreamEnd).toHaveBeenCalledWith(
+        JSON.stringify({ error: "Missing tenant context for tenant-targeted admin route" })
+      );
+      expect(mockHttpsRequest).not.toHaveBeenCalled();
+    });
+
+    test("returns rotate-credentials stub response", async () => {
+      const stream = mockResponseStream();
+      const event = {
+        rawPath: "/api/tenancy/v1/admin/tenants/acme-finance:rotate-credentials",
+        requestContext: {
+          http: { method: "POST" },
+          authorizer: {
+            tenant_id: "acme-finance",
+            app_id: "portal-prod"
+          }
+        },
+        body: JSON.stringify({
+          credentialType: "OIDC_CLIENT_SECRET",
+          rotationMode: "GRACEFUL"
+        }),
+        isBase64Encoded: false
+      };
+
+      await handler(event, stream);
+
+      expect(global.awslambda.HttpResponseStream.from).toHaveBeenCalledWith(stream, {
+        statusCode: 200,
+        headers: { "content-type": "application/json" },
+      });
+      const response = JSON.parse(mockStreamEnd.mock.calls[0][0]);
+      expect(response.tenantId).toBe("acme-finance");
+      expect(response.status).toBe("ACCEPTED");
+      expect(response.rotationId).toMatch(/^rot-/);
+      expect(mockHttpsRequest).not.toHaveBeenCalled();
+    });
+
+    test("returns 422 for invalid rotate-credentials request body", async () => {
+      const stream = mockResponseStream();
+      const event = {
+        rawPath: "/api/tenancy/v1/admin/tenants/acme-finance:rotate-credentials",
+        requestContext: {
+          http: { method: "POST" },
+          authorizer: {
+            tenant_id: "acme-finance",
+            app_id: "portal-prod"
+          }
+        },
+        body: JSON.stringify({
+          rotationMode: "GRACEFUL"
+        }),
+        isBase64Encoded: false
+      };
+
+      await handler(event, stream);
+
+      expect(global.awslambda.HttpResponseStream.from).toHaveBeenCalledWith(stream, {
+        statusCode: 422,
+        headers: { "content-type": "application/json" },
+      });
+      expect(mockStreamEnd).toHaveBeenCalledWith(
+        JSON.stringify({ error: "credentialType must be a non-empty string" })
+      );
+    });
+
+    test("returns 404 for unsupported tenancy admin route instead of falling through to chat", async () => {
+      const stream = mockResponseStream();
+      const event = {
+        rawPath: "/api/tenancy/v1/admin/tenants/acme-finance/unknown-action",
+        requestContext: {
+          http: { method: "GET" },
+          authorizer: {
+            tenant_id: "acme-finance",
+            app_id: "portal-prod"
+          }
+        }
+      };
+
+      await handler(event, stream);
+
+      expect(global.awslambda.HttpResponseStream.from).toHaveBeenCalledWith(stream, {
+        statusCode: 404,
+        headers: { "content-type": "application/json" },
+      });
+      expect(mockStreamEnd).toHaveBeenCalledWith(
+        JSON.stringify({ error: "Unsupported tenancy admin route" })
+      );
+      expect(mockHttpsRequest).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("audit logging", () => {
+    test("persists tenant-admin audit logs to S3 with sanitized key and SSE-S3", async () => {
+      process.env.AUDIT_LOGS_ENABLED = "true";
+      process.env.AUDIT_LOGS_BUCKET = "audit-bucket";
+      process.env.AUDIT_LOGS_PREFIX = "/audit/custom";
+
+      jest.resetModules();
+      setupAwsLambdaGlobal();
+      jest.mock("https", () => ({ request: mockHttpsRequest }));
+      const { handler: h } = require("./proxy");
+      const { S3Client: S3ClientLocal, PutObjectCommand: PutObjectCommandLocal } = require("@aws-sdk/client-s3");
+
+      mockS3Send.mockResolvedValueOnce({});
+
+      const stream = mockResponseStream();
+      const event = {
+        rawPath: "/api/tenancy/v1/admin/tenants/acme%2Ffinance/diagnostics",
+        requestContext: {
+          requestId: "req:1",
+          http: { method: "GET" },
+          authorizer: {
+            tenant_id: "acme/finance",
+            app_id: "portal prod"
+          }
+        }
+      };
+
+      await h(event, stream);
+
+      expect(S3ClientLocal).toHaveBeenCalled();
+      expect(mockS3Send).toHaveBeenCalledTimes(1);
+      expect(PutObjectCommandLocal).toHaveBeenCalledTimes(1);
+      const putArgs = mockS3Send.mock.calls[0][0];
+      expect(putArgs.Bucket).toBe("audit-bucket");
+      expect(putArgs.ContentType).toBe("application/json");
+      expect(putArgs.ServerSideEncryption).toBe("AES256");
+      expect(putArgs.Key).toMatch(/^audit\/custom\//);
+      expect(putArgs.Key).toContain("portal_prod/acme_finance/");
+      expect(putArgs.Key).toContain("req_1.json");
+
+      const body = JSON.parse(String(putArgs.Body).trim());
+      expect(body.app_id).toBe("portal prod");
+      expect(body.tenant_id).toBe("acme/finance");
+      expect(body.status_code).toBe(200);
+      expect(body.outcome).toBe("success");
+
+      delete process.env.AUDIT_LOGS_ENABLED;
+      delete process.env.AUDIT_LOGS_BUCKET;
+      delete process.env.AUDIT_LOGS_PREFIX;
+    });
+
+    test("does not fail request when audit persistence to S3 errors", async () => {
+      process.env.AUDIT_LOGS_ENABLED = "true";
+      process.env.AUDIT_LOGS_BUCKET = "audit-bucket";
+
+      jest.resetModules();
+      setupAwsLambdaGlobal();
+      jest.mock("https", () => ({ request: mockHttpsRequest }));
+      const { handler: h } = require("./proxy");
+
+      mockS3Send.mockRejectedValueOnce(new Error("s3 unavailable"));
+      const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+      const stream = mockResponseStream();
+      const event = {
+        rawPath: "/api/tenancy/v1/admin/tenants/acme-finance/diagnostics",
+        requestContext: {
+          http: { method: "GET" },
+          authorizer: {
+            tenant_id: "acme-finance",
+            app_id: "portal-prod"
+          }
+        }
+      };
+
+      await h(event, stream);
+
+      expect(global.awslambda.HttpResponseStream.from).toHaveBeenCalledWith(stream, {
+        statusCode: 200,
+        headers: { "content-type": "application/json" },
+      });
+      expect(mockStreamEnd).toHaveBeenCalled();
+      expect(mockS3Send).toHaveBeenCalledTimes(1);
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("Audit log persist failed"));
+
+      consoleSpy.mockRestore();
+      delete process.env.AUDIT_LOGS_ENABLED;
+      delete process.env.AUDIT_LOGS_BUCKET;
     });
   });
 

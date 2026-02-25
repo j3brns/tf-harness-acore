@@ -107,12 +107,7 @@ Notes:
 - PASS criteria are configurable (`--min-stream-seconds`, `--min-delta-events`, `--allow-non-ndjson`).
 - If Terraform outputs are unavailable in the current worktree, pass `--url https://.../chat` explicitly.
 
-#### Frontend Component Library (React + Tailwind, No Bundler)
-To verify the committed typed client matches the current OpenAPI spec (drift check used in CI):
-
-```bash
-make check-openapi-client
-```
+#### OpenAPI Contract Diff Summary (Issue #51)
 
 To generate a human-readable OpenAPI contract diff/changelog summary against a baseline spec (for PR review or release notes prep):
 
@@ -133,26 +128,6 @@ Generated artifacts:
 
 The OpenAPI contract diff/changelog summary is generated on demand (local via `make openapi-contract-diff`) and in CI as a job summary for PR/tag review. It is not committed as a static artifact.
 
-These artifacts can be used by the Web UI and integrators to consume a consistent tool-calling contract without ad hoc request code.
-
-#### Streaming Load Tester (Issue #32)
-
-For deployed BFF environments, use the automated streaming load tester to validate the 15-minute (900s) response-streaming path and capture evidence for issue/PR closeout:
-
-```bash
-# Direct API Gateway invoke URL (terraform output agentcore_bff_api_url + /chat)
-make streaming-load-test ARGS='--session-cookie tenant-a:session-123 --duration-seconds 900 --json-summary --verbose'
-
-# CloudFront path (/api/chat) instead of direct API Gateway
-make streaming-load-test ARGS='--use-spa-url --session-cookie tenant-a:session-123 --duration-seconds 900'
-```
-
-Notes:
-- The tester sends a default prompt that instructs a long-running mock tool to emit heartbeat updates.
-- Override with `--prompt "..."` if your test agent uses a different mock tool contract.
-- PASS criteria are configurable (`--min-stream-seconds`, `--min-delta-events`, `--allow-non-ndjson`).
-- If Terraform outputs are unavailable in the current worktree, pass `--url https://.../chat` explicitly.
-
 #### Frontend Component Library (React + Tailwind, No Bundler)
 
 The SPA template and the integrated example now ship with a reusable frontend component library:
@@ -168,6 +143,7 @@ The library is intentionally static-hosting friendly:
 
 To customize a specialized dashboard, compose panels in `frontend/app.js` and keep shared primitives in `frontend/components.js`. The example app will try to load `docs/api/mcp-tools-v1.openapi.json` so issue `#33` OpenAPI output can drive tool panels, and issue `#51` adds a generated typed client at `docs/api/mcp-tools-v1.client.ts` for integrator/frontend SDK usage.
 
+```bash
 # Syntax validation
 terraform validate
 
