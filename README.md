@@ -172,7 +172,7 @@ Create a `terraform.tfvars` file or use one of the provided examples.
 ```hcl
 agent_name  = "my-agent-core-a1b2"
 app_id      = "my-agent"
-region      = "eu-west-2"
+region      = "eu-central-1"
 environment = "dev"
 
 enable_gateway      = true
@@ -186,6 +186,8 @@ enable_observability = true
 enable_memory        = true
 memory_type          = "BOTH"
 ```
+
+Regional feature coverage varies across AgentCore services and features. `eu-central-1` (Frankfurt) is the safest EU default in this repo when you want broad AgentCore feature coverage (for example Runtime + Policy + Evaluations), while `eu-west-1` (Dublin) is often a good EU choice if your feature set does not require every AgentCore feature. Check the AWS AgentCore feature matrix and endpoints before choosing a deployment region, and do not assume London (`eu-west-2`) has feature parity.
 
 ### 3. Deploy
 
@@ -724,7 +726,7 @@ resource "gitlab_project_protected_environment" "production" {
 
 ### GitHub Actions (Validation Only)
 
-The GitHub Actions workflow runs on every pull request, push to `main`, and `v*` tag push. It executes formatting checks, `terraform validate`, TFLint, Checkov, example validation, Copier template generation, and **component accessibility regression testing (WCAG 2.1 AA)**. It does not deploy to AWS and requires no cloud credentials.
+The GitHub Actions workflow runs on every pull request, push to `main`, and `v*` tag push. It executes formatting checks, `terraform validate`, TFLint, Checkov, example validation, OpenAPI/documentation checks, and Copier template generation. It does not deploy to AWS and requires no cloud credentials.
 
 GitLab CI is the deployment pipeline. It runs validation/lint/test stages and then handles environment promotion gates for deploy.
 

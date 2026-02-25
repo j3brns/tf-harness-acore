@@ -148,9 +148,9 @@ test-cedar: ## Validate Cedar policies
 	bash $(TERRAFORM_DIR)/scripts/validate_cedar_policies.sh
 	@echo "✓ Cedar policies validated"
 
-test-frontend: ## Run frontend accessibility regression tests
-	@echo "Running frontend accessibility tests..."
-	cd terraform/tests/frontend && npm install && npx playwright install chromium && npm run test:accessibility
+test-frontend: ## Run frontend Playwright tests
+	@echo "Running frontend Playwright tests..."
+	cd terraform/tests/frontend && npm install && npx playwright install chromium && npm run test:frontend
 
 preview-frontend: ## Run a local server to preview frontend components
 	@echo "Starting component preview server on http://localhost:8080..."

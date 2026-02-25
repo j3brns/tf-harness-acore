@@ -21,6 +21,15 @@ All notable changes to this project are documented in this file.
 - CLI provisioners in foundation/tools/runtime/governance modules now create `${path.module}/.terraform` before writing local output artifacts, preventing deploy failures on clean CI runners.
 - Validation coverage now asserts this output-directory guard across all CLI-managed modules.
 
+## [0.1.1] - 2026-02-25
+
+### Changed
+- Switched the documented EU quickstart default region to `eu-central-1` (Frankfurt) and added guidance about AgentCore feature coverage differences across regions (including London/Dublin/Frankfurt caveats).
+- Renamed frontend Playwright npm/Makefile test commands from accessibility-specific names to generic frontend test names.
+
+### Removed
+- Disabled GitHub accessibility workflow and Axe-based accessibility regression spec/dependency from the frontend Playwright test harness.
+
 ## [0.1.0] - 2026-02-19
 
 ### Added

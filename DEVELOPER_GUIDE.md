@@ -22,6 +22,8 @@ This guide covers the development workflow for contributors. For initial account
 | `lambda_architecture` | Compute architecture (`x86_64` or `arm64`). | `x86_64` |
 | `environment` | Deployment stage (`dev`, `staging`, `prod`). | `dev` |
 
+Regional availability note: AgentCore feature coverage varies by region. Prefer a region that supports the specific features you plan to enable (for example Runtime, Policy, Evaluations) and verify against the current AWS AgentCore region matrix/endpoints before rollout.
+
 ## Development Workflow
 
 ### Making Changes

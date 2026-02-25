@@ -83,7 +83,7 @@ function Preview() {
   return html`
     <${AppShell}
       title="Component Preview Console"
-      subtitle="Exposing all library components for accessibility and visual regression testing."
+      subtitle="Exposing all library components for frontend regression and visual testing."
       sidebar=${sidebar}
     >
       <div className="flex flex-col gap-5">
