@@ -189,6 +189,11 @@ memory_type          = "BOTH"
 
 Regional feature coverage varies across AgentCore services and features. `eu-central-1` (Frankfurt) is the safest EU default in this repo when you want broad AgentCore feature coverage (for example Runtime + Policy + Evaluations), while `eu-west-1` (Dublin) is often a good EU choice if your feature set does not require every AgentCore feature. Check the AWS AgentCore feature matrix and endpoints before choosing a deployment region, and do not assume London (`eu-west-2`) has feature parity.
 
+Runtime deployability guard note (checked `2026-02-25`): this repo now validates `agentcore_region` against AWS General Reference AgentCore control/data plane endpoint coverage before `make plan*` / `make apply*`. A region may appear in the AgentCore Runtime feature matrix but still fail this repo's deployability guard if endpoint coverage is missing for the required path (for example `eu-west-2`).
+Sources:
+- https://docs.aws.amazon.com/general/latest/gr/bedrock_agentcore.html
+- https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-regions.html
+
 ### 3. Deploy
 
 ```bash
@@ -240,7 +245,7 @@ make watch   # auto-restart on file changes (inotifywait)
 
 ### The Makefile
 
-The root Makefile exposes the full development surface through forty-odd targets. `make quickstart` gets a new team member from clone to validated in under a minute. `make plan-dev` through `make plan-research` let you plan against any example configuration without remembering tfvars paths. `make test-all` runs every Terraform and Python validation in sequence. `make security-scan` runs Checkov. `make logs-gateway` through `make logs-evaluator` tail CloudWatch logs per component. `make docs` regenerates terraform-docs plus MCP OpenAPI/typed-client artifacts, `make generate-openapi-client` regenerates the TypeScript SDK from the MCP OpenAPI spec, `make check-openapi-client` validates generated-client drift, and `make openapi-contract-diff OLD=<baseline.json>` produces a classified contract diff/changelog summary (potentially breaking vs additive vs documentation-only) for PR/release review. `make streaming-load-test` runs the automated NDJSON streaming connectivity/load tester for validating the 15-minute (900s) streaming wall through the BFF proxy. `make debug` runs a plan with `TF_LOG=DEBUG` for when things go sideways.
+The root Makefile exposes the full development surface through forty-odd targets. `make quickstart` gets a new team member from clone to validated in under a minute. `make plan-dev` through `make plan-research` let you plan against any example configuration without remembering tfvars paths. `make validate-region` provides a non-interactive AgentCore Runtime deployability guard (and `make plan*` / `make apply*` call it automatically). `make test-all` runs every Terraform and Python validation in sequence. `make security-scan` runs Checkov. `make logs-gateway` through `make logs-evaluator` tail CloudWatch logs per component. `make docs` regenerates terraform-docs plus MCP OpenAPI/typed-client artifacts, `make generate-openapi-client` regenerates the TypeScript SDK from the MCP OpenAPI spec, `make check-openapi-client` validates generated-client drift, and `make openapi-contract-diff OLD=<baseline.json>` produces a classified contract diff/changelog summary (potentially breaking vs additive vs documentation-only) for PR/release review. `make streaming-load-test` runs the automated NDJSON streaming connectivity/load tester for validating the 15-minute (900s) streaming wall through the BFF proxy. `make debug` runs a plan with `TF_LOG=DEBUG` for when things go sideways.
 
 No target requires AWS credentials except those that explicitly deploy or read live infrastructure. Formatting, validation, security scanning, linting, and Python unit tests all run locally and offline.
 
@@ -274,6 +279,14 @@ make preflight-session
 ```
 
 The preflight source-of-truth is `terraform/scripts/session/preflight.policy`. It enforces branch/worktree guardrails and issue-linked worktree naming conventions.
+
+For configuration-level fail-fast checks before Terraform deploys, run:
+
+```bash
+make validate-region TFVARS=examples/1-hello-world/terraform.tfvars
+```
+
+This validates AgentCore Runtime deployability for the effective `agentcore_region` using AWS endpoint coverage (with actionable alternatives such as `eu-central-1` / `eu-west-1`).
 
 For an interactive linked-worktree helper (list/create/resume), use:
 
