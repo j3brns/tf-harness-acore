@@ -254,3 +254,26 @@ jobs:
           cd .generated-test/terraform
           terraform init -backend=false
           terraform validate
+
+  sdk-compatibility-matrix:
+    name: SDK compatibility matrix (${{ matrix.lane }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        lane:
+          - repo-floors
+          - curated-stable
+          - latest-compatible
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Harness unit test
+        if: matrix.lane == 'repo-floors'
+        run: python3 -m unittest terraform/tests/validation/test_validate_sdk_compatibility_matrix.py
+      - name: Run SDK compatibility smoke matrix lane
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+        run: make validate-sdk-compat-matrix LANE=${{ matrix.lane }}
