@@ -84,6 +84,10 @@ resource "aws_cloudfront_distribution" "bff" {
   # checkov:skip=CKV_AWS_374: Intentional harness default; geo restrictions are workload policy choices and typically enforced in WAF
   count = var.enable_bff ? 1 : 0
 
+  depends_on = [
+    aws_s3_bucket_acl.spa
+  ]
+
   # Optional WAFv2 CLOUDFRONT-scope Web ACL association (must be in us-east-1)
   web_acl_id = var.cloudfront_waf_acl_arn != "" ? var.cloudfront_waf_acl_arn : null
 

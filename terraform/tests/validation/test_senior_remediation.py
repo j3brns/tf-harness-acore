@@ -117,14 +117,25 @@ def test_s3_access_logging():
             raise Exception("FAILED: Centralized logging bucket missing from foundation")
         if '"logging.s3.amazonaws.com"' not in content:
             raise Exception("FAILED: S3 logging service principal missing from bucket policy")
+        if 'resource "aws_s3_bucket_ownership_controls" "access_logs"' not in content:
+            raise Exception("FAILED: Foundation logging bucket ownership controls missing (CloudFront logging ACL compatibility)")
+        if 'object_ownership = "BucketOwnerPreferred"' not in content:
+            raise Exception("FAILED: ACL-compatible ownership mode missing for logging buckets")
+        if 'resource "aws_s3_bucket_acl" "access_logs"' not in content:
+            raise Exception("FAILED: Foundation logging bucket ACL resource missing (CloudFront logging compatibility)")
 
     with open(runtime_s3_path, "r") as f:
         if 'resource "aws_s3_bucket_logging" "deployment"' not in f.read():
             raise Exception("FAILED: Access logging missing from deployment bucket")
 
     with open(bff_data_path, "r") as f:
-        if 'resource "aws_s3_bucket_logging" "spa"' not in f.read():
+        content = f.read()
+        if 'resource "aws_s3_bucket_logging" "spa"' not in content:
             raise Exception("FAILED: Access logging missing from SPA bucket")
+        if 'resource "aws_s3_bucket_ownership_controls" "spa"' not in content:
+            raise Exception("FAILED: SPA bucket ownership controls missing (CloudFront logging fallback compatibility)")
+        if 'resource "aws_s3_bucket_acl" "spa"' not in content:
+            raise Exception("FAILED: SPA bucket ACL resource missing (CloudFront logging fallback compatibility)")
 
     print("  PASS: Centralized S3 Access Logging verified.")
 

@@ -36,6 +36,14 @@ function writeError(responseStream, statusCode, message) {
   s.end(JSON.stringify({ error: message }));
 }
 
+function writeJson(responseStream, statusCode, payload) {
+  const s = awslambda.HttpResponseStream.from(responseStream, {
+    statusCode,
+    headers: { "content-type": "application/json" },
+  });
+  s.end(JSON.stringify(payload));
+}
+
 function safeString(value) {
   return typeof value === "string" ? value : "";
 }
@@ -62,6 +70,137 @@ function sanitizeKeySegment(value) {
 function normalizePrefix(prefix) {
   const raw = safeString(prefix).replace(/^\/+/, "");
   return raw.endsWith("/") ? raw : `${raw}/`;
+}
+
+function getHttpMethod(event) {
+  const requestContext = event.requestContext || {};
+  const httpContext = requestContext.http || {};
+  return safeString(httpContext.method || requestContext.httpMethod).toUpperCase();
+}
+
+function getQueryParams(event) {
+  const params = {};
+  const raw = safeString(event.rawQueryString);
+  if (raw) {
+    for (const [key, value] of new URLSearchParams(raw).entries()) {
+      if (!(key in params)) params[key] = value;
+    }
+  }
+  const direct = event.queryStringParameters;
+  if (direct && typeof direct === "object") {
+    for (const [key, value] of Object.entries(direct)) {
+      if (!(key in params) && typeof value === "string") {
+        params[key] = value;
+      }
+    }
+  }
+  return params;
+}
+
+function decodePathSegment(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function parseTenancyAdminRoute(resourcePath, httpMethod) {
+  const path = safeString(resourcePath);
+  if (!path.startsWith("/api/tenancy/v1/admin/tenants")) {
+    return null;
+  }
+
+  if (httpMethod === "POST" && /^\/api\/tenancy\/v1\/admin\/tenants\/?$/.test(path)) {
+    return { kind: "create_tenant", tenantId: null };
+  }
+
+  let match = path.match(/^\/api\/tenancy\/v1\/admin\/tenants\/([^/]+):suspend\/?$/);
+  if (match && httpMethod === "POST") {
+    return { kind: "suspend_tenant", tenantId: decodePathSegment(match[1]) };
+  }
+
+  match = path.match(/^\/api\/tenancy\/v1\/admin\/tenants\/([^/]+):rotate-credentials\/?$/);
+  if (match && httpMethod === "POST") {
+    return { kind: "rotate_tenant_credentials", tenantId: decodePathSegment(match[1]) };
+  }
+
+  match = path.match(/^\/api\/tenancy\/v1\/admin\/tenants\/([^/]+)\/(audit-summary|diagnostics|timeline)\/?$/);
+  if (match && httpMethod === "GET") {
+    const routeKind = {
+      "audit-summary": "fetch_tenant_audit_summary",
+      diagnostics: "fetch_tenant_diagnostics",
+      timeline: "fetch_tenant_timeline",
+    }[match[2]];
+    return { kind: routeKind, tenantId: decodePathSegment(match[1]) };
+  }
+
+  return { kind: "unsupported_tenancy_route", tenantId: null };
+}
+
+function parseJsonBody(event) {
+  const rawBody = event.body
+    ? event.isBase64Encoded
+      ? Buffer.from(event.body, "base64").toString("utf-8")
+      : event.body
+    : "{}";
+  return JSON.parse(rawBody);
+}
+
+function requireObject(value, label) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${label} must be a JSON object`);
+  }
+}
+
+function requireNonEmptyString(value, label) {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error(`${label} must be a non-empty string`);
+  }
+}
+
+function validateCreateTenantRequest(body) {
+  requireObject(body, "request body");
+  if ("tenantId" in body || "appId" in body) {
+    throw new Error("request body must not include authoritative tenantId/appId");
+  }
+  requireNonEmptyString(body.tenantSlug, "tenantSlug");
+  requireNonEmptyString(body.displayName, "displayName");
+  requireObject(body.owner, "owner");
+  requireNonEmptyString(body.owner.email, "owner.email");
+  requireObject(body.credentialProfile, "credentialProfile");
+  requireNonEmptyString(body.credentialProfile.mode, "credentialProfile.mode");
+}
+
+function validateSuspendTenantRequest(body) {
+  requireObject(body, "request body");
+  requireNonEmptyString(body.reasonCode, "reasonCode");
+  if (body.invalidateSessions !== undefined && typeof body.invalidateSessions !== "boolean") {
+    throw new Error("invalidateSessions must be a boolean");
+  }
+}
+
+function validateRotateTenantCredentialsRequest(body) {
+  requireObject(body, "request body");
+  requireNonEmptyString(body.credentialType, "credentialType");
+  requireNonEmptyString(body.rotationMode, "rotationMode");
+}
+
+function parsePositiveInt(query, key, { min = 1, max = 1000 } = {}) {
+  if (!(key in query)) return null;
+  const value = Number.parseInt(query[key], 10);
+  if (!Number.isInteger(value) || value < min || value > max) {
+    throw new Error(`${key} must be an integer between ${min} and ${max}`);
+  }
+  return value;
+}
+
+function parseOptionalBoolean(query, key) {
+  if (!(key in query)) return null;
+  const value = safeString(query[key]).toLowerCase();
+  if (value === "true") return true;
+  if (value === "false") return false;
+  throw new Error(`${key} must be true or false`);
 }
 
 function createAuditRecord(event) {
@@ -291,11 +430,9 @@ function sendRequest(signed, body, responseStream, sessionId, auditRecord) {
 exports.handler = awslambda.streamifyResponse(async (event, responseStream) => {
   const auditRecord = createAuditRecord(event);
   const resourcePath = event.rawPath || (event.requestContext || {}).resourcePath || (event.requestContext || {}).path || "";
-
-  const isDiagnosticsRoute = resourcePath.endsWith("/diagnostics");
-  const isTimelineRoute = resourcePath.endsWith("/timeline");
-  const isAuditSummaryRoute = resourcePath.endsWith("/audit-summary");
-  const isTenancyRoute = isDiagnosticsRoute || isTimelineRoute || isAuditSummaryRoute;
+  const httpMethod = getHttpMethod(event);
+  const tenancyRoute = parseTenancyAdminRoute(resourcePath, httpMethod);
+  const isTenancyRoute = Boolean(tenancyRoute);
   const isChatRoute = resourcePath.endsWith("/chat") || !isTenancyRoute;
 
   if (isChatRoute) {
@@ -322,15 +459,47 @@ exports.handler = awslambda.streamifyResponse(async (event, responseStream) => {
   const tenantId = authorizer.tenant_id;
   const appId = authorizer.app_id;
   const authorizedSessionId = authorizer.session_id;
+  const pathTenantId = tenancyRoute && tenancyRoute.tenantId ? tenancyRoute.tenantId : null;
 
   auditRecord.app_id = appId || null;
-  auditRecord.tenant_id = tenantId || null;
+  auditRecord.tenant_id = pathTenantId || tenantId || null;
   auditRecord.session_id_authorized = authorizedSessionId || null;
 
+  if (tenancyRoute && tenancyRoute.kind === "unsupported_tenancy_route") {
+    auditRecord.status_code = 404;
+    auditRecord.outcome = "invalid_request";
+    auditRecord.error_message = "Unsupported tenancy admin route";
+    writeError(responseStream, 404, "Unsupported tenancy admin route");
+    await persistAuditLog(finalizeAuditRecord(auditRecord));
+    return;
+  }
+
+  // Rule 14.1: tenant-targeted admin routes must match the authenticated tenant context.
+  if (pathTenantId) {
+    if (!tenantId) {
+      auditRecord.status_code = 403;
+      auditRecord.outcome = "tenant_isolation_violation";
+      auditRecord.error_message = "Missing tenant context for tenant-targeted admin route";
+      writeError(responseStream, 403, "Missing tenant context for tenant-targeted admin route");
+      await persistAuditLog(finalizeAuditRecord(auditRecord));
+      return;
+    }
+    if (pathTenantId !== tenantId) {
+      auditRecord.status_code = 403;
+      auditRecord.outcome = "tenant_isolation_violation";
+      auditRecord.error_message = "Tenant isolation violation: path tenant does not match authenticated tenant";
+      writeError(responseStream, 403, "Tenant isolation violation: path tenant does not match authenticated tenant");
+      await persistAuditLog(finalizeAuditRecord(auditRecord));
+      return;
+    }
+  }
+
+  const query = getQueryParams(event);
+
   // Route: /api/tenancy/v1/admin/tenants/{tenantId}/diagnostics
-  if (isDiagnosticsRoute) {
+  if (tenancyRoute && tenancyRoute.kind === "fetch_tenant_diagnostics") {
     const response = {
-      tenantId: tenantId || "unknown",
+      tenantId: pathTenantId || tenantId || "unknown",
       appId: appId || "unknown",
       health: "HEALTHY",
       lastDeploymentSha: process.env.DEPLOYMENT_SHA || "unknown",
@@ -341,11 +510,7 @@ exports.handler = awslambda.streamifyResponse(async (event, responseStream) => {
       },
       generatedAt: new Date().toISOString()
     };
-    const s = awslambda.HttpResponseStream.from(responseStream, {
-      statusCode: 200,
-      headers: { "content-type": "application/json" },
-    });
-    s.end(JSON.stringify(response));
+    writeJson(responseStream, 200, response);
     auditRecord.status_code = 200;
     auditRecord.outcome = "success";
     await persistAuditLog(finalizeAuditRecord(auditRecord));
@@ -353,9 +518,20 @@ exports.handler = awslambda.streamifyResponse(async (event, responseStream) => {
   }
 
   // Route: /api/tenancy/v1/admin/tenants/{tenantId}/timeline
-  if (isTimelineRoute) {
+  if (tenancyRoute && tenancyRoute.kind === "fetch_tenant_timeline") {
+    let limit;
+    try {
+      limit = parsePositiveInt(query, "limit", { min: 1, max: 100 });
+    } catch (err) {
+      auditRecord.status_code = 400;
+      auditRecord.outcome = "invalid_request";
+      auditRecord.error_message = err.message;
+      writeError(responseStream, 400, err.message);
+      await persistAuditLog(finalizeAuditRecord(auditRecord));
+      return;
+    }
     const response = {
-      tenantId: tenantId || "unknown",
+      tenantId: pathTenantId || tenantId || "unknown",
       appId: appId || "unknown",
       events: [
         {
@@ -367,11 +543,10 @@ exports.handler = awslambda.streamifyResponse(async (event, responseStream) => {
       ],
       generatedAt: new Date().toISOString()
     };
-    const s = awslambda.HttpResponseStream.from(responseStream, {
-      statusCode: 200,
-      headers: { "content-type": "application/json" },
-    });
-    s.end(JSON.stringify(response));
+    if (limit !== null) {
+      response.events = response.events.slice(0, limit);
+    }
+    writeJson(responseStream, 200, response);
     auditRecord.status_code = 200;
     auditRecord.outcome = "success";
     await persistAuditLog(finalizeAuditRecord(auditRecord));
@@ -379,20 +554,131 @@ exports.handler = awslambda.streamifyResponse(async (event, responseStream) => {
   }
 
   // Route: /api/tenancy/v1/admin/tenants/{tenantId}/audit-summary
-  if (isAuditSummaryRoute) {
+  if (tenancyRoute && tenancyRoute.kind === "fetch_tenant_audit_summary") {
+    let windowHours;
+    let includeActors;
+    try {
+      windowHours = parsePositiveInt(query, "windowHours", { min: 1, max: 168 });
+      includeActors = parseOptionalBoolean(query, "includeActors");
+    } catch (err) {
+      auditRecord.status_code = 400;
+      auditRecord.outcome = "invalid_request";
+      auditRecord.error_message = err.message;
+      writeError(responseStream, 400, err.message);
+      await persistAuditLog(finalizeAuditRecord(auditRecord));
+      return;
+    }
     const response = {
-      tenantId: tenantId || "unknown",
+      tenantId: pathTenantId || tenantId || "unknown",
       appId: appId || "unknown",
-      window: { hours: 24, from: new Date(Date.now() - 86400000).toISOString(), to: new Date().toISOString() },
+      window: {
+        hours: windowHours || 24,
+        from: new Date(Date.now() - (windowHours || 24) * 3600000).toISOString(),
+        to: new Date().toISOString(),
+      },
       summary: { totalEvents: 0, successCount: 0, failureCount: 0, credentialRotations: 0, suspensions: 0 },
       lastEvents: [],
       generatedAt: new Date().toISOString()
     };
-    const s = awslambda.HttpResponseStream.from(responseStream, {
-      statusCode: 200,
-      headers: { "content-type": "application/json" },
-    });
-    s.end(JSON.stringify(response));
+    if (includeActors) {
+      response.actorBreakdown = [];
+    }
+    writeJson(responseStream, 200, response);
+    auditRecord.status_code = 200;
+    auditRecord.outcome = "success";
+    await persistAuditLog(finalizeAuditRecord(auditRecord));
+    return;
+  }
+
+  // Route: POST /api/tenancy/v1/admin/tenants
+  if (tenancyRoute && tenancyRoute.kind === "create_tenant") {
+    let body;
+    try {
+      body = parseJsonBody(event);
+      validateCreateTenantRequest(body);
+    } catch (err) {
+      auditRecord.status_code = 422;
+      auditRecord.outcome = "invalid_request";
+      auditRecord.error_message = err.message;
+      writeError(responseStream, 422, err.message);
+      await persistAuditLog(finalizeAuditRecord(auditRecord));
+      return;
+    }
+    const response = {
+      tenantId: body.tenantSlug,
+      appId: appId || "unknown",
+      status: "PENDING_ONBOARDING",
+      onboardingState: "QUEUED",
+      credentials: {
+        mode: body.credentialProfile.mode,
+        nextRotationDueAt: new Date(Date.now() + 30 * 86400000).toISOString(),
+      },
+      createdAt: new Date().toISOString(),
+      auditEventId: `evt-${crypto.randomUUID()}`,
+    };
+    auditRecord.tenant_id = body.tenantSlug;
+    writeJson(responseStream, 201, response);
+    auditRecord.status_code = 201;
+    auditRecord.outcome = "success";
+    await persistAuditLog(finalizeAuditRecord(auditRecord));
+    return;
+  }
+
+  // Route: POST /api/tenancy/v1/admin/tenants/{tenantId}:suspend
+  if (tenancyRoute && tenancyRoute.kind === "suspend_tenant") {
+    let body;
+    try {
+      body = parseJsonBody(event);
+      validateSuspendTenantRequest(body);
+    } catch (err) {
+      auditRecord.status_code = 422;
+      auditRecord.outcome = "invalid_request";
+      auditRecord.error_message = err.message;
+      writeError(responseStream, 422, err.message);
+      await persistAuditLog(finalizeAuditRecord(auditRecord));
+      return;
+    }
+    const response = {
+      tenantId: pathTenantId,
+      appId: appId || "unknown",
+      status: "SUSPENDED",
+      suspendedAt: new Date().toISOString(),
+      effectiveAt: body.effectiveAt || new Date().toISOString(),
+      invalidateSessions: Boolean(body.invalidateSessions),
+      auditEventId: `evt-${crypto.randomUUID()}`,
+    };
+    writeJson(responseStream, 200, response);
+    auditRecord.status_code = 200;
+    auditRecord.outcome = "success";
+    await persistAuditLog(finalizeAuditRecord(auditRecord));
+    return;
+  }
+
+  // Route: POST /api/tenancy/v1/admin/tenants/{tenantId}:rotate-credentials
+  if (tenancyRoute && tenancyRoute.kind === "rotate_tenant_credentials") {
+    let body;
+    try {
+      body = parseJsonBody(event);
+      validateRotateTenantCredentialsRequest(body);
+    } catch (err) {
+      auditRecord.status_code = 422;
+      auditRecord.outcome = "invalid_request";
+      auditRecord.error_message = err.message;
+      writeError(responseStream, 422, err.message);
+      await persistAuditLog(finalizeAuditRecord(auditRecord));
+      return;
+    }
+    const now = new Date();
+    const response = {
+      tenantId: pathTenantId,
+      appId: appId || "unknown",
+      rotationId: `rot-${now.toISOString().replace(/[-:.TZ]/g, "").slice(0, 12)}-${Math.floor(Math.random() * 10000).toString().padStart(4, "0")}`,
+      status: "ACCEPTED",
+      previousCredentialValidUntil: new Date(now.getTime() + 3600000).toISOString(),
+      requestedAt: now.toISOString(),
+      auditEventId: `evt-${crypto.randomUUID()}`,
+    };
+    writeJson(responseStream, 200, response);
     auditRecord.status_code = 200;
     auditRecord.outcome = "success";
     await persistAuditLog(finalizeAuditRecord(auditRecord));
@@ -404,12 +690,7 @@ exports.handler = awslambda.streamifyResponse(async (event, responseStream) => {
   let sessionId;
 
   try {
-    const rawBody = event.body
-      ? event.isBase64Encoded
-        ? Buffer.from(event.body, "base64").toString("utf-8")
-        : event.body
-      : "{}";
-    const body = JSON.parse(rawBody);
+    const body = parseJsonBody(event);
     prompt = body.prompt;
     sessionId = body.sessionId || "default-session";
 
