@@ -5,7 +5,7 @@
 | Aspect | Status |
 |--------|--------|
 | **Last Updated** | 2026-02-13 |
-| **Code Version** | v1.1.0 (North-South Join) |
+| **Code Version** | v0.1.1 (North-South Join) |
 | **Sync Status** | Fully Refactored for Multi-Tenancy |
 
 ---
