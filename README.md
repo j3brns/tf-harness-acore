@@ -538,6 +538,9 @@ Operational verification points:
 | `3-deepresearch` | Full-featured research agent with Strands DeepAgents | Gateway, Code Interpreter, Browser, Memory (BOTH), Observability |
 | `4-research` | Research agent with governance and quality evaluation | Gateway, Code Interpreter, Browser, Memory, Evaluations (REASONING) |
 | `5-integrated` | Full module composition with BFF/SPA, CloudFront, and Token Handler | Gateway, Runtime, BFF, CloudFront, WAF, Memory, Evaluations, Code Interpreter |
+| `6-langgraph-baseline` | Minimal LangGraph single-agent baseline for runtime parity comparisons | Runtime, Observability, Packaging |
+
+`6-langgraph-baseline` is intentionally small and deterministic (no live model call) so teams can compare the runtime wiring and local developer workflow against the Strands examples before adding tools, memory, or governance features.
 
 Deploy any example with a single command:
 

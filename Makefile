@@ -106,6 +106,11 @@ generate-openapi-client: ## Generate typed TypeScript client from MCP Tools Open
 	python3 terraform/scripts/generate_mcp_typescript_client.py
 	@echo "✓ Typed client generated to docs/api/mcp-tools-v1.client.ts"
 
+report-sdk-drift: ## Generate SDK version drift report for example agents
+	@echo "Generating SDK version drift report..."
+	python3 terraform/scripts/report_sdk_drift.py
+	@echo "✓ SDK version drift report generated to docs/SDK_VERSION_DRIFT_REPORT.md"
+
 check-openapi-client: ## Verify generated MCP Tools TypeScript client matches OpenAPI spec
 	@echo "Checking MCP Tools TypeScript client drift..."
 	python3 terraform/scripts/generate_mcp_typescript_client.py --check
@@ -164,8 +169,8 @@ preview-frontend: ## Run a local server to preview frontend components
 	@echo "Starting component preview server on http://localhost:8080..."
 	cd terraform/tests/frontend && npm install && npx http-server ./preview -p 8080 -o
 
-# Testing - Python (All example agents)
-test-python: test-python-hello test-python-gateway test-python-deepresearch test-python-research ## Run all Python tests
+# Testing - Python (All example agents with tests)
+test-python: test-python-hello test-python-gateway test-python-deepresearch test-python-research test-python-langgraph ## Run all Python tests
 	@echo "✓ All Python tests passed"
 
 test-python-hello: ## Run hello-world agent tests
@@ -188,8 +193,13 @@ test-python-research: ## Run simple research agent tests
 	pip install -q -e ".[dev]" && \
 	python -m pytest tests/ -v --tb=short
 
+test-python-langgraph: ## Run LangGraph baseline agent tests
+	cd examples/6-langgraph-baseline/agent-code && \
+	pip install -q -e ".[dev]" && \
+	python -m pytest tests/ -v --tb=short
+
 test-python-unit: ## Run all Python unit tests
-	@for example in 1-hello-world 2-gateway-tool 4-research; do \
+	@for example in 1-hello-world 2-gateway-tool 4-research 6-langgraph-baseline; do \
 		echo "Testing $$example..."; \
 		cd examples/$$example/agent-code && pip install -q -e ".[dev]" && python -m pytest tests/ -v --tb=short && cd ../../../; \
 	done
