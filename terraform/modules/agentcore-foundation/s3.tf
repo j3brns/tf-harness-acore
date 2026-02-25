@@ -13,6 +13,7 @@ resource "aws_s3_bucket" "access_logs" {
 # CloudFront standard logging (legacy S3 delivery via distribution logging_config)
 # requires ACLs to be enabled on the destination bucket.
 resource "aws_s3_bucket_ownership_controls" "access_logs" {
+  # checkov:skip=CKV2_AWS_65: CloudFront standard logging (legacy logging_config) requires ACL-compatible S3 destination buckets
   count  = var.enable_observability ? 1 : 0
   bucket = aws_s3_bucket.access_logs[0].id
 
