@@ -1,4 +1,4 @@
-.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both ci-status-both streaming-load-test policy-report
+.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both ci-status-both streaming-load-test policy-report validate-region
 
 # Variables
 ROOT_DIR := $(abspath .)
@@ -21,6 +21,7 @@ validate: ## Validate Terraform configuration
 	@echo "✓ Terraform configuration is valid"
 
 plan: ## Create Terraform plan
+	$(MAKE) validate-region
 	terraform -chdir=$(TERRAFORM_DIR) plan -out=$(TERRAFORM_DIR)/tfplan
 
 plan-destroy: ## Create plan for destroying all resources
@@ -28,9 +29,11 @@ plan-destroy: ## Create plan for destroying all resources
 
 apply: ## Apply Terraform changes
 	@echo "Applying Terraform changes..."
+	$(MAKE) validate-region
 	terraform -chdir=$(TERRAFORM_DIR) apply $(TERRAFORM_DIR)/tfplan
 
 apply-no-verify: ## Apply without plan verification
+	$(MAKE) validate-region
 	terraform -chdir=$(TERRAFORM_DIR) apply -auto-approve
 
 destroy: ## Destroy all Terraform resources
@@ -39,21 +42,26 @@ destroy: ## Destroy all Terraform resources
 
 # Environment-specific targets
 plan-dev:
+	$(MAKE) validate-region TFVARS="$(ROOT_DIR)/examples/1-hello-world/terraform.tfvars"
 	terraform -chdir=$(TERRAFORM_DIR) plan -var-file="$(ROOT_DIR)/examples/1-hello-world/terraform.tfvars" -out=$(TERRAFORM_DIR)/tfplan-dev
 
 apply-dev: plan-dev
 	terraform -chdir=$(TERRAFORM_DIR) apply $(TERRAFORM_DIR)/tfplan-dev
 
 plan-hello-world: ## Plan hello-world example
+	$(MAKE) validate-region TFVARS="$(ROOT_DIR)/examples/1-hello-world/terraform.tfvars"
 	terraform -chdir=$(TERRAFORM_DIR) plan -var-file="$(ROOT_DIR)/examples/1-hello-world/terraform.tfvars" -out=$(TERRAFORM_DIR)/tfplan-hello
 
 plan-gateway-tool: ## Plan gateway-tool example
+	$(MAKE) validate-region TFVARS="$(ROOT_DIR)/examples/2-gateway-tool/terraform.tfvars"
 	terraform -chdir=$(TERRAFORM_DIR) plan -var-file="$(ROOT_DIR)/examples/2-gateway-tool/terraform.tfvars" -out=$(TERRAFORM_DIR)/tfplan-gateway
 
 plan-deepresearch: ## Plan deepresearch example
+	$(MAKE) validate-region TFVARS="$(ROOT_DIR)/examples/3-deepresearch/terraform.tfvars"
 	terraform -chdir=$(TERRAFORM_DIR) plan -var-file="$(ROOT_DIR)/examples/3-deepresearch/terraform.tfvars" -out=$(TERRAFORM_DIR)/tfplan-deepresearch
 
 plan-research: ## Plan simple research example
+	$(MAKE) validate-region TFVARS="$(ROOT_DIR)/examples/4-research/terraform.tfvars"
 	terraform -chdir=$(TERRAFORM_DIR) plan -var-file="$(ROOT_DIR)/examples/4-research/terraform.tfvars" -out=$(TERRAFORM_DIR)/tfplan-research
 
 # Output targets
@@ -202,6 +210,13 @@ test-all: test test-python ## Run all tests (Terraform + Python)
 
 streaming-load-test: ## Run BFF/AgentCore streaming load tester (pass ARGS='...')
 	python3 terraform/scripts/streaming_load_tester.py $(ARGS)
+
+validate-region: ## Validate AgentCore Runtime region deployability (TFVARS=... or REGION=/AGENTCORE_REGION=/BFF_REGION=...)
+	python3 terraform/scripts/validate_agentcore_runtime_region.py \
+		$(if $(TFVARS),--tfvars "$(TFVARS)",) \
+		$(if $(REGION),--region "$(REGION)",) \
+		$(if $(AGENTCORE_REGION),--agentcore-region "$(AGENTCORE_REGION)",) \
+		$(if $(BFF_REGION),--bff-region "$(BFF_REGION)",)
 
 policy-report: ## Generate policy and tag conformance report
 	@echo "Generating policy and tag conformance report..."
