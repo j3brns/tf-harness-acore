@@ -347,7 +347,7 @@ repo-root/
 |   +-- .terraform-version # Pinned Terraform version
 |
 +-- examples/             # Example agents
-|   +-- 1-hello-world/    # Basic S3 explorer agent
+|   +-- 1-hello-world/    # Minimal Strands baseline demo agent
 |   +-- 2-gateway-tool/   # MCP gateway with Titanic analysis
 |   +-- 3-deepresearch/   # Full Strands DeepAgents implementation
 |   +-- 4-research/       # Simplified research agent
