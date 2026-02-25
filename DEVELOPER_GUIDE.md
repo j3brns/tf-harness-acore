@@ -95,6 +95,9 @@ make policy-report
 # Validate VERSION / CHANGELOG / docs version metadata consistency
 make validate-version-metadata
 
+# Fast SDK compatibility smoke matrix (Strands + Bedrock AgentCore)
+make validate-sdk-compat-matrix
+
 # Generate all documentation (including MCP Tools OpenAPI + typed client)
 make docs
 ```
@@ -119,6 +122,32 @@ python3 -m pytest tests/unit -v
 # Or via make (from repo root):
 make test-python-unit
 ```
+
+#### SDK Compatibility Matrix (Issue #115)
+
+Use the SDK compatibility smoke matrix to catch Strands / Bedrock AgentCore dependency regressions across example agents without running full deploys.
+On Debian/Ubuntu, ensure Python venv support is installed first (for example `python3.12-venv`).
+
+```bash
+# Run one CI lane locally
+make validate-sdk-compat-matrix LANE=repo-floors
+
+# Reproduce a single lane/example failure from CI
+make validate-sdk-compat-matrix LANE=latest-compatible EXAMPLE=3-deepresearch
+
+# Inspect lane definitions and pinned package sets
+make validate-sdk-compat-matrix ARGS='--list-lanes'
+```
+
+Lane strategy:
+- `repo-floors`: exact pins are auto-derived from example `pyproject.toml` minimums for tracked Strands/AgentCore SDK packages
+- `curated-stable`: explicit repo-maintained pins in `terraform/scripts/validate_sdk_compatibility_matrix.py` (`CURATED_STABLE_PINS`) for reproducible CI triage
+- `latest-compatible`: no constraints file; resolver installs newest versions compatible with each example's declared ranges
+
+When updating lanes:
+- update example dependency minimums in the relevant `examples/*/agent-code/pyproject.toml` files (the `repo-floors` lane updates automatically for tracked packages)
+- update `CURATED_STABLE_PINS` when re-baselining the curated lane
+- rerun `make validate-sdk-compat-matrix` (or at least the changed lane) and include results in issue/PR evidence
 
 #### MCP Tools OpenAPI + Typed Client Generation
 
@@ -525,6 +554,7 @@ pre-commit run --all-files
 
 ### GitHub Actions (validation only)
 - Runs docs/tests gate, Terraform fmt/validate, TFLint, Checkov, and example validation.
+- Runs the SDK compatibility smoke matrix (`repo-floors`, `curated-stable`, `latest-compatible`) with lane-labeled jobs for Strands + Bedrock AgentCore example dependency regression coverage.
 - Runs `Frontend Playwright Smoke` tests on PRs and pushes to main affecting frontend or test paths.
 - `release-tag-guard` accepts only strict release tags (`vMAJOR.MINOR.PATCH`); use `checkpoint/*` for non-release checkpoints.
 - Uses `terraform init -backend=false` on the runner (local only, no AWS).

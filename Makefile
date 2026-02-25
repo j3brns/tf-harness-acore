@@ -1,4 +1,4 @@
-.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both push-checkpoint-tag-both ci-status-both streaming-load-test policy-report validate-region validate-version-metadata
+.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both push-checkpoint-tag-both ci-status-both streaming-load-test policy-report validate-region validate-version-metadata validate-sdk-compat-matrix
 
 # Variables
 ROOT_DIR := $(abspath .)
@@ -221,6 +221,14 @@ validate-region: ## Validate AgentCore Runtime region deployability (TFVARS=... 
 
 validate-version-metadata: ## Validate VERSION, CHANGELOG.md, and docs version metadata consistency
 	python3 terraform/scripts/validate_version_metadata.py
+
+validate-sdk-compat-matrix: ## Run SDK compatibility smoke matrix for example agents (LANE=... EXAMPLE=... ARGS='...')
+	python3 terraform/scripts/validate_sdk_compatibility_matrix.py \
+		$(if $(LANE),--lane "$(LANE)",) \
+		$(if $(EXAMPLE),--example "$(EXAMPLE)",) \
+		$(if $(REUSE_VENV),--reuse-venv,) \
+		$(if $(SKIP_PIP_UPGRADE),--skip-pip-upgrade,) \
+		$(ARGS)
 
 policy-report: ## Generate policy and tag conformance report
 	@echo "Generating policy and tag conformance report..."
