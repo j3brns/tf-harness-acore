@@ -793,6 +793,116 @@ describe("proxy.js", () => {
       delete process.env.AUDIT_LOGS_PREFIX;
     });
 
+    test("captures chat prompt/response truncation, hashes, and counters in audit record", async () => {
+      process.env.AUDIT_LOGS_ENABLED = "true";
+      process.env.AUDIT_LOGS_BUCKET = "audit-bucket";
+
+      jest.resetModules();
+      setupAwsLambdaGlobal();
+      jest.mock("https", () => ({ request: mockHttpsRequest }));
+      const { handler: h } = require("./proxy");
+
+      mockS3Send.mockResolvedValueOnce({});
+      const longPrompt = "p".repeat(5000);
+      const longDelta = "x".repeat(17000);
+      setupMockRequest(
+        200,
+        { "x-amzn-bedrock-agentcore-runtime-session-id": "runtime-sess-1" },
+        [longDelta]
+      );
+
+      const stream = mockResponseStream();
+      const event = {
+        rawPath: "/api/chat",
+        requestContext: {
+          http: { method: "POST" },
+          authorizer: {
+            tenant_id: "tenant-A",
+            app_id: "app-A",
+            session_id: "sess-1"
+          }
+        },
+        body: JSON.stringify({ prompt: longPrompt, sessionId: "sess-1" }),
+        isBase64Encoded: false
+      };
+
+      await h(event, stream);
+
+      expect(mockHttpsRequest).toHaveBeenCalledTimes(1);
+      expect(mockS3Send).toHaveBeenCalledTimes(1);
+      const putArgs = mockS3Send.mock.calls[0][0];
+      const body = JSON.parse(String(putArgs.Body).trim());
+
+      expect(body.request_prompt_chars).toBe(5000);
+      expect(body.request_prompt_preview_truncated).toBe(true);
+      expect(body.request_prompt_preview.length).toBe(4096);
+      expect(body.request_prompt_sha256).toMatch(/^[a-f0-9]{64}$/);
+
+      expect(body.runtime_session_id).toBe("runtime-sess-1");
+      expect(body.response_delta_chunks).toBe(1);
+      expect(body.response_bytes).toBe(17000);
+      expect(body.response_preview_truncated).toBe(true);
+      expect(body.response_preview.length).toBe(16384);
+      expect(body.response_sha256).toMatch(/^[a-f0-9]{64}$/);
+      expect(body.outcome).toBe("success");
+
+      delete process.env.AUDIT_LOGS_ENABLED;
+      delete process.env.AUDIT_LOGS_BUCKET;
+    });
+
+    test("persists audit record for AssumeRole isolation failures and returns 500 without upstream call", async () => {
+      process.env.AUDIT_LOGS_ENABLED = "true";
+      process.env.AUDIT_LOGS_BUCKET = "audit-bucket";
+      process.env.AGENTCORE_RUNTIME_ROLE_ARN = "arn:aws:iam::123456789012:role/runtime";
+
+      jest.resetModules();
+      setupAwsLambdaGlobal();
+      jest.mock("https", () => ({ request: mockHttpsRequest }));
+      jest.mock("@aws-sdk/client-sts", () => ({
+        STSClient: jest.fn(() => ({ send: mockStsSend })),
+        AssumeRoleCommand: jest.fn((args) => args),
+      }));
+      const { handler: h } = require("./proxy");
+
+      mockStsSend.mockRejectedValueOnce(new Error("sts denied"));
+      mockS3Send.mockResolvedValueOnce({});
+      const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+      const stream = mockResponseStream();
+      const event = {
+        rawPath: "/api/chat",
+        requestContext: {
+          http: { method: "POST" },
+          authorizer: {
+            tenant_id: "tenant-A",
+            app_id: "app-A",
+            session_id: "sess-1"
+          }
+        },
+        body: JSON.stringify({ prompt: "hello", sessionId: "sess-1" }),
+        isBase64Encoded: false
+      };
+
+      await h(event, stream);
+
+      expect(mockHttpsRequest).not.toHaveBeenCalled();
+      expect(mockStreamEnd).toHaveBeenCalledWith(
+        JSON.stringify({ error: "Error: Identity isolation failed: sts denied" })
+      );
+      expect(mockS3Send).toHaveBeenCalledTimes(1);
+      const putArgs = mockS3Send.mock.calls[0][0];
+      const body = JSON.parse(String(putArgs.Body).trim());
+      expect(body.status_code).toBe(500);
+      expect(body.outcome).toBe("error");
+      expect(body.error_message).toBe("Identity isolation failed: sts denied");
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("AssumeRole failed"));
+
+      consoleSpy.mockRestore();
+      delete process.env.AUDIT_LOGS_ENABLED;
+      delete process.env.AUDIT_LOGS_BUCKET;
+      delete process.env.AGENTCORE_RUNTIME_ROLE_ARN;
+    });
+
     test("does not fail request when audit persistence to S3 errors", async () => {
       process.env.AUDIT_LOGS_ENABLED = "true";
       process.env.AUDIT_LOGS_BUCKET = "audit-bucket";
