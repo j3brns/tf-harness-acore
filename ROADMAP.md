@@ -119,7 +119,7 @@ This document outlines planned features and improvements for the Bedrock AgentCo
   * Align CloudFront caching behavior/comments for SPA assets vs `index.html`.
   * **Issue:** #48
 
-- [ ] **C5: Portal Diagnostics + Audit Timeline UI**
+- [x] **C5: Portal Diagnostics + Audit Timeline UI**
   * Add portal UI views/components for tenant diagnostics and audit timeline consumption.
   * Consume the operational UX API payloads after C3 endpoint work is complete.
   * Leverage existing OpenAPI/component-library DX outputs where applicable.
