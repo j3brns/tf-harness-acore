@@ -10,6 +10,10 @@ import sys
 CHECK_DATE = "2026-02-25"
 GENERAL_REFERENCE_URL = "https://docs.aws.amazon.com/general/latest/gr/bedrock_agentcore.html"
 AGENTCORE_REGIONS_URL = "https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-regions.html"
+BEDROCK_CROSS_REGION_INFERENCE_URL = "https://docs.aws.amazon.com/bedrock/latest/userguide/cross-region-inference.html"
+BEDROCK_INFERENCE_PROFILE_SUPPORT_URL = (
+    "https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-support.html"
+)
 
 # AWS General Reference (AgentCore endpoints and quotas), checked 2026-02-25 via AWS Knowledge MCP.
 GENERAL_REF_CONTROL_PLANE_REGIONS = frozenset(
@@ -62,19 +66,43 @@ AGENTCORE_RUNTIME_MATRIX_REGIONS = frozenset(
 )
 
 RECOMMENDED_EU_RUNTIME_DEPLOYABLE_REGIONS = ("eu-central-1", "eu-west-1")
+BEDROCK_APP_INFERENCE_PROFILE_REGIONS = frozenset(
+    {
+        "ap-northeast-1",
+        "ap-northeast-2",
+        "ap-south-1",
+        "ap-southeast-1",
+        "ap-southeast-2",
+        "ca-central-1",
+        "eu-central-1",
+        "eu-west-1",
+        "eu-west-2",
+        "eu-west-3",
+        "sa-east-1",
+        "us-east-1",
+        "us-east-2",
+        "us-gov-east-1",
+        "us-west-2",
+    }
+)
 REGION_CODE_RE = re.compile(r"^[a-z]{2}(?:-[a-z]+)+-\d+$")
 TFVARS_STRING_ASSIGNMENT_RE = re.compile(
     r'^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:"((?:[^"\\]|\\.)*)"|([^\s#]+))\s*(?:#.*)?$'
 )
-TRACKED_TFVARS_KEYS = frozenset({"region", "agentcore_region", "bff_region"})
+TRACKED_TFVARS_KEYS = frozenset(
+    {"region", "agentcore_region", "bedrock_region", "bff_region", "enable_inference_profile"}
+)
 
 
 @dataclass(frozen=True)
 class ResolvedRegions:
     region: str | None
     agentcore_region: str | None
+    bedrock_region: str | None
     bff_region: str | None
     agentcore_region_source: str | None
+    bedrock_region_source: str | None
+    enable_inference_profile: bool | None
     config_path: Path | None
 
 
@@ -89,6 +117,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--region", help="Override for Terraform variable 'region'.")
     parser.add_argument("--agentcore-region", help="Override for Terraform variable 'agentcore_region'.")
+    parser.add_argument("--bedrock-region", help="Override for Terraform variable 'bedrock_region'.")
     parser.add_argument("--bff-region", help="Override for Terraform variable 'bff_region'.")
     parser.add_argument(
         "--quiet-success",
@@ -139,6 +168,27 @@ def _effective_bff_region(agentcore_region: str | None, bff_region: str | None) 
     return agentcore_region
 
 
+def _effective_bedrock_region(
+    agentcore_region: str | None, bedrock_region: str | None
+) -> tuple[str | None, str | None]:
+    if bedrock_region:
+        return bedrock_region, "bedrock_region"
+    if agentcore_region:
+        return agentcore_region, "agentcore_region"
+    return None, None
+
+
+def _parse_bool(value: str | None) -> bool | None:
+    if value is None:
+        return None
+    lowered = value.strip().lower()
+    if lowered == "true":
+        return True
+    if lowered == "false":
+        return False
+    return None
+
+
 def resolve_regions(args: argparse.Namespace) -> ResolvedRegions:
     config_path: Path | None = None
     tfvars_values: dict[str, str] = {}
@@ -160,14 +210,24 @@ def resolve_regions(args: argparse.Namespace) -> ResolvedRegions:
         tfvars_values.get("agentcore_region")
     )
     effective_agentcore_region, agentcore_source = _effective_agentcore_region(region, agentcore_region_override)
+    bedrock_region_override = _clean_region_value(args.bedrock_region) or _clean_region_value(
+        tfvars_values.get("bedrock_region")
+    )
+    effective_bedrock_region, bedrock_source = _effective_bedrock_region(
+        effective_agentcore_region, bedrock_region_override
+    )
     bff_region_override = _clean_region_value(args.bff_region) or _clean_region_value(tfvars_values.get("bff_region"))
     effective_bff_region = _effective_bff_region(effective_agentcore_region, bff_region_override)
+    enable_inference_profile = _parse_bool(tfvars_values.get("enable_inference_profile"))
 
     return ResolvedRegions(
         region=region,
         agentcore_region=effective_agentcore_region,
+        bedrock_region=effective_bedrock_region,
         bff_region=effective_bff_region,
         agentcore_region_source=agentcore_source,
+        bedrock_region_source=bedrock_source,
+        enable_inference_profile=enable_inference_profile,
         config_path=config_path,
     )
 
@@ -183,6 +243,8 @@ def _sources_block() -> list[str]:
         f"Sources (checked {CHECK_DATE}):",
         f"  - AWS General Reference (AgentCore endpoints): {GENERAL_REFERENCE_URL}",
         f"  - AgentCore supported Regions matrix: {AGENTCORE_REGIONS_URL}",
+        f"  - Amazon Bedrock cross-Region inference guidance: {BEDROCK_CROSS_REGION_INFERENCE_URL}",
+        f"  - Amazon Bedrock inference profile region support: {BEDROCK_INFERENCE_PROFILE_SUPPORT_URL}",
     ]
 
 
@@ -208,6 +270,8 @@ def run_validation(resolved: ResolvedRegions) -> tuple[int, list[str]]:
         format_errors.extend(validate_region_code(resolved.region, "region"))
     if resolved.bff_region:
         format_errors.extend(validate_region_code(resolved.bff_region, "effective bff_region"))
+    if resolved.bedrock_region:
+        format_errors.extend(validate_region_code(resolved.bedrock_region, "effective bedrock_region"))
     if format_errors:
         lines.append("ERROR: AgentCore Runtime region deployability guard failed (invalid region input).")
         for err in format_errors:
@@ -233,7 +297,8 @@ def run_validation(resolved: ResolvedRegions) -> tuple[int, list[str]]:
             + (f" (derived from {resolved.agentcore_region_source})" if resolved.agentcore_region_source else "")
         )
         lines.append(
-            "  This repo requires AWS General Reference coverage for both AgentCore control plane and data plane endpoints"
+            "  This repo requires AWS General Reference coverage for both AgentCore control plane and data plane"
+            " endpoints"
             " before Terraform plan/apply."
         )
         lines.append(f"  Missing endpoint coverage: {', '.join(missing)}")
@@ -256,6 +321,11 @@ def run_validation(resolved: ResolvedRegions) -> tuple[int, list[str]]:
                 f"  Config note: bff_region resolves to {resolved.bff_region}; cross-region BFF/runtime splits are"
                 " supported but increase latency and separate observability footprints."
             )
+        if resolved.bedrock_region and resolved.bedrock_region != target:
+            lines.append(
+                f"  Config note: bedrock_region resolves to {resolved.bedrock_region}; validate-region does not"
+                " verify model-specific Bedrock availability or CRIS destination-region/SCP compatibility."
+            )
         lines.extend(_sources_block())
         return 1, lines
 
@@ -272,6 +342,20 @@ def run_validation(resolved: ResolvedRegions) -> tuple[int, list[str]]:
         lines.append(
             f"WARNING: bff_region resolves to {resolved.bff_region} while agentcore_region is {target}"
             " (cross-region split)."
+        )
+    if resolved.bedrock_region and resolved.bedrock_region != target:
+        lines.append(
+            f"WARNING: bedrock_region resolves to {resolved.bedrock_region} while agentcore_region is {target}"
+            " (cross-region Bedrock split)."
+        )
+        lines.append(
+            "WARNING: validate-region checks AgentCore Runtime deployability only. Confirm model/inference-profile"
+            " support in the selected bedrock_region and CRIS IAM/SCP requirements for all destination regions."
+        )
+    if resolved.enable_inference_profile and target not in BEDROCK_APP_INFERENCE_PROFILE_REGIONS:
+        lines.append(
+            "WARNING: enable_inference_profile=true but the effective agentcore_region is not in the current"
+            " Bedrock application inference profile region list. Re-check AWS docs before deployment."
         )
     if resolved.config_path is not None:
         lines.append(f"Config source: {resolved.config_path}")

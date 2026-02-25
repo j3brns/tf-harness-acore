@@ -194,6 +194,16 @@ Sources:
 - https://docs.aws.amazon.com/general/latest/gr/bedrock_agentcore.html
 - https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-regions.html
 
+Region source-of-truth policy (checked `2026-02-25`):
+- `agentcore_region` deployability for this repo is gated by AWS General Reference AgentCore endpoint coverage (control + data plane) and is enforced by `make validate-region`.
+- AgentCore optional feature toggles (`Policy`, `Evaluations`) are gated by the AgentCore feature-region matrix and Terraform preconditions.
+- `bedrock_region` compatibility is a separate Bedrock concern (model availability, application inference profile support, and cross-Region inference profile/IAM/SCP requirements). `make validate-region` now warns on Bedrock split-region configs but does not prove model-specific or CRIS destination-region compatibility.
+Sources:
+- https://docs.aws.amazon.com/general/latest/gr/bedrock_agentcore.html
+- https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-regions.html
+- https://docs.aws.amazon.com/bedrock/latest/userguide/cross-region-inference.html
+- https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-support.html
+
 ### 3. Deploy
 
 ```bash
