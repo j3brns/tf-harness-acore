@@ -1,0 +1,27 @@
+[project]
+name = "langgraph-baseline-agent"
+version = "0.1.0"
+description = "Minimal LangGraph baseline demo for Bedrock AgentCore runtime"
+requires-python = ">=3.12"
+dependencies = [
+    "bedrock-agentcore>=1.0.7",
+    "langgraph>=0.2.0,<1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"

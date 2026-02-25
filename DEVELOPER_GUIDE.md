@@ -124,6 +124,10 @@ python3 -m pytest tests/unit -v
 
 # Or via make (from repo root):
 make test-python-unit
+
+# LangGraph baseline smoke tests:
+cd examples/6-langgraph-baseline/agent-code
+python3 -m pytest tests/ -v
 ```
 
 #### SDK Compatibility Matrix (Issue #115)
@@ -351,6 +355,7 @@ repo-root/
 |   +-- 2-gateway-tool/   # MCP gateway with Titanic analysis
 |   +-- 3-deepresearch/   # Full Strands DeepAgents implementation
 |   +-- 4-research/       # Simplified research agent
+|   +-- 6-langgraph-baseline/ # Minimal LangGraph runtime baseline
 |
 +-- docs/                 # Documentation
 |   +-- adr/              # Architecture Decision Records
