@@ -19,7 +19,7 @@ A hardened Terraform framework for deploying enterprise AI agents on AWS Bedrock
 The North-South Join anchors every request to three coordinates:
 
 - **North**: the `app_id` boundary and public entrypoint
-- **Middle**: the validated tenant and session context
+- **Central**: the validated tenant and session context
 - **South**: the concrete runtime, tools, and policy surface that execute work
 
 That same hierarchy drives data partitioning. DynamoDB session keys use `APP#{app_id}#TENANT#{tenant_id}`, S3 memory paths use `{app_id}/{tenant_id}/{agent_name}/memory/`, and runtime context is carried through the proxy path instead of trusting caller-supplied tenant identifiers.
