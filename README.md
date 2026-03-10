@@ -297,6 +297,8 @@ Every commit passes through a hook chain that catches problems before they reach
 
 ### Session Preflight (Worktree Safety)
 
+The repository now treats the worktree harness as the default contributor loop: queue a `ready` issue, create or resume a linked worktree, run a fast validation tier repeatedly, run a push validation tier before pushing, then use the guided finish protocol. The compact runbook is [docs/runbooks/developer-harness.md](./docs/runbooks/developer-harness.md).
+
 Run session preflight checks before editing and before commit/push:
 
 ```bash
@@ -320,6 +322,21 @@ make worktree
 ```
 
 The menu validates branch naming against the same policy regex, runs `make preflight-session` in the selected worktree, and can hand off into your selected agent/CLI in the correct worktree. For new worktrees, it can pull from the GitHub `ready` issue queue, order it by plan docs (default `ROADMAP.md` issue order), then by priority labels, then by creation time, auto-derive the branch slug from the selected issue title, suggest a branch `scope` namespace from issue labels/title (editable), and optionally auto-claim the selected issue (`ready` -> `in-progress`) after worktree creation and preflight pass. You can override queue plan sources with `WORKTREE_QUEUE_PLAN_FILES` (space-separated repo-relative files). On shell handoff, it lets you choose `gemini`, `claude`, or `codex`, choose `yolo`/equivalent mode or normal mode, choose `issue type` (execution or tracker), choose the expected `closure condition`, and choose `execute-now` or `print-only`. It then prints a boilerplate agent prompt plus the launch command (with selected worktree path and parsed issue number injected) and either executes it immediately or opens a shell without executing it.
+
+For a tighter day-to-day loop, use:
+
+```bash
+make issue-queue
+make worktree
+make validate-fast
+make validate-scope SCOPE=terraform
+make validate-push
+make finish-worktree-summary
+```
+
+For AWS-specific changes, query AWS Knowledge MCP before changing code or docs that depend on current AWS behavior, availability, quotas, or IAM semantics. Checked 2026-03-10 against AWS primary documentation:
+- https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-regions.html
+- https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazonbedrockagentcore.html
 
 ### Issue Queue Conventions (for `make worktree`)
 

@@ -571,7 +571,7 @@ refresh_ready_issue_queue() {
     [ -z "${sorted_line}" ] && continue
     READY_ISSUE_NUMBERS+=("$(printf '%s' "${sorted_line}" | cut -f4)")
     READY_ISSUE_CREATED+=("$(printf '%s' "${sorted_line}" | cut -f3)")
-    READY_ISSUE_TITLES+=("$(printf '%s' "${sorted_line}" | cut -f5-)")
+    READY_ISSUE_TITLES+=("$(printf '%s' "${sorted_line}" | cut -f5)")
     READY_ISSUE_LABELS+=("$(printf '%s' "${sorted_line}" | cut -f6-)")
   done < <(printf '%s' "${unsorted_lines}" | sort -t $'\t' -k1,1n -k2,2n -k3,3)
 
@@ -1459,7 +1459,7 @@ print_finish_worktree_summary() {
 }
 
 finish_worktree_protocol() {
-  local wt_path=""
+  local wt_path="${1:-}"
   local primary=""
   local choice=""
   local branch_name=""
@@ -1468,11 +1468,13 @@ finish_worktree_protocol() {
   local issue_id=""
   local issue_state=""
 
-  if ! wt_path="$(choose_worktree_path false)"; then
-    return 0
-  fi
-  if is_menu_back "${wt_path}"; then
-    return 0
+  if [ -z "${wt_path}" ]; then
+    if ! wt_path="$(choose_worktree_path false)"; then
+      return 0
+    fi
+    if is_menu_back "${wt_path}"; then
+      return 0
+    fi
   fi
   primary="$(primary_worktree_path)"
 
@@ -1575,6 +1577,29 @@ finish_worktree_protocol() {
   done
 }
 
+print_ready_issue_queue() {
+  local stream_label="${1:-}"
+  local i
+
+  if ! refresh_ready_issue_queue "${stream_label}"; then
+    return 1
+  fi
+
+  if [ -n "${stream_label}" ]; then
+    echo "Ready issue queue (filter: ready + ${stream_label}; plan order -> priority -> createdAt)"
+  else
+    echo "Ready issue queue (filter: ready; plan order -> priority -> createdAt)"
+  fi
+
+  for i in "${!READY_ISSUE_NUMBERS[@]}"; do
+    if [ -n "${READY_ISSUE_LABELS[$i]}" ]; then
+      printf "  #%s  %s  [%s]\n" "${READY_ISSUE_NUMBERS[$i]}" "${READY_ISSUE_TITLES[$i]}" "${READY_ISSUE_LABELS[$i]}"
+    else
+      printf "  #%s  %s\n" "${READY_ISSUE_NUMBERS[$i]}" "${READY_ISSUE_TITLES[$i]}"
+    fi
+  done
+}
+
 main_menu() {
   while :; do
     echo "Worktree Session Menu"
@@ -1625,4 +1650,22 @@ main_menu() {
   done
 }
 
-main_menu
+case "${1:-}" in
+  "")
+    main_menu
+    ;;
+  queue)
+    print_ready_issue_queue "${2:-}"
+    ;;
+  summary-current)
+    print_finish_worktree_summary "$(pwd -P)"
+    ;;
+  finish-current)
+    finish_worktree_protocol "$(pwd -P)"
+    ;;
+  *)
+    echo "ERROR: unknown command '${1}'"
+    echo "Usage: $0 [queue [stream]|summary-current|finish-current]"
+    exit 1
+    ;;
+esac

@@ -56,30 +56,52 @@ Sources:
 
 ## Development Workflow
 
+Use the harness runbook as the default path for day-to-day work: [docs/runbooks/developer-harness.md](docs/runbooks/developer-harness.md).
+
+### Harness Loop
+
+```bash
+make issue-queue
+make worktree
+make validate-fast
+make validate-scope SCOPE=terraform
+make validate-push
+make finish-worktree-summary
+make finish-worktree-close
+```
+
+This repo is optimized for issue-queue driven linked worktrees, not ad hoc editing on `main`.
+
+For AWS-specific changes, check AWS Knowledge MCP before editing anything that depends on current AgentCore service behavior, IAM semantics, limits, or regional support. Checked 2026-03-10 against:
+- https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-regions.html
+- https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazonbedrockagentcore.html
+
 ### Making Changes
 
 ```bash
-# 1. Make your changes
-# Edit files...
+# 1. Create or resume a linked worktree from the ready queue
+make issue-queue
+make worktree
 
-# 2. Validate locally (NO AWS needed)
-make validate-region TFVARS=../examples/1-hello-world/terraform.tfvars
-# Optional: test an explicit Bedrock split override (warning-only guidance, not model validation)
-make validate-region TFVARS=../examples/1-hello-world/terraform.tfvars BEDROCK_REGION=eu-west-2
-cd terraform
-terraform fmt -recursive
-terraform validate
-terraform plan -backend=false
+# 2. Fast inner loop (NO AWS needed)
+make validate-fast
 
-# 3. Security scan
-checkov -d . --framework terraform --compact --config-file .checkov.yaml
+# 3. Scope-specific checks before push
+make validate-scope SCOPE=terraform
 
-# 4. Commit (pre-commit hooks run automatically)
+# 4. Full pre-push gate
+make validate-push
+
+# 5. Commit (pre-commit hooks run automatically)
 git add .
 git commit -m "feat: add new capability"
 
-# 5. Push to main
-git push origin main
+# 6. Push the worktree branch
+git push -u origin <branch>
+
+# 7. Inspect finish stage / complete guided finish
+make finish-worktree-summary
+make finish-worktree-close
 ```
 
 ### Local Testing (No AWS Required)
