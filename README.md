@@ -321,7 +321,18 @@ For an interactive linked-worktree helper (list/create/resume), use:
 make worktree
 ```
 
-The menu validates branch naming against the same policy regex, runs `make preflight-session` in the selected worktree, and can hand off into your selected agent/CLI in the correct worktree. For new worktrees, it can pull from the GitHub `ready` issue queue, order it by plan docs (default `ROADMAP.md` issue order), then by priority labels, then by creation time, auto-derive the branch slug from the selected issue title, suggest a branch `scope` namespace from issue labels/title (editable), and optionally auto-claim the selected issue (`ready` -> `in-progress`) after worktree creation and preflight pass. You can override queue plan sources with `WORKTREE_QUEUE_PLAN_FILES` (space-separated repo-relative files). On shell handoff, it lets you choose `gemini`, `claude`, or `codex`, choose `yolo`/equivalent mode or normal mode, choose `issue type` (execution or tracker), choose the expected `closure condition`, and choose `execute-now` or `print-only`. It then prints a boilerplate agent prompt plus the launch command (with selected worktree path and parsed issue number injected) and either executes it immediately or opens a shell without executing it.
+The default menu now biases toward the common path: next ready issue, resume the current issue worktree, inspect the queue, or finish the current worktree. The detailed legacy menu still exists behind the advanced option.
+
+For a tighter loop, use the explicit shortcuts:
+
+```bash
+make worktree-next-issue OPEN_SHELL=1
+make worktree-create-issue ISSUE=134 OPEN_SHELL=1
+make worktree-resume-issue OPEN_SHELL=1
+make worktree-push-issue
+```
+
+Queue ordering remains plan-doc order (`ROADMAP.md` by default), then priority labels, then creation time. The helper auto-derives the branch slug from the issue title, infers a scope namespace from labels/title, and auto-claims the selected issue (`ready` -> `in-progress`) on creation.
 
 For a tighter day-to-day loop, use:
 

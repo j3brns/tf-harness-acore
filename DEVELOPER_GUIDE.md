@@ -63,6 +63,7 @@ Use the harness runbook as the default path for day-to-day work: [docs/runbooks/
 ```bash
 make issue-queue
 make worktree
+make worktree-next-issue OPEN_SHELL=1
 make validate-fast
 make validate-scope SCOPE=terraform
 make validate-push
@@ -82,6 +83,7 @@ For AWS-specific changes, check AWS Knowledge MCP before editing anything that d
 # 1. Create or resume a linked worktree from the ready queue
 make issue-queue
 make worktree
+make worktree-next-issue OPEN_SHELL=1
 
 # 2. Fast inner loop (NO AWS needed)
 make validate-fast
@@ -384,7 +386,9 @@ repo-root/
 |   +-- architecture.md   # System architecture
 |   +-- runbooks/         # Operational runbooks
 |
-+-- CLAUDE.md             # AI agent development rules
++-- AGENTS.md             # Canonical AI agent development rules
++-- CLAUDE.md             # Mirror of AGENTS.md
++-- GEMINI.md             # Mirror of AGENTS.md
 +-- DEVELOPER_GUIDE.md    # This file
 +-- README.md             # User documentation
 ```
@@ -731,7 +735,7 @@ terraform --help
 
 ## Getting Help
 
-1. Check `CLAUDE.md` - AI agent development rules
+1. Check `AGENTS.md` - canonical AI agent development rules
 2. Check `docs/architecture.md` - System design
 3. Check `docs/adr/` - Architecture decisions
 4. Create GitLab issue for bugs/features
@@ -739,7 +743,7 @@ terraform --help
 ## Next Steps
 
 1. Complete quick start
-2. Read `CLAUDE.md`
+2. Read `AGENTS.md`
 3. Review `examples/`
 4. Try modifying an example
 5. Create your first release tag (`v0.1.x`) after validation

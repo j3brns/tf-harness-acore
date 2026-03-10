@@ -1,4 +1,4 @@
-.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree issue-queue terraform-init-local terraform-validate-local terraform-plan-local validate-fast validate-scope validate-push finish-worktree-summary finish-worktree-close toolchain-versions push-main-both push-tag-both push-checkpoint-tag-both ci-status-both streaming-load-test policy-report validate-region validate-version-metadata validate-sdk-compat-matrix validate-deps
+.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session pre-validate-session worktree issue-queue worktree-next-issue worktree-create-issue worktree-resume-issue worktree-push-issue terraform-init-local terraform-validate-local terraform-plan-local validate-fast validate-scope validate-push finish-worktree-summary finish-worktree-close toolchain-versions push-main-both push-tag-both push-checkpoint-tag-both ci-status-both streaming-load-test policy-report validate-region validate-version-metadata validate-sdk-compat-matrix validate-deps
 
 # Variables
 ROOT_DIR := $(abspath .)
@@ -292,6 +292,16 @@ worktree: ## Interactive menu for linked worktree create/resume + preflight
 issue-queue: ## Show ready issue queue ordered for make worktree (STREAM=<label> optional)
 	@bash $(TERRAFORM_DIR)/scripts/session/worktree.sh queue "$(STREAM)"
 
+worktree-next-issue: ## Create a worktree for the next ready issue (STREAM=<label>, OPEN_SHELL=1 optional)
+	@bash $(TERRAFORM_DIR)/scripts/session/worktree.sh next-issue "$(STREAM)" "$(OPEN_SHELL)"
+
+worktree-create-issue: ## Create a worktree for a specific issue (ISSUE=<num>, OPEN_SHELL=1 optional)
+	@test -n "$(ISSUE)" || (echo "ERROR: ISSUE required. Usage: make worktree-create-issue ISSUE=134 [OPEN_SHELL=1]" && exit 1)
+	@bash $(TERRAFORM_DIR)/scripts/session/worktree.sh create-issue "$(ISSUE)" "$(OPEN_SHELL)"
+
+worktree-resume-issue: ## Resume an issue worktree with preflight (WT_PATH=... optional, OPEN_SHELL=1 optional)
+	@bash $(TERRAFORM_DIR)/scripts/session/worktree.sh resume-issue "$(WT_PATH)" "$(OPEN_SHELL)"
+
 terraform-init-local: ## Initialize Terraform locally with scratch data/plugin caches for offline-friendly validation
 	mkdir -p $(LOCAL_TF_DATA_DIR) $(LOCAL_TF_PLUGIN_CACHE_DIR)
 	@start=$$(date +%s); \
@@ -370,6 +380,14 @@ validate-push: ## Pre-push gate: preflight + Terraform + plan + policy + scanner
 	tflint --chdir=$(TERRAFORM_DIR) --recursive --config $(TERRAFORM_DIR)/.tflint.hcl
 	checkov -d $(TERRAFORM_DIR) --framework terraform --compact --config-file $(TERRAFORM_DIR)/.checkov.yaml
 	pre-commit run --all-files
+
+pre-validate-session: ## Enforced pre-push validation for the current worktree
+	$(MAKE) preflight-session
+	$(MAKE) validate-push
+
+worktree-push-issue: ## Preflight + validate + push the current issue branch
+	$(MAKE) pre-validate-session
+	git push -u origin $$(git branch --show-current)
 
 finish-worktree-summary: ## Print finish-stage summary for the current worktree
 	@bash $(TERRAFORM_DIR)/scripts/session/worktree.sh summary-current

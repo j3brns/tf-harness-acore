@@ -10,12 +10,11 @@ Optimize for this path:
 
 ```bash
 make issue-queue
-make worktree
+make worktree-next-issue OPEN_SHELL=1
 make validate-fast
 make validate-scope SCOPE=terraform
-make validate-push
+make worktree-push-issue
 make finish-worktree-summary
-make finish-worktree-close
 ```
 
 ## Operating Model
@@ -32,7 +31,7 @@ make finish-worktree-close
 
 ```bash
 make issue-queue
-make worktree
+make worktree-next-issue OPEN_SHELL=1
 ```
 
 2. Start every session with worktree preflight:
