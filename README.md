@@ -299,6 +299,8 @@ Every commit passes through a hook chain that catches problems before they reach
 
 The repository now treats the worktree harness as the default contributor loop: queue a `ready` issue, create or resume a linked worktree, run a fast validation tier repeatedly, run a push validation tier before pushing, then use the guided finish protocol. The compact runbook is [docs/runbooks/developer-harness.md](./docs/runbooks/developer-harness.md).
 
+For the broader validation and CI/CD interaction model, including which lane to use for local fast checks versus broad CI approximation, see [docs/runbooks/devops-loop.md](./docs/runbooks/devops-loop.md).
+
 Run session preflight checks before editing and before commit/push:
 
 ```bash

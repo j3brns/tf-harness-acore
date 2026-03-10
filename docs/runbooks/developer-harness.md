@@ -138,6 +138,8 @@ Current repo constraints at check time:
 - Terraform CLI required: `>= 1.10.0`
 - AWS provider: `~> 6.33.0`
 
+For the broader validation and CI/CD interaction model, use [docs/runbooks/devops-loop.md](devops-loop.md).
+
 ## AWS Knowledge Checkpoints
 
 Checked 2026-03-10 using AWS Knowledge MCP:

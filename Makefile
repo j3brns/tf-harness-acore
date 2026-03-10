@@ -1,4 +1,4 @@
-.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session pre-validate-session worktree issue-queue worktree-next-issue worktree-create-issue worktree-resume-issue worktree-push-issue terraform-init-local terraform-validate-local terraform-plan-local validate-fast validate-scope validate-push finish-worktree-summary finish-worktree-close toolchain-versions push-main-both push-tag-both push-checkpoint-tag-both ci-status-both streaming-load-test policy-report validate-region validate-version-metadata validate-sdk-compat-matrix validate-deps
+.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session pre-validate-session validate-ci-fast validate-ci-full worktree issue-queue worktree-next-issue worktree-create-issue worktree-resume-issue worktree-push-issue terraform-init-local terraform-validate-local terraform-plan-local validate-fast validate-scope validate-push finish-worktree-summary finish-worktree-close toolchain-versions push-main-both push-tag-both push-checkpoint-tag-both ci-status-both streaming-load-test policy-report validate-region validate-version-metadata validate-sdk-compat-matrix validate-deps
 
 # Variables
 ROOT_DIR := $(abspath .)
@@ -384,6 +384,18 @@ validate-push: ## Pre-push gate: preflight + Terraform + plan + policy + scanner
 pre-validate-session: ## Enforced pre-push validation for the current worktree
 	$(MAKE) preflight-session
 	$(MAKE) validate-push
+
+validate-ci-fast: ## Local approximation of the fast GitHub validation lane
+	$(MAKE) validate-version-metadata
+	$(MAKE) check-openapi-client
+	$(MAKE) toolchain-versions
+	$(MAKE) issue-queue
+
+validate-ci-full: ## Local approximation of the broad CI lane
+	$(MAKE) validate-ci-fast
+	$(MAKE) validate-push
+	$(MAKE) validate-sdk-compat-matrix
+	$(MAKE) validate-deps
 
 worktree-push-issue: ## Preflight + validate + push the current issue branch
 	$(MAKE) pre-validate-session

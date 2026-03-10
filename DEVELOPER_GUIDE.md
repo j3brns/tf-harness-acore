@@ -57,6 +57,7 @@ Sources:
 ## Development Workflow
 
 Use the harness runbook as the default path for day-to-day work: [docs/runbooks/developer-harness.md](docs/runbooks/developer-harness.md).
+Use [docs/runbooks/devops-loop.md](docs/runbooks/devops-loop.md) when deciding which validation or CI lane to use.
 
 ### Harness Loop
 
@@ -65,6 +66,7 @@ make issue-queue
 make worktree
 make worktree-next-issue OPEN_SHELL=1
 make validate-fast
+make validate-ci-fast
 make validate-scope SCOPE=terraform
 make validate-push
 make finish-worktree-summary
