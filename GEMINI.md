@@ -154,6 +154,14 @@ If AWS Knowledge MCP is unavailable, say so explicitly and fall back to official
 - `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` must remain byte-identical.
 - Edit one source and mirror it verbatim in the same change.
 
+### Rule 7.1.2: Session Discovery Rule Promotion
+
+- Session-discovered rules may be added only if they are durable, repo-wide, and expected to matter beyond the current issue.
+- Do not promote temporary tactics, one-off debugging notes, or issue-local preferences into agent rules.
+- Add promoted rules to `AGENTS.md` and mirror them to `CLAUDE.md` and `GEMINI.md` in the same change.
+- If a promoted rule changes workflow or expected behavior, update the relevant docs in the same change.
+- Keep promoted rules compact; prefer tightening an existing rule over adding a new sprawling section.
+
 ### Rule 7.2: Docs Sync
 
 - Behavior, workflow, CI/CD, or architecture changes require doc updates in the same change.
