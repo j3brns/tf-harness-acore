@@ -72,6 +72,8 @@ These are not part of the default contributor loop unless the assigned issue exp
 
 Treat these as platform or release debt. Do not bury them inside unrelated docs/workflow PRs just to make checks green.
 
+To keep docs/workflow/governance PRs mergeable, CI now skips these heavyweight jobs when the changed-path set does not touch the relevant Terraform/template surface.
+
 ## Cognitive Load Rules
 
 - Do not start with the full CI surface unless you are debugging CI.

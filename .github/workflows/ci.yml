@@ -16,6 +16,66 @@ permissions:
   contents: read
 
 jobs:
+  change-classifier:
+    runs-on: ubuntu-latest
+    outputs:
+      terraform_validate: ${{ steps.classify.outputs.terraform_validate }}
+      examples_validate: ${{ steps.classify.outputs.examples_validate }}
+      template_test: ${{ steps.classify.outputs.template_test }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Classify changed paths for scoped CI
+        id: classify
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+
+          should_run_all="true"
+          if [ "$EVENT_NAME" = "pull_request" ] && [ -n "$BASE_REF" ]; then
+            git fetch origin "$BASE_REF" --depth=1
+            CHANGED="$(git diff --name-only "origin/$BASE_REF"...HEAD)"
+            should_run_all="false"
+          elif [ "$EVENT_NAME" = "push" ] && [[ "${GITHUB_REF:-}" == refs/heads/main ]]; then
+            CHANGED="$(git diff --name-only HEAD^...HEAD 2>/dev/null || git diff-tree --no-commit-id --name-only -r HEAD)"
+            should_run_all="false"
+          else
+            CHANGED=""
+          fi
+
+          if [ "$should_run_all" = "true" ]; then
+            echo "terraform_validate=true" >> "$GITHUB_OUTPUT"
+            echo "examples_validate=true" >> "$GITHUB_OUTPUT"
+            echo "template_test=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          printf '%s\n' "Changed files:"
+          printf '%s\n' "$CHANGED"
+
+          terraform_validate="false"
+          examples_validate="false"
+          template_test="false"
+
+          if printf '%s\n' "$CHANGED" | grep -Eq '^(terraform/.*\.tf|terraform/.*\.tfvars|terraform/versions\.tf|terraform/modules/|terraform/tests/validation/|terraform/scripts/validate_examples\.sh|terraform/scripts/ci/|\.github/actions/terraform-setup/)'; then
+            terraform_validate="true"
+          fi
+
+          if printf '%s\n' "$CHANGED" | grep -Eq '^(examples/.*\.tfvars|examples/.*/terraform/|terraform/scripts/validate_examples\.sh|terraform/.*\.tf|terraform/modules/|terraform/versions\.tf|\.github/actions/terraform-setup/)'; then
+            examples_validate="true"
+          fi
+
+          if printf '%s\n' "$CHANGED" | grep -Eq '^(templates/agent-project/|terraform/modules/|terraform/versions\.tf|VERSION|CHANGELOG\.md|\.github/actions/terraform-setup/)'; then
+            template_test="true"
+          fi
+
+          echo "terraform_validate=${terraform_validate}" >> "$GITHUB_OUTPUT"
+          echo "examples_validate=${examples_validate}" >> "$GITHUB_OUTPUT"
+          echo "template_test=${template_test}" >> "$GITHUB_OUTPUT"
+
   release-tag-guard:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
@@ -170,6 +230,8 @@ jobs:
         run: python3 terraform/tests/validation/policy_wildcard_exceptions_test.py
 
   terraform-validate:
+    needs: change-classifier
+    if: needs.change-classifier.outputs.terraform_validate == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -234,6 +296,8 @@ jobs:
           python3 terraform/scripts/ci/checkov_bff_regression_gate.py --input "${CHECKOV_JSON}"
 
   examples-validate:
+    needs: change-classifier
+    if: needs.change-classifier.outputs.examples_validate == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -256,6 +320,8 @@ jobs:
         run: bash terraform/scripts/validate_deps.sh
 
   template-test:
+    needs: change-classifier
+    if: needs.change-classifier.outputs.template_test == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
