@@ -4,73 +4,39 @@
 
 | Aspect | Status |
 |--------|--------|
-| **Last Updated** | 2026-02-13 |
+| **Last Updated** | 2026-03-10 |
 | **Code Version** | v0.1.1 (North-South Join) |
 | **Sync Status** | Fully Refactored for Multi-Tenancy |
 
 ---
 
+## System Summary
+
+This repository provisions an opinionated Bedrock AgentCore platform for multi-tenant agents on AWS. The architecture is built around a small set of hard boundaries:
+
+- `foundation` owns shared ingress, identity, and observability primitives
+- `tools` owns optional execution tools such as browser and code interpreter
+- `runtime` owns packaging, execution, and memory
+- `governance` owns policy, guardrails, and evaluation
+- `bff` owns browser-facing auth, SPA delivery, and streaming proxy behavior
+
+The system model is designed around a North-South Join:
+
+- **North**: `app_id` and the public entrypoint
+- **Middle**: validated tenant and session context
+- **South**: runtime resources, tools, and policy enforcement
+
 ## Physical Infrastructure Architecture
 
-The following diagram illustrates the deployment of AgentCore components and the end-to-end data flow from the browser to the AI runtime.
+The platform overview below shows how public traffic, browser auth, runtime execution, and tenant-partitioned state fit together.
 
-```mermaid
-flowchart TD
-    subgraph Users[Public Internet]
-        Browser[SPA Web Terminal]
-    end
+![Platform architecture overview](diagrams/architecture-overview.drawio.svg)
 
-    subgraph North[Entry Point: AppID]
-        CF[CloudFront CDN]
-        APIGW[API Gateway REST]
-    end
-
-    subgraph Middle[Identity Layer: TenantID]
-        LAuth[OIDC Handler Lambda]
-        LAuthorizer[Lambda Authorizer]
-        DDB[(DynamoDB Sessions<br/>APP#AppID#TENANT#TenantID)]
-    end
-
-    subgraph South[Compute Layer: AgentName]
-        LProxy[Agent Proxy Lambda]
-        BGateway[Bedrock Agent / Gateway]
-        BRuntime[Bedrock Runtime Engine]
-        BSandbox[Code Interpreter Sandbox<br/>x86_64 / arm64]
-    end
-
-    subgraph Storage[Partitioned Persistence]
-        S3SPA[S3: SPA Assets]
-        S3Deploy[S3: Artifacts]
-        S3Memory[S3: Long-term Memory<br/>/AppID/TenantID/AgentName/]
-        CW[CloudWatch Logs & Metrics]
-    end
-
-    %% Data Flows
-    Browser <--> CF
-    CF <--> S3SPA
-
-    Browser -- "AppID Context" --> APIGW
-    APIGW --> LAuthorizer
-    LAuthorizer <--> DDB
-
-    APIGW -- "OIDC Flow" --> LAuth
-    LAuth <--> DDB
-
-    APIGW -- "Validated Request" --> LProxy
-
-    LProxy -- "x-tenant-id / x-app-id" --> BGateway
-    BGateway --> BRuntime
-    BRuntime <--> S3Memory
-
-    %% Monitoring Flows
-    South -.-> CW
-    North -.-> CW
-    Middle -.-> CW
-```
+_The same `app_id` and tenant boundary drives routing, session lookup, runtime invocation, and persistent state layout._
 
 ## System Overview
 
-This Terraform implementation provisions AWS Bedrock AgentCore infrastructure for deploying AI agents with MCP protocol support, code interpretation, web browsing, memory, and governance capabilities.
+This Terraform implementation provisions Bedrock AgentCore infrastructure for agents that need MCP routing, runtime execution, optional browser/code-interpreter tools, persistent memory, and governance controls. The repo intentionally mixes native Terraform resources with a CLI bridge where provider coverage is still incomplete.
 
 ## Project Structure
 
@@ -99,6 +65,7 @@ repo-root/
 │   └── mcp-servers/                # Lambda MCP servers + local dev
 ├── docs/
 │   ├── adr/                        # Architecture Decision Records
+│   ├── diagrams/                   # Editable draw.io sources + SVG exports
 │   ├── runbooks/                   # Operational runbooks
 │   └── architecture.md             # This file
 ├── AGENTS.md                       # Canonical AI development rules
@@ -110,52 +77,27 @@ repo-root/
 
 ## High-Level Architecture
 
-```
-+-------------------------------------------------------------+
-|                     AgentCore Agent                          |
-|                                                              |
-|  +------------+  +----------+  +--------------+             |
-|  |  Gateway   |->| Runtime  |->| Code         |             |
-|  |  (MCP)     |  |          |  | Interpreter  |             |
-|  +------------+  +----------+  +--------------+             |
-|        |              |                                      |
-|        v              v                                      |
-|  +------------+  +----------+  +--------------+             |
-|  |  Lambda    |  |  Memory  |  |   Browser    |             |
-|  | (MCP Tool) |  |          |  |              |             |
-|  +------------+  +----------+  +--------------+             |
-|                                                              |
-|         Monitored by CloudWatch + X-Ray                      |
-|         Governed by Cedar Policies + Evaluators              |
-+-------------------------------------------------------------+
-```
+The dependency graph is fixed. `foundation` is the base layer, `tools` and `runtime` consume it, `governance` depends on `runtime`, and `bff` stays adjacent to the runtime chain rather than inside it.
 
-## Resource Model (Entity)
+![Module topology](diagrams/module-topology.drawio.svg)
 
-```mermaid
-erDiagram
-  AGENT ||--|| GATEWAY : exposes
-  GATEWAY ||--o{ MCP_TOOL : routes_to
-  AGENT ||--|| RUNTIME : executes
-  RUNTIME ||--o{ MEMORY : stores
-  RUNTIME ||--o{ TOOL : uses
-  RUNTIME }|--|| POLICY_ENGINE : enforced_by
-  RUNTIME }|--|| EVALUATOR : assessed_by
-  OBSERVABILITY ||--o{ LOG_GROUP : writes_to
-```
+_The dependency order is there to prevent circular references and keep shared primitives stable before higher-level modules consume them._
+
+## Resource Model
+
+At runtime, the core relationships are straightforward:
+
+- one agent exposes one runtime
+- a gateway can route to many MCP tools
+- a runtime can read and write memory
+- policy and evaluator systems sit beside runtime execution, not inside the request origin
+- observability spans every layer rather than belonging to one module
 
 ## Module Architecture
 
 ### Dependency Graph
 
-```
-agentcore-foundation (NO dependencies)
-        |
-        +---> agentcore-tools (depends: foundation)
-        +---> agentcore-runtime (depends: foundation)
-                    |
-                agentcore-governance (depends: foundation + runtime)
-```
+Use the module topology above as the source of truth for dependency direction. The detailed module summaries below explain what each layer owns.
 
 ### 1. agentcore-foundation
 
@@ -218,33 +160,9 @@ agentcore-foundation (NO dependencies)
 
 ### Agent Invocation Flow
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant Client as External System
-  participant Gateway as MCP Gateway
-  participant Identity as Workload Identity
-  participant Tool as Lambda MCP Tool
-  participant Runtime as Agent Runtime
-  participant CI as Code Interpreter
-  participant Memory as Memory Store
-  participant Eval as Evaluator
-  participant Policy as Policy Engine
-  participant Obs as CloudWatch/X-Ray
+![Request flow](diagrams/request-flow.drawio.svg)
 
-  Client->>Gateway: invoke (MCP request)
-  Gateway->>Identity: authenticate
-  Gateway->>Tool: call tool
-  Tool-->>Gateway: tool result
-  Gateway->>Runtime: dispatch runtime
-  Runtime->>CI: optional code exec
-  Runtime->>Memory: read/write state
-  Runtime->>Eval: evaluate response
-  Runtime->>Policy: enforce policies
-  Runtime-->>Gateway: response
-  Gateway-->>Client: response
-  Runtime-->>Obs: logs/traces
-```
+_The browser-facing path keeps identity, session lookup, runtime execution, and tenant memory as explicit hops instead of implicit application logic._
 
 ```
 1. External System -> Gateway (MCP endpoint)
@@ -263,13 +181,10 @@ sequenceDiagram
 
 ### Deployment Flow
 
-```
-1. Developer -> Commits code to Git
-2. GitHub Actions (current) / GitLab CI (target) -> Runs validate/lint/test (no AWS)
-3. GitLab CI (target) -> Auto-deploys to dev on merge to main
-4. GitLab CI (target) -> Manual deploy to test from release branch
-5. GitLab CI (target) -> Manual deploy to prod from tag
-```
+1. Developers work on scoped issue branches and open PRs to `main`.
+2. GitHub Actions runs validation-only CI and does not deploy to AWS.
+3. GitLab CI handles promotion and deployment gates.
+4. Dev promotion happens from `main`; test and production promotions remain explicit.
 
 GitHub Actions currently runs validation only and does not deploy to AWS.
 
@@ -277,21 +192,13 @@ GitHub Actions currently runs validation only and does not deploy to AWS.
 
 ### Authentication & Authorization
 
-```
-GitLab (deploy) -> WIF -> AWS STS -> Temporary Credentials
-    |
-    v
-Terraform -> Creates Resources
-    |
-    v
-Agent Runtime -> IAM Role (least privilege)
-    |
-    v
-Gateway -> Workload Identity (OAuth2)
-    |
-    v
-MCP Tools -> Lambda IAM execution role
-```
+The deployment and runtime auth chain is:
+
+1. GitLab uses WIF to obtain AWS STS credentials for deployment.
+2. Terraform provisions resources under those temporary credentials.
+3. The agent runtime executes under a least-privilege IAM role.
+4. Gateway access is mediated by workload identity.
+5. MCP tools run under their own Lambda execution roles.
 
 #### Agent-to-Agent (A2A) Auth
 For multi-agent collaboration (Strands), we use **Workload Identity Propagation**:
@@ -321,18 +228,12 @@ To prevent cross-tenant data leakage even in the event of agent compromise:
 
 ### Policy Enforcement
 
-```
-Request -> Policy Engine (Cedar) -> Allow/Deny
-    |
-    v
-If Allowed -> Runtime Executes
-    |
-    v
-Response -> Evaluator -> Quality Score
-    |
-    v
-Metrics -> CloudWatch
-```
+Policy and evaluation stay adjacent to runtime execution:
+
+1. The request hits the policy engine and is allowed or denied.
+2. Allowed requests continue to runtime execution.
+3. Responses can then be scored by evaluator logic.
+4. Metrics and quality signals land in CloudWatch.
 
 ## State Management
 
@@ -340,13 +241,9 @@ Metrics -> CloudWatch
 
 Using S3 backend with **native S3 locking** (Terraform 1.10.0+):
 
-```
-S3 Bucket (per environment)
-├── agentcore/
-│   ├── terraform.tfstate        (current state)
-│   ├── terraform.tfstate.tflock (lock file during operations)
-│   └── [versioned snapshots]    (via S3 versioning)
-```
+- `agentcore/terraform.tfstate`: current state
+- `agentcore/terraform.tfstate.tflock`: active lock file during operations
+- versioned snapshots: historical state through S3 versioning
 
 **Note**: DynamoDB-based locking is deprecated. Native S3 locking via `use_lockfile = true` is the recommended approach.
 
@@ -373,15 +270,14 @@ S3 Bucket (per environment)
 
 ### Logs (CloudWatch Logs)
 
-```
-/aws/bedrock/agentcore/
-+-- gateway/{agent-name}
-+-- runtime/{agent-name}
-+-- code-interpreter/{agent-name}
-+-- browser/{agent-name}
-+-- policy-engine/{agent-name}
-+-- evaluator/{agent-name}
-```
+Log groups are organized under `/aws/bedrock/agentcore/` by component, for example:
+
+- `gateway/{agent-name}`
+- `runtime/{agent-name}`
+- `code-interpreter/{agent-name}`
+- `browser/{agent-name}`
+- `policy-engine/{agent-name}`
+- `evaluator/{agent-name}`
 
 ### Tracing (X-Ray)
 

@@ -1,0 +1,60 @@
+<mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="10" value="Foundation" style="swimlane;startSize=34;rounded=1;html=1;whiteSpace=wrap;container=1;fillColor=#EAF3FF;strokeColor=#5B8FF9;fontColor=#2E3440;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="80" y="150" width="260" height="300" as="geometry"/>
+    </mxCell>
+    <mxCell id="11" value="Gateway\nIdentity\nObservability" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D9E8FB;strokeColor=#5B8FF9;fontColor=#2E3440;fontSize=16;" vertex="1" parent="10">
+      <mxGeometry x="40" y="90" width="180" height="120" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="20" value="Tools" style="swimlane;startSize=34;rounded=1;html=1;whiteSpace=wrap;container=1;fillColor=#FFF4E5;strokeColor=#F6A54B;fontColor=#2E3440;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="450" y="80" width="260" height="220" as="geometry"/>
+    </mxCell>
+    <mxCell id="21" value="Code Interpreter\nBrowser" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDE3C7;strokeColor=#F6A54B;fontColor=#2E3440;fontSize=16;" vertex="1" parent="20">
+      <mxGeometry x="40" y="80" width="180" height="80" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="30" value="Runtime" style="swimlane;startSize=34;rounded=1;html=1;whiteSpace=wrap;container=1;fillColor=#E9F7F4;strokeColor=#3BA272;fontColor=#2E3440;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="450" y="360" width="260" height="220" as="geometry"/>
+    </mxCell>
+    <mxCell id="31" value="Runtime\nMemory\nPackaging" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5F5E3;strokeColor=#3BA272;fontColor=#2E3440;fontSize=16;" vertex="1" parent="30">
+      <mxGeometry x="40" y="80" width="180" height="80" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="40" value="Governance" style="swimlane;startSize=34;rounded=1;html=1;whiteSpace=wrap;container=1;fillColor=#F4ECFF;strokeColor=#8E6AD8;fontColor=#2E3440;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="840" y="360" width="300" height="220" as="geometry"/>
+    </mxCell>
+    <mxCell id="41" value="Policies\nEvaluations\nGuardrails" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8DDFB;strokeColor=#8E6AD8;fontColor=#2E3440;fontSize=16;" vertex="1" parent="40">
+      <mxGeometry x="60" y="80" width="180" height="80" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="50" value="BFF" style="swimlane;startSize=34;rounded=1;html=1;whiteSpace=wrap;container=1;fillColor=#FFF7E6;strokeColor=#D6B656;fontColor=#2E3440;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="840" y="80" width="300" height="220" as="geometry"/>
+    </mxCell>
+    <mxCell id="51" value="CloudFront\nAPI Gateway\nToken Handler\nStreaming Proxy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontColor=#2E3440;fontSize=16;" vertex="1" parent="50">
+      <mxGeometry x="60" y="70" width="180" height="100" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="60" value="Dependency Rules" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F7F7F2;strokeColor=#C9C7B8;fontColor=#2E3440;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="80" y="610" width="1060" height="120" as="geometry"/>
+    </mxCell>
+    <mxCell id="61" value="Foundation is the base layer. Tools and Runtime depend on Foundation. Governance depends on Foundation and Runtime. BFF depends on Foundation and stays outside the Runtime-Governance chain to avoid circular references." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=17;fontColor=#2E3440;" vertex="1" parent="1">
+      <mxGeometry x="120" y="645" width="980" height="60" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="100" value="shared IAM, logs, WAF, identity" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#5B8FF9;endArrow=block;endFill=1;" edge="1" parent="1" source="10" target="20">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="101" value="shared IAM, logs, packaging inputs" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#5B8FF9;endArrow=block;endFill=1;" edge="1" parent="1" source="10" target="30">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="102" value="observability + identity" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#5B8FF9;endArrow=block;endFill=1;" edge="1" parent="1" source="10" target="50">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="103" value="runtime policy targets" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#3BA272;endArrow=block;endFill=1;" edge="1" parent="1" source="30" target="40">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+  </root>
+</mxGraphModel>
