@@ -56,30 +56,55 @@ Sources:
 
 ## Development Workflow
 
+Use the harness runbook as the default path for day-to-day work: [docs/runbooks/developer-harness.md](docs/runbooks/developer-harness.md).
+Use [docs/runbooks/devops-loop.md](docs/runbooks/devops-loop.md) when deciding which validation or CI lane to use.
+Use [docs/archive/README.md](docs/archive/README.md) only for historical context, not for current workflow decisions.
+
+### Harness Loop
+
+```bash
+make issue-queue
+make worktree
+make worktree-agent-handoff
+make validate-fast
+make validate-ci-fast
+make validate-scope SCOPE=terraform
+make validate-push
+make finish-worktree-close
+```
+
+This repo is optimized for issue-queue driven linked worktrees, not ad hoc editing on `main`.
+
+For AWS-specific changes, check AWS Knowledge MCP before editing anything that depends on current AgentCore service behavior, IAM semantics, limits, or regional support. Checked 2026-03-10 against:
+- https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-regions.html
+- https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazonbedrockagentcore.html
+
 ### Making Changes
 
 ```bash
-# 1. Make your changes
-# Edit files...
+# 1. Create or resume a linked worktree from the ready queue
+make issue-queue
+make worktree
 
-# 2. Validate locally (NO AWS needed)
-make validate-region TFVARS=../examples/1-hello-world/terraform.tfvars
-# Optional: test an explicit Bedrock split override (warning-only guidance, not model validation)
-make validate-region TFVARS=../examples/1-hello-world/terraform.tfvars BEDROCK_REGION=eu-west-2
-cd terraform
-terraform fmt -recursive
-terraform validate
-terraform plan -backend=false
+# 2. Prompt / assistant / yolo handoff if you need to relaunch from the current worktree
+make worktree-agent-handoff
 
-# 3. Security scan
-checkov -d . --framework terraform --compact --config-file .checkov.yaml
+# 3. Fast inner loop (NO AWS needed)
+make validate-fast
 
-# 4. Commit (pre-commit hooks run automatically)
+# 4. Scope-specific checks before push
+make validate-scope SCOPE=terraform
+
+# 5. Commit (pre-commit hooks run automatically)
 git add .
 git commit -m "feat: add new capability"
 
-# 5. Push to main
-git push origin main
+# 6. Push the worktree branch
+make worktree-push-issue
+
+# 7. Inspect finish stage / complete guided finish
+make finish-worktree-summary
+make finish-worktree-close
 ```
 
 ### Local Testing (No AWS Required)
@@ -362,7 +387,9 @@ repo-root/
 |   +-- architecture.md   # System architecture
 |   +-- runbooks/         # Operational runbooks
 |
-+-- CLAUDE.md             # AI agent development rules
++-- AGENTS.md             # Canonical AI agent development rules
++-- CLAUDE.md             # Mirror of AGENTS.md
++-- GEMINI.md             # Mirror of AGENTS.md
 +-- DEVELOPER_GUIDE.md    # This file
 +-- README.md             # User documentation
 ```
@@ -709,15 +736,15 @@ terraform --help
 
 ## Getting Help
 
-1. Check `CLAUDE.md` - AI agent development rules
+1. Check `AGENTS.md` - canonical AI agent development rules
 2. Check `docs/architecture.md` - System design
 3. Check `docs/adr/` - Architecture decisions
-4. Create GitLab issue for bugs/features
+4. Check `docs/runbooks/developer-harness.md` and `docs/runbooks/devops-loop.md` for the current execution loop
 
 ## Next Steps
 
 1. Complete quick start
-2. Read `CLAUDE.md`
+2. Read `AGENTS.md`
 3. Review `examples/`
 4. Try modifying an example
 5. Create your first release tag (`v0.1.x`) after validation

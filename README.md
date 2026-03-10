@@ -297,6 +297,12 @@ Every commit passes through a hook chain that catches problems before they reach
 
 ### Session Preflight (Worktree Safety)
 
+The repository now treats the worktree harness as the default contributor loop: queue a `ready` issue, create or resume a linked worktree, run a fast validation tier repeatedly, run a push validation tier before pushing, then use the guided finish protocol. The compact runbook is [docs/runbooks/developer-harness.md](./docs/runbooks/developer-harness.md).
+
+For the broader validation and CI/CD interaction model, including which lane to use for local fast checks versus broad CI approximation, see [docs/runbooks/devops-loop.md](./docs/runbooks/devops-loop.md).
+
+Historical planning and superseded docs live under [docs/archive/README.md](./docs/archive/README.md). Treat that directory as reference history, not active guidance.
+
 Run session preflight checks before editing and before commit/push:
 
 ```bash
@@ -319,7 +325,42 @@ For an interactive linked-worktree helper (list/create/resume), use:
 make worktree
 ```
 
-The menu validates branch naming against the same policy regex, runs `make preflight-session` in the selected worktree, and can hand off into your selected agent/CLI in the correct worktree. For new worktrees, it can pull from the GitHub `ready` issue queue, order it by plan docs (default `ROADMAP.md` issue order), then by priority labels, then by creation time, auto-derive the branch slug from the selected issue title, suggest a branch `scope` namespace from issue labels/title (editable), and optionally auto-claim the selected issue (`ready` -> `in-progress`) after worktree creation and preflight pass. You can override queue plan sources with `WORKTREE_QUEUE_PLAN_FILES` (space-separated repo-relative files). On shell handoff, it lets you choose `gemini`, `claude`, or `codex`, choose `yolo`/equivalent mode or normal mode, choose `issue type` (execution or tracker), choose the expected `closure condition`, and choose `execute-now` or `print-only`. It then prints a boilerplate agent prompt plus the launch command (with selected worktree path and parsed issue number injected) and either executes it immediately or opens a shell without executing it.
+The default menu now biases toward the common path: next ready issue, resume the current issue worktree, inspect the queue, or finish the current worktree. The detailed legacy menu still exists behind the advanced option.
+
+It now also includes the prompt/assistant handoff directly in the start path. `make worktree` is intended to carry the normal loop from allocation into prompted agent launch, then expose push and finish without making you remember separate commands first.
+
+For a tighter loop, use the explicit shortcuts:
+
+```bash
+make worktree-next-issue OPEN_SHELL=1
+make worktree-create-issue ISSUE=134 OPEN_SHELL=1
+make worktree-resume-issue OPEN_SHELL=1
+make worktree-agent-handoff
+make worktree-push-issue
+```
+
+Queue ordering remains plan-doc order (`ROADMAP.md` by default), then priority labels, then creation time. The helper auto-derives the branch slug from the issue title, infers a scope namespace from labels/title, and auto-claims the selected issue (`ready` -> `in-progress`) on creation.
+
+For a tighter day-to-day loop, use:
+
+```bash
+make issue-queue
+make worktree
+make validate-fast
+make validate-scope SCOPE=terraform
+make validate-push
+make finish-worktree-close
+```
+
+Current known CI debt is intentionally separated from the default loop:
+- `terraform-validate` / `examples-validate`: pre-existing runtime/BFF dependency cycle
+- `template-test`: template/module release-tag drift
+
+Do not broaden normal worktree scope to fix those unless the assigned issue explicitly covers that remediation.
+
+For AWS-specific changes, query AWS Knowledge MCP before changing code or docs that depend on current AWS behavior, availability, quotas, or IAM semantics. Checked 2026-03-10 against AWS primary documentation:
+- https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-regions.html
+- https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazonbedrockagentcore.html
 
 ### Issue Queue Conventions (for `make worktree`)
 

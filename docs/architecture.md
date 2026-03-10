@@ -101,7 +101,9 @@ repo-root/
 │   ├── adr/                        # Architecture Decision Records
 │   ├── runbooks/                   # Operational runbooks
 │   └── architecture.md             # This file
-├── CLAUDE.md                       # AI development rules
+├── AGENTS.md                       # Canonical AI development rules
+├── CLAUDE.md                       # Mirror of AGENTS.md
+├── GEMINI.md                       # Mirror of AGENTS.md
 ├── DEVELOPER_GUIDE.md              # Team onboarding
 └── README.md                       # User documentation
 ```

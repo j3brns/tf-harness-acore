@@ -1,633 +1,346 @@
-# Development Rules & Principles for AI Coding Agents
+# Development Rules for AI Coding Agents
 ## Bedrock AgentCore Terraform
 
-> **Critical**: This is NOT a typical Terraform project. Read ALL rules before making ANY changes.
+This file is the repo source of truth for agent workflow and hard constraints. `CLAUDE.md` and `GEMINI.md` must remain byte-identical mirrors of this file.
 
----
+## Temporary Prolog: v0.1.x Release Freeze
 
-## TEMPORARY PROLOG: Migration Plan (v0.1.x Freeze)
+Status: active until the release-freeze exit criteria are met.
 
-**Status**: Temporary. Applies until the exit criteria below are met.
+- Keep release commits limited to versioning, governance, docs-sync, and blocker fixes.
+- Push `main` and release tags to both `origin` and `gitlab`.
+- Validate both CI systems before calling a release finished.
+- Remove this prolog in the same change that completes the freeze.
 
-### Temporary Directive Governance
-- **Owner**: Repository maintainers working the `v0.1.x` release freeze.
-- **Scope**: This prolog governs release-freeze work only and does not broaden feature scope.
-- **Precedence**: This prolog overrides lower-level workflow convenience only while active. Security, architecture, and issue-scope rules still apply.
-- **Removal Trigger**: Remove this prolog in the same change that satisfies the exit criteria below.
+Exit criteria:
+- `VERSION` matches `v0.1.x`
+- `CHANGELOG.md` has the matching release entry
+- `main` and the release tag exist on both remotes
+- GitHub Actions and GitLab CI are green for the tagged SHA
 
-### Purpose
-- Freeze a clean SemVer baseline (`0.1.x`) without carrying repository sprawl into release history.
-- Align GitHub (`origin`) and GitLab (`gitlab`) release behavior.
+## Rule 0: Quick Start
 
-### Execution Order (Mandatory)
-1. Snapshot current mixed work to a non-release WIP branch; do not delete files.
-2. Build a clean release commit containing only versioning/governance/docs-sync changes.
-3. Run local gates before push: fmt, validate, tflint, checkov, pre-commit.
-4. Push `main` to both remotes: `origin` and `gitlab`.
-5. Create release tag `v0.1.x`, then push the tag to both remotes.
-6. Verify both CI systems:
-   - GitHub Actions: validation green on commit/tag.
-   - GitLab CI: promotion/deployment gates green or approved.
-7. Record release evidence (tag, SHAs, CI URLs) in release notes/changelog context.
-8. Move remaining sprawl cleanup to follow-up scoped commits (no mixed release commits).
+### Rule 0.1: Session Contract
 
-### Temporary Constraints
-- No net-new feature work is allowed in the release freeze commit unless it is a release blocker fix.
-- No script/file proliferation during migration; one-off artifacts remain in `.scratch/` and uncommitted.
-- `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` must stay byte-identical.
-
-### Exit Criteria (Remove This Prolog After Completion)
-- `VERSION` matches release tag `v0.1.x`.
-- `CHANGELOG.md` contains the matching release entry.
-- `main` and release tag are present on both remotes (`origin`, `gitlab`).
-- GitHub Actions and GitLab CI are green for the tagged release SHA.
-
----
-
-## RULE 0: Quick Start (Hard Stops)
-
-### Rule 0.1: Agent Runtime Contract (MANDATORY)
-Before making changes, agents MUST:
-1. Confirm which rules file they read (`AGENTS.md`, `CLAUDE.md`, or `GEMINI.md`) and use it as the working source of truth.
+Before editing:
+1. Read `AGENTS.md` and use it as the rules source of truth.
 2. Run `make preflight-session` and stop if it fails.
-3. Confirm the assigned issue type (`tracker` or `execution`) and closure condition.
-4. Work only in the assigned worktree/branch for the assigned issue.
-5. Keep the PR scoped to the issue; split work if scope expands materially.
-6. Use AWS Knowledge MCP first for AWS-specific questions (Rule 5).
-7. Follow the finish protocol (Rule 12.8 / 12.9); local validation alone is not done.
-8. Update required docs in the same change for any behavior/workflow/architecture change.
+3. Confirm the assigned issue type and closure condition.
+4. Work only in the assigned issue worktree/branch.
+5. Keep the PR scoped to the issue; split if scope expands materially.
+6. Use AWS Knowledge MCP first for AWS-specific questions.
+7. Follow the finish protocol in Rule 12; local validation alone is not done.
+8. Update required docs in the same change when behavior, workflow, or architecture changes.
 
-### Rule 0.2: Rule Interpretation (Normative vs Guidance)
-- Rules using **MUST / MUST NOT / REQUIRED / FORBIDDEN** are normative and mandatory.
-- Examples, rationale text, and reference lists are guidance unless they explicitly state a normative requirement.
-- When a guidance example conflicts with a normative rule, the normative rule wins.
+### Rule 0.2: Default Harness Loop
 
-### Rule 0.3: Rule Precedence & Conflict Resolution (MANDATORY)
-If rules or constraints appear to conflict, apply this precedence order:
-1. Security and safety requirements (Rule 1, Rule 14, fail-fast behavior).
-2. Architecture and boundary constraints (Rule 2, Rule 9, Rule 10, Rule 11, Rule 13).
-3. Issue scope and allocation rules (Rule 12, assigned issue acceptance criteria, PR scope guard).
-4. Temporary release-freeze directives (when active and applicable).
-5. Workflow/tooling convenience and local preferences.
+Use this as the normal path:
 
-Conflict handling requirements:
-- Do NOT violate a higher-precedence rule to satisfy a lower-precedence one.
-- If an approach conflicts with repo rules, choose a compliant alternative and continue.
-- If no compliant path exists, stop and report the conflict, affected rule(s), and the smallest viable unblock decision.
-- Do not broaden PR scope to fix unrelated CI debt unless the current issue explicitly includes that remediation (see Rule 7.7.1).
-
-### Non-Negotiables
-- **No IAM wildcard resources** (except documented AWS-required exceptions).
-- **No error suppression** in provisioners (Fail Fast).
-- **No hardcoded ARNs, regions, or account IDs**.
-- **Validate all user inputs** (ARNs, URLs, account IDs).
-- **Use AWS-managed encryption** (SSE-S3) unless regulatory exception.
-- **Use dynamic blocks ONLY for repeatable blocks**, never for single attributes.
-
-### Key References
-- **Architecture**: `docs/architecture.md`
-- **ADRs**: `docs/adr/` (Review 0009, 0010, 0011)
-- **Human Guide**: `DEVELOPER_GUIDE.md`
-
----
-
-## RULE 1: Security is NON-NEGOTIABLE
-
-### Critical Security Findings (Remediated)
-
-**DEPLOYMENT BLOCKERS remediated**:
-1. IAM wildcard resources (3 instances) - REMEDIATED: Scoped to specific ARNs or documented as AWS-required exceptions.
-2. Dynamic block syntax errors - FIXED: Replaced with direct attributes.
-3. Error suppression masking failures - FIXED: Implemented fail-fast error handling in all provisioners.
-4. Placeholder ARN validation missing - FIXED: Added variable validation.
-5. Dependency package limits - FIXED: Removed arbitrary limits.
-
-### Security Rules - NEVER Violate These
-
-#### Rule 1.1: IAM Resources MUST Be Specific
-```hcl
-# FORBIDDEN:
-Resource = "*"
-
-# REQUIRED:
-Resource = [
-  "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/*"
-]
-Condition = {
-  StringEquals = {
-    "aws:SourceAccount" = data.aws_caller_identity.current.account_id
-  }
-}
-```
-
-**Known Exceptions (AWS-Required Wildcards)**:
-Certain actions do NOT support resource-level scoping and MUST use `Resource = "*"`. These are accommodated in tests:
-- `logs:PutResourcePolicy`: Required for Bedrock AgentCore log delivery.
-- `sts:GetCallerIdentity`: Required for identity verification.
-- `ec2:CreateNetworkInterface`: Required for dynamic VPC networking.
-- `s3:ListAllMyBuckets`: Required for bucket discovery.
-
-**Rule**: Every wildcard MUST have a comment: `# AWS-REQUIRED: <Reason>`.
-
-**Exception Change Control**:
-- A new wildcard exception is allowed only with a linked AWS primary source proving resource-level scoping is unsupported.
-- The policy statement MUST include `# AWS-REQUIRED: <Reason>` and a doc reference in adjacent comments.
-- Add/update tests that explicitly validate only the approved wildcard actions.
-- Update this "Known Exceptions" list in the same change.
-
-#### Rule 1.2: Errors MUST Fail Fast
-Forbidden:
 ```bash
-cp -r "${local.source_path}"/* "$BUILD_DIR/code/" 2>/dev/null || true
-```
-Required:
-```bash
-if [ ! -d "${local.source_path}" ]; then
-  echo "ERROR: Source path not found: ${local.source_path}"
-  exit 1
-fi
-cp -r "${local.source_path}"/* "$BUILD_DIR/code/"
+make issue-queue
+make worktree-next-issue OPEN_SHELL=1
+make validate-fast
+make validate-scope SCOPE=terraform
+make worktree-push-issue
+make finish-worktree-summary
 ```
 
-**Why**: Error suppression masks deployment failures.
+`make worktree` remains available for the interactive menu and advanced paths.
 
----
+### Rule 0.3: Rule Precedence
 
-## RULE 2: Module Architecture is FIXED
+Apply conflicts in this order:
+1. Security and safety
+2. Architecture and boundary rules
+3. Issue scope and allocation rules
+4. Active release-freeze rules
+5. Workflow convenience
 
-Dependency direction (IMMUTABLE):
-foundation -> tools/runtime -> governance
+If no compliant path exists, stop and report the conflict explicitly.
+
+## Rule 1: Security Is Non-Negotiable
+
+### Rule 1.1: IAM Resources Must Be Specific
+
+- `Resource = "*"` is forbidden unless AWS does not support resource scoping for that action.
+- Every approved wildcard must include `# AWS-REQUIRED: <reason>`.
+- New wildcard exceptions require an AWS primary source and tests covering only the approved exception.
+
+Approved wildcard exceptions:
+- `logs:PutResourcePolicy`
+- `sts:GetCallerIdentity`
+- `ec2:CreateNetworkInterface`
+- `s3:ListAllMyBuckets`
+
+### Rule 1.2: Fail Fast
+
+- Do not suppress provisioner errors with `|| true`, `2>/dev/null`, or equivalent masking.
+- Missing input paths, failed copies, and failed CLI calls must abort with an explicit error.
+
+### Rule 1.3: Input and Secret Hygiene
+
+- No hardcoded ARNs, account IDs, or regions.
+- Validate user inputs such as ARNs, URLs, and account IDs.
+- Mark secrets `sensitive = true`.
+- Use AWS-managed encryption by default unless a documented regulatory exception requires KMS.
+
+## Rule 2: Module Architecture Is Fixed
+
+Dependency direction:
+
+`foundation -> tools/runtime -> governance`
 
 Module boundaries:
-- **foundation**: Gateway, Identity, Observability
-- **tools**: Code Interpreter, Browser
-- **runtime**: Runtime, Memory, Packaging
-- **governance**: Policies, Evaluations
+- `foundation`: gateway, identity, observability
+- `tools`: browser, code interpreter
+- `runtime`: runtime, memory, packaging
+- `governance`: policies, evaluations
+- `bff`: token handler, SPA/API edge, proxy
 
-Reference: `docs/architecture.md`
+Do not introduce circular dependencies or move components across module boundaries without an ADR-level decision.
 
----
-
-## RULE 3: Coding Rules
+## Rule 3: Coding Rules
 
 ### Rule 3.1: Terraform
+
 - Prefer `for_each` with stable keys over `count`.
-- Use explicit types and validation for all variables.
-- Mark secrets as `sensitive = true`.
-- Avoid `null_resource` unless using the CLI pattern (Rule 4).
+- Use explicit types and validation for variables.
+- Use dynamic blocks only for repeatable nested blocks, never for single attributes.
+- Prefer native provider resources where stable; use CLI bridges only where coverage is missing or intentionally deferred.
 
-### Rule 3.2: Python (Strands SDK)
-- **Target**: Python 3.12 only.
-- **Format**: Black + Flake8 (Line length 120).
-- **Testing**: `pytest` under `examples/*/agent-code/tests/`.
-- **Behavior**: Use `logging` instead of `print`.
-- **Mocks**: No network calls in unit tests; mock external services.
+### Rule 3.2: Python
 
----
+- Python `3.12` only.
+- Format: Black + Flake8, line length `120`.
+- Tests live under `examples/*/agent-code/tests/`.
+- Use `logging`, not `print`.
+- Unit tests must not make real network calls.
 
-## RULE 4: CLI Pattern is MANDATORY
+## Rule 4: Native-vs-CLI Resource Policy
 
-The following resources MUST use the `null_resource` + AWS CLI pattern due to provider gaps:
-1. Gateway
-2. Identity
-3. Browser
-4. Code Interpreter
-5. Runtime
-6. Memory
-7. Policy Engine / Cedar Policies
-8. Evaluators
-9. Credential Providers
+This repo is no longer CLI-only. Use the current repo/provider matrix:
 
-For the nine resources above, this rule takes precedence over Terraform-native preferences.
-For all other resources, follow the decision framework (native provider first when available and stable).
+- Native in this repo: gateway, gateway targets, workload identity, browser, code interpreter, runtime, memory
+- CLI bridge still accepted where native coverage is missing or not yet adopted: policy engine, Cedar policies, evaluators, credential providers, other gaps documented in code/comments
 
----
+When changing resource control-plane strategy:
+- update the migration matrix or code comments in the same change
+- do not reintroduce CLI bridges where native coverage is already stable in the repo
 
-## RULE 5: AWS Query Source of Truth (MANDATORY)
+## Rule 5: AWS Query Source of Truth
 
-### Rule 5.1: AWS Knowledge MCP First
-- For any AWS-specific question, agents MUST query `aws-knowledge-mcp-server` before answering.
-- This includes: service availability, API/CLI syntax, limits/quotas, pricing, release status, and troubleshooting.
-- General memory may be used for context, but final answers MUST be grounded in AWS Knowledge MCP results.
-- Fallback: If `aws-knowledge-mcp-server` is unavailable, agents MUST state that explicitly, use best-effort official AWS docs, and mark the answer as lower confidence.
+For AWS-specific questions, use AWS Knowledge MCP first.
 
-### Rule 5.2: Required Query Flow
-1. Choose the first tool by question type:
-   - Regional availability: `get_regional_availability`.
-   - API/CLI usage, limits, errors, best practices: `search_documentation`.
-2. If a specific documentation URL is found or provided, use `read_documentation` on that URL.
-3. If results conflict or are unclear, run a second targeted query and state the uncertainty explicitly.
-4. Prefer primary AWS documentation pages over secondary summaries.
+Required flow:
+1. `get_regional_availability` for region questions
+2. `search_documentation` for API, CLI, limits, errors, or best practices
+3. `read_documentation` for the chosen AWS doc page
+4. include the exact check date for time-sensitive facts
 
-### Rule 5.3: Response Requirements
-- Include the exact check date in the response for time-sensitive AWS facts.
-- Include source links (AWS docs/AWS Knowledge MCP-backed URLs).
-- Clearly label any inference vs directly confirmed facts.
-- Include exact command/API field names when answering implementation questions.
-- If fallback mode was used, include: "AWS Knowledge MCP unavailable at query time."
+If AWS Knowledge MCP is unavailable, say so explicitly and fall back to official AWS docs only.
 
-### Rule 5.4: Query Examples
-- Availability check:
-  - `get_regional_availability(region="eu-west-2", resource_type="product", filters=["Amazon Bedrock AgentCore","Amazon Bedrock AgentCore Runtime"])`
-- API/CLI reference:
-  - `search_documentation(search_phrase="bedrock-agentcore-control create-gateway", topics=["reference_documentation"])`
-- Troubleshooting:
-  - `search_documentation(search_phrase="AccessDenied bedrock-agentcore create-gateway-target", topics=["troubleshooting"])`
-- Release awareness:
-  - `search_documentation(search_phrase="Amazon Bedrock AgentCore new features", topics=["current_awareness"])`
+## Rule 6: Versioning and Releases
 
----
+- Canonical version lives in `VERSION`.
+- Release tags are `vMAJOR.MINOR.PATCH`.
+- Update `VERSION` and `CHANGELOG.md` together.
+- Push release commits and tags to both `origin` and `gitlab`.
+- Validate GitHub Actions and GitLab CI before calling a release complete.
 
-## RULE 6: Versioning & Release Freeze (MANDATORY)
+## Rule 7: Docs, Sprawl, and Harness Workflow
 
-### Rule 6.1: Canonical Version Source
-- The repository version MUST be stored in the root `VERSION` file using SemVer (`MAJOR.MINOR.PATCH`).
-- During the current pre-1.0 phase, the active release line is `0.1.x`.
-- Any release change MUST update `VERSION` and `CHANGELOG.md` in the same commit.
+### Rule 7.1: Mirrored Agent Rule Docs
 
-### Rule 6.2: Tags Are the Release Artifact
-- Official releases MUST be created as immutable Git tags in the format `vMAJOR.MINOR.PATCH` (example: `v0.1.0`).
-- Branches are for integration only; tags are the source of truth for Terraform module consumers.
-- Forks are NOT a release mechanism for this repo.
+- `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` must remain byte-identical.
+- Edit one source and mirror it verbatim in the same change.
 
-### Rule 6.3: Promotion Model
-- `main` is the integration branch.
-- `main` is also the promotion branch for dev and test; no long-lived `release/*` branch is used in the standard flow.
-- Test environment actions (`plan:test`, `deploy:test`, `smoke-test:test`) are allowed only from manual/API pipelines on `main` and require explicit manual promotion first (`promote:test`).
-- Production promotion MUST reference a tag that points to the exact tested commit SHA.
+### Rule 7.2: Docs Sync
 
-### Rule 6.4: GitHub + GitLab Remote Sync
-- This repository is dual-remote: `origin` (GitHub) and `gitlab` (GitLab).
-- Release commits and release tags MUST be pushed to both remotes.
-- Use non-interactive CLI commands only (for example: `git push origin main`, `git push gitlab main`, `git push origin v0.1.0`, `git push gitlab v0.1.0`).
-- Validate both CI systems after push: GitHub Actions for validation and GitLab CI for deployment gates.
+- Behavior, workflow, CI/CD, or architecture changes require doc updates in the same change.
+- Do not defer docs to a follow-up commit.
 
----
+### Rule 7.3: Scratch and New Files
 
-## RULE 7: Documentation Sync & Sprawl Control
+- Temporary outputs and one-off investigation files belong in `.scratch/` and must not be committed.
+- Reusable automation belongs in established paths such as `terraform/scripts/` or `Makefile`.
+- Avoid file proliferation such as `*_v2`, `*_copy`, `*_tmp`, or `*_backup`.
 
-### Rule 7.1: Agent Rule Docs Must Match
-- `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` MUST remain byte-identical.
-- If one file changes, all three MUST be updated in the same commit.
+### Rule 7.7: Startup Preflight Is Mandatory
 
-### Rule 7.1.1: Agent Rule Mirror Update Workflow
-- When updating agent rules, edit one source file and then copy it verbatim to the other two files in the same change.
-- Agents SHOULD verify byte identity before commit using non-interactive checks (for example `cmp` or `sha256sum`).
-- Do not make manual wording edits independently in the mirrored files.
+- Run `make preflight-session` at session start and before commit/push.
 
-### Rule 7.2: Update Docs Before Commit/Push
-- Any behavioral, CI/CD, architecture, or workflow change MUST include the required docs update before commit and before push.
-- "Follow-up docs later" is not permitted.
+### Rule 7.7.1: CI Failure Triage
 
-### Rule 7.3: Ephemeral Work Area
-- Temporary experiments, generated files, and one-off tooling outputs MUST live under `.scratch/`.
-- `.scratch/` content is session-scoped and MUST NOT be committed.
-- Reusable automation belongs in existing maintained locations (`terraform/scripts/`, `Makefile`) and requires documentation.
-
-### Rule 7.3.1: `.context/` for Committed Research & Synthesis
-- `.context/` is the repository location for committed agent/human research syntheses, reference packs, and project-specific context intended to improve future execution quality.
-- `.context/` content MUST be curated and human-readable (summaries, decision notes, source indexes, migration notes), not raw dumps of fetched web pages, binaries, or generated scratch output.
-- Every `.context/` pack MUST include:
-  - check date(s) for time-sensitive facts,
-  - source links (primary sources preferred),
-  - clear repo relevance (why this context exists here).
-- Raw extraction artifacts, temporary downloads, and one-off parsing outputs MUST remain in `.scratch/` and MUST NOT be committed.
-- If workflow/tooling begins to depend on `.context/` content, document that behavior in `README.md` and/or `DEVELOPER_GUIDE.md` in the same change.
-
-### Rule 7.4: No File Proliferation
-- Do not create variant files like `*_v2.*`, `*_improved.*`, `*_enhanced.*`, `*_copy.*`, `*_tmp.*`, or `*_backup.*`.
-- Prefer editing existing files in place.
-- A new file is allowed only when it introduces genuinely new functionality that cannot fit an existing file without reducing clarity.
-
-### Rule 7.5: Script Sprawl Control
-- Committed automation scripts are allowed only in established locations (`terraform/scripts/`, CI workflows, or template/example agent-code paths).
-- One-off scripts for investigation/migration must be created under `.scratch/` and must remain uncommitted.
-
-### Rule 7.6: New-File Accountability
-- Any committed new file MUST be accompanied by:
-  - a short rationale in the commit message, and
-  - required docs updates in the same commit when behavior/workflow changes.
-
-### Rule 7.7: Startup Preflight is Mandatory
-- Session startup/worktree safety checks are governed by the repo SoT file: `terraform/scripts/session/preflight.policy`.
-- Agents and humans MUST run `make preflight-session` at session start and before commit/push.
-- If preflight fails, do not proceed with edits/commits until resolved.
-
-### Rule 7.7.1: CI Failure Triage (Regression vs Existing Debt)
-- When CI fails, agents MUST classify failures before broadening scope:
-  - **Regression**: caused by the current change and must be fixed in the current issue.
-  - **Pre-existing debt**: existing repo failure not caused by the current change.
-- Agents MUST fix regressions in the current issue before merge.
-- Agents MUST NOT silently expand PR scope to remediate pre-existing debt unless:
-  - the current issue explicitly includes that remediation, or
-  - a tracker/execution split is created and the work is reassigned.
-- If pre-existing debt blocks merge, agents MUST record the blocker and create/update a scoped issue for the debt.
+- When validation or CI fails, classify it as:
+  - regression caused by the current change
+  - pre-existing debt not caused by the current change
+- Do not silently broaden scope to fix unrelated debt.
 
 ### Rule 7.7.2: CI Failure Output Must Be Actionable
-- CI jobs and local validation commands SHOULD emit actionable failure details directly in job logs.
-- If a tool writes structured output to artifacts (for example JUnit/XML), agents MUST ensure the command also preserves readable failure diagnostics in logs or document how to retrieve them.
-- Do not treat a failing tool as "opaque"; identify and report the exact failing rule/check/message before changing code.
 
-### Rule 7.7.3: Scanner Exception Governance (Checkov/TFLint/Similar)
-- Security/static-analysis exceptions MUST be explicit, minimal, and justified.
-- Prefer the narrowest exception scope available:
-  - inline/resource-level skip for resource-specific accepted exceptions,
-  - repo-level config skip only when the exception is intentionally broad and documented.
-- Every exception MUST include a rationale stating why the finding is acceptable in this repo context.
-- Temporary exceptions SHOULD reference a tracking issue and expected removal condition.
-- Adding a scanner exception MUST NOT be used to mask a true regression without documenting the tradeoff.
+- Surface the exact failing command, rule, or error in logs and handoffs.
+- Do not treat failing validation as opaque.
 
-### Rule 7.8: Worktree Finish & Cleanup
-- A worktree is **not finished** when code is only local or locally validated.
-- A worktree is finished only when the issue closure condition has been met (for example `PR merged`) and any required issue/PR evidence updates are posted.
-- Agents MUST track and report the current finish stage when pausing or handing off. Use these stages:
-  - `implementing` (editing/validating in worktree),
-  - `ready-to-commit`,
-  - `ready-to-push`,
-  - `pr-open`,
-  - `review`,
-  - `merged`,
-  - `cleanup-complete`.
-- Do not remove a linked worktree until its branch is pushed and no local-only work remains.
-- After merge to `main`, agents SHOULD remove the linked worktree, delete the local branch, and run `git worktree prune`.
-- Worktree cleanup MUST NOT discard unmerged or unpushed changes.
+### Rule 7.8: Worktree Finish and Cleanup
 
----
+Use these stage names when handing off:
+- `implementing`
+- `ready-to-push`
+- `pr-open`
+- `review`
+- `merged`
+- `cleanup-complete`
 
-## RULE 9: Discovery is EXPLICIT
+A worktree is not finished until the issue closure condition is met and evidence is posted.
 
-### Rule 9.1: Agents Must Be Discoverable
-- **Requirement**: Every agent MUST expose `/.well-known/agent-card.json`.
-- **Registry**: Agents MUST register with **Cloud Map** (East-West) or the **Gateway Manifest** (Northbound).
+## Rule 9: Discovery and Gateway Use
 
-### Rule 9.2: Gateway is the Tool Source
-- **Requirement**: Tools MUST be accessed via the **AgentCore Gateway**.
-- **Forbidden**: Invoking Tool Lambdas directly via `lambda:InvokeFunction`.
+- Every agent must expose `/.well-known/agent-card.json`.
+- Register agents in Cloud Map or the gateway manifest.
+- Tools must be accessed through the AgentCore Gateway, not direct Lambda invocation.
 
----
+## Rule 10: Identity Propagation
 
-## RULE 10: Identity Propagation is MANDATORY
+- No anonymous agent-to-agent calls.
+- Use workload tokens.
+- Preserve original Entra/OIDC user context across A2A calls.
 
-### Rule 10.1: No Anonymous A2A Calls
-- **Requirement**: Agent-to-Agent calls MUST use a **Workload Token**.
-- **Pattern**: `GetWorkloadAccessTokenForJWT` -> `Authorization: Bearer <token>`.
+## Rule 11: Frontend Security
 
-### Rule 10.2: User Context Must Persist
-- **Requirement**: Original Entra ID context MUST be exchanged, not dropped.
+- No access or refresh tokens in browser storage.
+- Store tokens server-side.
+- Use secure, HTTP-only, `SameSite=Strict` session cookies.
 
----
-
-## RULE 11: Frontend Security (Token Handler)
-
-### Rule 11.1: No Tokens in Browser
-- **Forbidden**: Storing Access/Refresh Tokens in `localStorage`, `sessionStorage`, or Cookies accessible to JS.
-- **Requirement**: Tokens must be stored server-side (DynamoDB/ElastiCache).
-
-### Rule 11.2: Session Management
-- **Pattern**: Use **Secure, HTTP-only, SameSite=Strict** cookies for Session IDs.
-- **Reference**: ADR 0011 (Serverless Token Handler).
-
----
-
-## RULE 12: Comprehensive Issue Reporting
+## Rule 12: Issue, Worktree, and PR Discipline
 
 ### Rule 12.1: Issue Structure
-AI Agents MUST create comprehensive GitHub issues. Every issue MUST include:
-- **Context**: Why is this change needed? (Relate to ADRs/Rules).
-- **Technical Detail**: Specific AWS APIs, Python libraries, or Terraform patterns to be used.
-- **Implementation Tasks**: A checklist of specific actionable items.
-- **Acceptance Criteria**: Verifiable outcomes (e.g., "Exit code 0", "Test passes").
+
+Every issue used for allocation must include:
+- context
+- technical detail
+- implementation tasks
+- acceptance criteria
+- closure condition
 
 ### Rule 12.2: Roadmap Alignment
-- Every planned item in `ROADMAP.md` MUST have a corresponding GitHub Issue.
-- The Roadmap provides the **Strategic Vision**; Issues provide the **Execution Detail**.
-- When an issue is closed, the corresponding item in `ROADMAP.md` MUST be ticked.
 
-### Rule 12.3: Tracker Issues vs Execution Issues (MANDATORY)
-- A **Tracker Issue** coordinates a larger initiative (scope, sequencing, blockers, child issues, status rollup).
-- An **Execution Issue** is a single implementable work package assigned to one agent/worktree.
-- Agents MUST perform implementation work against an Execution Issue, not a Tracker Issue, unless the task is explicitly planning/docs-only.
+- Roadmap-planned work should map cleanly to GitHub issues.
+- Use issues, not roadmap prose, as the execution surface.
 
-### Rule 12.4: Worktree Branch Issue ID MUST Match the Execution Issue
-- Linked worktree branch names (`wt/<scope>/<issue>-<slug>`) MUST use the **Execution Issue** number.
-- Tracker Issue numbers MUST NOT be used for implementation branches unless the work is planning/docs-only for the tracker itself.
+### Rule 12.3: Tracker vs Execution
+
+- `tracker`: coordination and decomposition
+- `execution`: one implementable work package for one worktree/branch/PR
+
+Implementation work belongs on execution issues unless the task is explicitly planning/docs-only.
+
+### Rule 12.4: Branch Issue ID Must Match the Execution Issue
+
+- Branches use the execution issue number: `wt/<scope>/<issue>-<slug>`.
+- Do not use tracker issue numbers for implementation branches.
 
 ### Rule 12.5: One Agent / One Execution Issue / One Worktree
-- Each active coding agent MUST be assigned exactly one open Execution Issue at a time.
-- Each active Execution Issue MUST map to exactly one worktree and one branch.
-- Do not allocate parallel agents to tasks with high-overlap file paths unless explicitly coordinated.
 
-### Rule 12.5.1: PR Scope Guard (MANDATORY)
-- A PR MUST remain within the assigned issue scope and expected touched paths for that issue.
-- If implementation reveals materially broader work (for example architecture + implementation, or unrelated subsystem changes), agents MUST do one of the following before continuing:
-  - split the work into separate issues/PRs, or
-  - update the issue scope explicitly and obtain coordination approval on the issue.
-- Agents MUST NOT use a single PR to "sneak in" unrelated fixes just to turn CI green.
+- One active execution issue per agent
+- One worktree per active execution issue
+- Branch naming: `wt/<scope>/<issue>-<slug>`
 
-### Rule 12.6: Tracker-Agent Completion Criteria
-- An agent assigned to a Tracker Issue is done when the work is allocatable:
-  - child Execution Issues created/updated with full Rule 12.1 structure,
-  - dependencies and ordering documented,
-  - ready tasks labeled,
-  - active allocations recorded,
-  - blockers explicitly captured.
-- Tracker agents SHOULD stop after coordination outputs unless the tracker is explicitly a planning/docs implementation task.
+### Rule 12.5.1: PR Scope Guard
 
-### Rule 12.7: Allocation Status Labels (Standard)
-- Use labels for execution state: `triage`, `ready`, `in-progress`, `blocked`, `review`, `done`.
-- `triage` is the queue intake state for open issues that are not yet scheduled/allocatable.
-- Workstream lane labels (roadmap-aligned) are: `a`, `b`, `c`, `d`, `e`.
-- Roadmap item labels (optional) are labels like `a0`, `a1`, `b0`, `c2`, `d1`, `e3`.
-- Optional domain/topic labels (for example `provider-matrix`, `freeze-point`) MAY be used for filtering and reporting.
+If work broadens materially:
+- split it into another issue/PR, or
+- update the issue scope explicitly before continuing
 
-Allowed status transitions (standard flow):
+Do not sneak unrelated fixes into the same PR.
 
-| From | To | Required Trigger / Evidence |
-| --- | --- | --- |
-| `triage` | `ready` | Rule 12.1 complete, dependencies explicit, closure condition defined, allocatable to one agent/worktree |
-| `triage` | `blocked` | Issue is specified but waiting on dependency/decision; blocker is explicitly documented |
-| `ready` | `in-progress` | Agent/worktree assigned (auto-claim or manual claim) |
-| `ready` | `blocked` | A dependency or decision blocker is discovered before active implementation; blocker is explicitly documented |
-| `in-progress` | `review` | Branch pushed, PR opened/updated, issue evidence updated enough for review |
-| `in-progress` | `blocked` | New blocker discovered and documented |
-| `review` | `in-progress` | Review/CI requested changes require more implementation work |
-| `review` | `done` | PR merged, issue closed (or explicitly closed by workflow), evidence updated |
-| `blocked` | `ready` | Blocking dependency/decision resolved and documented |
-| `done` | `in-progress` | Only if issue is explicitly reopened with new scope or regression follow-up in the same issue |
+### Rule 12.6: Tracker Completion
 
-### Rule 12.8: Execution Issue Finish Protocol (MANDATORY)
-For any Execution Issue, agents MUST complete the following finish sequence:
-1. Run `make preflight-session`.
-2. Run issue-appropriate validation (and required repo checks for the touched scope).
-3. Commit focused changes with the issue number in the commit message.
-4. Push the worktree branch to `origin` (and other remotes only if required by team convention).
-5. Open or update a PR to `main`.
-6. Post a closeout comment on the issue including:
-   - summary of changes,
-   - validation commands run and outcomes,
-   - evidence links (PR, commit SHA, CI).
-7. Update issue labels/status (`in-progress` -> `review` or `done`).
-8. Close the issue only after merge unless the team workflow explicitly closes on PR creation.
-- Agents MUST NOT mark an Execution Issue complete based only on local edits or local validation.
-- If pausing before merge, agents MUST report:
-  - current finish stage (Rule 7.8),
-  - what is already complete,
-  - exact next command(s) to advance the issue.
+- Tracker work is done when child execution issues are allocatable, dependencies are explicit, and blockers are recorded.
 
-### Rule 12.8.1: One Execution PR MUST Close One Execution Issue (MANDATORY)
-- Each Execution PR MUST map to exactly one Execution Issue as its primary closure target.
-- Execution PRs MUST include an explicit GitHub closing reference for that issue (for example `Closes #33`) in the PR body so merge closes the issue automatically when possible.
-- If a PR relates to additional issues, reference them without closing keywords unless they are intentionally being closed by the same PR.
-- After merge, agents MUST verify issue/PR state consistency:
-  - PR merged,
-  - target Execution Issue closed,
-  - issue status label transitioned to `done`.
-- If auto-close did not occur (for example missing closing keyword), agents MUST immediately close the issue and update labels/evidence in the same finish sequence.
+### Rule 12.7: Label Hygiene
 
-### Rule 12.8.2: Review-Stage Handoff Content (MANDATORY)
-- A handoff or pause at `pr-open` or `review` stage MUST include:
-  - current finish stage (Rule 7.8),
-  - PR link,
-  - issue number and status label,
-  - completed finish steps,
-  - current blocker/rationale (if merge is not immediately possible),
-  - exact next command(s).
-- "PR open" alone is not a sufficient handoff.
-- If PR checks are failing or merge is blocked, agents MUST state the exact failing check or merge blocker.
+Every open issue must have:
+- exactly one type label: `tracker` or `execution`
+- exactly one status label: `triage`, `ready`, `in-progress`, `blocked`, `review`, or `done`
 
-### Rule 12.9: Tracker Issue Finish Protocol (MANDATORY)
-For Tracker Issues, agents are done when work is allocatable or fully coordinated:
-- child Execution Issues created/updated with Rule 12.1 structure,
-- dependencies and ordering documented,
-- ready tasks labeled,
-- active allocations recorded,
-- blockers captured,
-- tracker checklist/status updated.
-Tracker agents SHOULD NOT perform implementation work unless the tracker is explicitly a planning/docs implementation task.
+Allocatable `ready` issues must also have:
+- explicit dependencies/blockers
+- actionable acceptance criteria
+- a closure condition
+- scope suitable for one worktree
+
+### Rule 12.8: Execution Finish Protocol
+
+For execution issues:
+1. `make preflight-session`
+2. run issue-appropriate validation
+3. commit focused changes with the issue number
+4. push the worktree branch
+5. open or update the PR to `main`
+6. post an issue closeout comment with summary, validation, PR, commit SHA, and CI evidence
+7. move the issue to `review` or `done`
+8. close only after merge unless the workflow explicitly auto-closes on PR creation
+
+### Rule 12.8.1: One Execution PR Must Close One Execution Issue
+
+Execution PRs must include `Closes #<issue>` in the PR body.
+
+### Rule 12.8.2: Review-Stage Handoff
+
+Any pause at `pr-open` or `review` must include:
+- finish stage
+- PR link
+- issue number and label state
+- completed steps
+- current blocker, if any
+- exact next command(s)
+
+### Rule 12.9: Tracker Finish Protocol
+
+- Tracker issues finish when work is fully allocatable or coordinated.
 
 ### Rule 12.10: Definition of Done Must Be Explicit
-Every issue MUST define completion evidence:
-- required validation commands,
-- expected outcomes,
-- required docs updates,
-- closure condition (PR opened, PR merged, or release tag).
 
-### Rule 12.11: Label Hygiene for Queueing (MANDATORY)
-- This rule is the source of truth for issue label taxonomy used by the `ready` queue and `make worktree`.
-- The `ready` queue is a scheduling mechanism and MUST remain high-signal.
-- All open issues MUST be in the issue queue taxonomy, even if they are not roadmap-planned or not yet allocatable.
-- Issues used for agent allocation MUST maintain label hygiene before they are marked `ready`.
-- Every open issue MUST have:
-  - exactly one issue-type label: `tracker` or `execution`,
-  - exactly one status label from: `triage`, `ready`, `in-progress`, `blocked`, `review`, `done`.
-- Every allocatable issue MUST additionally satisfy the `ready` requirements below.
-- Roadmap-planned issues MUST include exactly one workstream lane label (`a`, `b`, `c`, `d`, or `e`).
-- Roadmap item labels (for example `a0`, `a1`, `b0`) are RECOMMENDED for roadmap parity and queue readability, but optional.
-- Priority labels are optional, but if used MUST be singular (for example one of `p0`, `p1`, `p2`, `p3`).
-- Do not use duplicate/synonym labels for the same meaning (for example multiple competing status labels).
-- Status transitions MUST remove the previous status label in the same update (for example `ready` -> `in-progress`).
-- `triage` SHOULD be used for unscheduled backlog, legacy issues pending normalization, or issues awaiting scope/priority decisions.
-- An issue MUST NOT be labeled `ready` unless:
-  - Rule 12.1 structure is complete,
-  - dependencies/blockers are explicit,
-  - acceptance criteria are actionable,
-  - closure condition is stated,
-  - the issue is allocatable to one agent/worktree.
-- Trackers MAY be labeled `ready` only when they are ready for coordination work (not implementation execution) and the intended outcome is clear.
+- Every issue needs required validation, expected outcomes, required docs updates, and a closure condition.
 
----
+### Rule 12.11: Label Hygiene for Queueing
 
-## RULE 13: Repo Layout & Reorg Guardrails
+- The `ready` queue is only for allocatable issues with explicit scope and closure conditions.
 
-**Layout**: Terraform core is in `terraform/`. Examples live in `examples/`. Docs live at repo root and `docs/`.
+## Rule 13: Repo Layout
 
-**Rules**:
-- Do not move docs into `terraform/`.
-- Keep examples adjacent at repo root.
-- If you move Terraform files, update references in `README.md`, `DEVELOPER_GUIDE.md`, `Makefile`, `validate_windows.bat`, `scripts/`, and `tests/`.
-- Run the preflight tests in `docs/runbooks/repo-restructure.md` before and after any move.
+- Terraform core stays in `terraform/`
+- examples stay in `examples/`
+- docs stay at repo root and `docs/`
 
----
+If files move, update references in docs, scripts, tests, and helper commands in the same change.
 
-## DECISION FRAMEWORK
+## Decision Framework
 
-| Question | Answer |
+| Question | Default |
 | --- | --- |
-| Terraform-native or CLI? | Gateway/Identity/Browser/Code Interpreter/Runtime/Memory/Policy Engine/Evaluators/Credential Providers: CLI pattern mandatory (Rule 4). All others: use native provider if available and stable; otherwise use CLI pattern. |
-| Which module? | Foundation, Tools, Runtime, Governance (Fixed architecture). |
-| Use dynamic block? | Only for repeatable blocks. NEVER for single attributes. |
-| KMS or AWS-managed? | AWS-managed (SSE-S3) by default. |
-| Hardcode ARNs/regions? | NEVER. Use data sources or module outputs. |
-| Where do tokens go? | DynamoDB (server-side). Never in the browser. |
+| Native or CLI? | Native when stable in this repo; CLI only for documented gaps |
+| Which module? | Follow the fixed module boundaries in Rule 2 |
+| Dynamic block? | Only for repeatable blocks |
+| Encryption? | AWS-managed by default |
+| Hardcoded ARNs/regions? | Never |
+| Worktree flow? | `issue-queue -> worktree-next-issue -> validate-fast -> worktree-push-issue` |
 
----
+## Before Commit
 
-## CHECKLIST: Before Every Commit
+Default:
 
 ```bash
-terraform -chdir=terraform fmt -check -recursive
-terraform -chdir=terraform validate
-make policy-report
-terraform -chdir=terraform plan -backend=false -var-file=../examples/research-agent.tfvars
-checkov -d terraform --framework terraform --compact --config-file terraform/.checkov.yaml
-tflint --chdir=terraform --recursive --config terraform/.tflint.hcl
-pre-commit run --all-files
+make preflight-session
+make validate-fast
+make validate-push
 ```
 
-### Windows Notes (Pre-commit + Terraform Hooks)
-- Terraform-related pre-commit hooks require **bash**. On Windows, run `pre-commit` from **Git Bash or WSL** for full checks.
-- For a Windows-native minimal check, use `validate_windows.bat` (runs `terraform fmt` + `pre-commit` with Terraform hooks skipped).
+Use narrower `make validate-scope` paths only when the issue scope justifies it and the issue evidence records what was run.
 
-### YAML Rule for Pre-commit Entries
-- If a `pre-commit` hook `entry:` contains `:` or complex shell, use a block scalar (`>-`) to avoid YAML parse errors.
+## Rule 14: Multi-Tenant Isolation
 
-### Binary Hygiene
-- Do not commit tool binaries. Keep `.tools/` ignored and download tooling via scripts when needed.
-
----
-
-## KEY DECISIONS (ADRs)
-
-| ADR | Decision | Rationale |
-|-----|----------|-----------|
-| 0001 | 4-module architecture | Clear separation of concerns |
-| 0002 | CLI-based resources | AWS provider gaps |
-| 0008 | AWS-managed encryption | Simpler, equivalent security |
-| 0009 | B2E Publishing & Identity | Streaming + Entra ID |
-| 0010 | Service Discovery (Dual-Tier) | Cloud Map + Registry |
-| 0011 | Serverless SPA & BFF | Token Handler Pattern (No XSS) |
-
----
-
-## RULE 14: Multi-Tenant Isolation (MANDATORY)
-
-### Rule 14.1: No Implicit Tenant Trust
-- **Requirement**: Components MUST NOT trust a `tenant_id` or `session_id` provided in the request body without verifying it against the authenticated OIDC context (JWT claims).
-- **Enforcement**: The `Agent Proxy` MUST validate that the `sessionId` belongs to the `tenant_id` and `app_id` extracted from the authorizer context.
-
-### Rule 14.2: Partitioned Storage
-- **Requirement**: All persistent state (S3 Memory, DynamoDB Sessions) MUST be partitioned by `app_id` and `tenant_id`.
-- **Pattern (S3)**: `s3://{bucket}/{app_id}/{tenant_id}/{agent_name}/memory/`.
-- **Pattern (DynamoDB)**:
-  - `PartitionKey (PK)`: `APP#{app_id}#TENANT#{tenant_id}`
-  - `SortKey (SK)`: `SESSION#{session_id}`
-
-### Rule 14.3: ABAC Enforcement
-- **Requirement**: Access to resources MUST be restricted using **Attribute-Based Access Control (ABAC)**.
-- **Implementation**: IAM and Cedar policies MUST use conditions comparing the `principal.tenant_id` with the `resource.tenant_id`.
-- **Example**:
-  ```hcl
-  Condition = {
-    StringEquals = { "s3:ExistingObjectTag/TenantID" = "${aws:PrincipalTag/TenantID}" }
-  }
-  ```
-
-### Rule 14.4: Hierarchical Identity (North-South Join)
-- **Requirement**: Every interaction MUST be anchored by the North-South hierarchy.
-- **North Anchor**: `AppID` (Logical application/environment boundary).
-- **Middle Anchor**: `TenantID` (Unit of ownership).
-- **South Anchor**: `AgentName` (Physical compute resource).
-- **Join Logic**: `Identity = [AppID] + [TenantID]`, `Compute = [AgentName]`.
-
-### Rule 14.5: Just-in-Time (ZTO) Onboarding
-- **Requirement**: Tenant-specific logical resources (S3 prefixes, DDB items) MUST be provisioned just-in-time upon first successful OIDC authentication.
+- Never trust `tenant_id` or `session_id` from the request body without verifying against authenticated context.
+- Partition S3 and DynamoDB state by `app_id` and `tenant_id`.
+- Enforce ABAC conditions that bind principal tenant/app identity to resource tenant/app identity.
+- Keep the North-South identity join intact across the system.

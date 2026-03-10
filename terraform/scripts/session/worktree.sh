@@ -571,7 +571,7 @@ refresh_ready_issue_queue() {
     [ -z "${sorted_line}" ] && continue
     READY_ISSUE_NUMBERS+=("$(printf '%s' "${sorted_line}" | cut -f4)")
     READY_ISSUE_CREATED+=("$(printf '%s' "${sorted_line}" | cut -f3)")
-    READY_ISSUE_TITLES+=("$(printf '%s' "${sorted_line}" | cut -f5-)")
+    READY_ISSUE_TITLES+=("$(printf '%s' "${sorted_line}" | cut -f5)")
     READY_ISSUE_LABELS+=("$(printf '%s' "${sorted_line}" | cut -f6-)")
   done < <(printf '%s' "${unsorted_lines}" | sort -t $'\t' -k1,1n -k2,2n -k3,3)
 
@@ -1068,6 +1068,22 @@ open_shell_in_worktree() {
   exec "${SHELL:-bash}" -l
 }
 
+handoff_current_worktree() {
+  local wt_path="${1:-}"
+  if [ -z "${wt_path}" ]; then
+    if [[ "$(git branch --show-current 2>/dev/null || true)" =~ ${WORKTREE_BRANCH_REGEX} ]]; then
+      wt_path="$(pwd -P)"
+    else
+      wt_path="$(choose_worktree_path false)"
+      if is_menu_back "${wt_path}"; then
+        return 0
+      fi
+    fi
+  fi
+  run_preflight_in_worktree "${wt_path}"
+  open_shell_in_worktree "${wt_path}"
+}
+
 run_command_in_worktree() {
   local wt_path="$1"
   local command_str=""
@@ -1459,7 +1475,7 @@ print_finish_worktree_summary() {
 }
 
 finish_worktree_protocol() {
-  local wt_path=""
+  local wt_path="${1:-}"
   local primary=""
   local choice=""
   local branch_name=""
@@ -1468,11 +1484,13 @@ finish_worktree_protocol() {
   local issue_id=""
   local issue_state=""
 
-  if ! wt_path="$(choose_worktree_path false)"; then
-    return 0
-  fi
-  if is_menu_back "${wt_path}"; then
-    return 0
+  if [ -z "${wt_path}" ]; then
+    if ! wt_path="$(choose_worktree_path false)"; then
+      return 0
+    fi
+    if is_menu_back "${wt_path}"; then
+      return 0
+    fi
   fi
   primary="$(primary_worktree_path)"
 
@@ -1575,6 +1593,124 @@ finish_worktree_protocol() {
   done
 }
 
+print_ready_issue_queue() {
+  local stream_label="${1:-}"
+  local i
+
+  if ! refresh_ready_issue_queue "${stream_label}"; then
+    return 1
+  fi
+
+  if [ -n "${stream_label}" ]; then
+    echo "Ready issue queue (filter: ready + ${stream_label}; plan order -> priority -> createdAt)"
+  else
+    echo "Ready issue queue (filter: ready; plan order -> priority -> createdAt)"
+  fi
+
+  for i in "${!READY_ISSUE_NUMBERS[@]}"; do
+    if [ -n "${READY_ISSUE_LABELS[$i]}" ]; then
+      printf "  #%s  %s  [%s]\n" "${READY_ISSUE_NUMBERS[$i]}" "${READY_ISSUE_TITLES[$i]}" "${READY_ISSUE_LABELS[$i]}"
+    else
+      printf "  #%s  %s\n" "${READY_ISSUE_NUMBERS[$i]}" "${READY_ISSUE_TITLES[$i]}"
+    fi
+  done
+}
+
+next_ready_issue_pick() {
+  local stream_label="${1:-}"
+  if ! refresh_ready_issue_queue "${stream_label}"; then
+    return 1
+  fi
+  printf '%s\t%s\t%s\n' "${READY_ISSUE_NUMBERS[0]}" "${READY_ISSUE_TITLES[0]}" "${READY_ISSUE_LABELS[0]}"
+}
+
+create_worktree_with_defaults() {
+  local issue_id="$1"
+  local issue_title="$2"
+  local issue_labels="$3"
+  local open_shell="${4:-}"
+  local base_dir="${WORKTREE_BASE_DIR_DEFAULT}"
+  local scope=""
+  local slug=""
+  local branch_name=""
+  local wt_path=""
+  local start_ref=""
+
+  scope="$(infer_scope_from_issue "${issue_title}" "${issue_labels}")"
+  slug="$(derive_slug_from_issue_title "${issue_title}")"
+  if ! validate_branch_parts "${scope}" "${issue_id}" "${slug}"; then
+    return 1
+  fi
+
+  branch_name="wt/${scope}/${issue_id}-${slug}"
+  wt_path="${base_dir%/}/wt${issue_id}"
+  if [ -e "${wt_path}" ]; then
+    echo "ERROR: path already exists: ${wt_path}"
+    return 1
+  fi
+  if git show-ref --verify --quiet "refs/heads/${branch_name}"; then
+    echo "ERROR: local branch already exists: ${branch_name}"
+    return 1
+  fi
+
+  if git show-ref --verify --quiet refs/remotes/origin/main; then
+    start_ref="origin/main"
+  else
+    start_ref="${REQUIRED_MAIN_BRANCH}"
+  fi
+
+  mkdir -p "${base_dir}"
+  echo
+  echo "Creating worktree for #${issue_id}: ${issue_title}"
+  echo "  path:   ${wt_path}"
+  echo "  branch: ${branch_name}"
+  echo "  from:   ${start_ref}"
+  echo
+  git worktree add "${wt_path}" -b "${branch_name}" "${start_ref}"
+  run_preflight_in_worktree "${wt_path}"
+  claim_issue_in_progress "${issue_id}" || true
+
+  if [ "${open_shell}" = "1" ]; then
+    open_shell_in_worktree "${wt_path}"
+  else
+    echo "Worktree ready: ${wt_path}"
+  fi
+}
+
+issue_title_and_labels() {
+  local issue_id="$1"
+  if ! command -v gh >/dev/null 2>&1; then
+    echo "ERROR: gh CLI not found (required to resolve issue metadata)." >&2
+    return 1
+  fi
+  if [ -z "${GH_REPO}" ]; then
+    echo "ERROR: could not determine GitHub repo from origin remote." >&2
+    return 1
+  fi
+  gh issue view "${issue_id}" -R "${GH_REPO}" --json title,labels --jq '[.title, (.labels | map(.name) | join("|"))] | @tsv'
+}
+
+resume_issue_worktree() {
+  local wt_path="${1:-}"
+  local open_shell="${2:-}"
+  if [ -z "${wt_path}" ]; then
+    if [[ "$(git branch --show-current 2>/dev/null || true)" =~ ${WORKTREE_BRANCH_REGEX} ]]; then
+      wt_path="$(pwd -P)"
+    else
+      wt_path="$(choose_worktree_path false)"
+      if is_menu_back "${wt_path}"; then
+        return 0
+      fi
+    fi
+  fi
+  run_preflight_in_worktree "${wt_path}"
+  if [ "${open_shell}" = "1" ]; then
+    open_shell_in_worktree "${wt_path}"
+  else
+    print_finish_worktree_summary "${wt_path}"
+  fi
+}
+
 main_menu() {
   while :; do
     echo "Worktree Session Menu"
@@ -1625,4 +1761,115 @@ main_menu() {
   done
 }
 
-main_menu
+quick_menu() {
+  while :; do
+    echo "Worktree Quick Menu"
+    echo "  1) Start next ready issue -> prompt/yolo handoff (default)"
+    echo "  2) Resume issue -> prompt/yolo handoff"
+    echo "  3) Handoff current issue worktree"
+    echo "  4) Issue queue"
+    echo "  5) Push current issue branch"
+    echo "  6) Finish current worktree"
+    echo "  7) Advanced menu"
+    echo "  0) Exit"
+    echo
+
+    local choice=""
+    local queue_pick=""
+    read -r -p "Choice [1]: " choice
+    choice="${choice:-1}"
+    echo
+
+    case "${choice}" in
+      1)
+        queue_pick="$(next_ready_issue_pick "${WORKTREE_READY_STREAM_LABEL:-}")" || true
+        if [ -n "${queue_pick}" ] && ! is_menu_back "${queue_pick}"; then
+          create_worktree_with_defaults \
+            "$(printf '%s' "${queue_pick}" | cut -f1)" \
+            "$(printf '%s' "${queue_pick}" | cut -f2)" \
+            "$(printf '%s' "${queue_pick}" | cut -f3-)" \
+            "1"
+        fi
+        ;;
+      2)
+        resume_issue_worktree "" "1"
+        ;;
+      3)
+        handoff_current_worktree
+        ;;
+      4)
+        print_ready_issue_queue "${WORKTREE_READY_STREAM_LABEL:-}"
+        pause
+        ;;
+      5)
+        echo "Running preflight + validate + push for current issue branch"
+        if (cd "$(pwd -P)" && make worktree-push-issue); then
+          echo "Push completed."
+        else
+          echo "Push failed."
+        fi
+        pause
+        ;;
+      6)
+        if [[ "$(git branch --show-current 2>/dev/null || true)" =~ ${WORKTREE_BRANCH_REGEX} ]]; then
+          print_finish_worktree_summary "$(pwd -P)"
+          finish_worktree_protocol "$(pwd -P)"
+        else
+          finish_worktree_protocol
+        fi
+        ;;
+      7)
+        main_menu
+        ;;
+      0|back)
+        exit 0
+        ;;
+      *)
+        echo "Invalid choice."
+        ;;
+    esac
+    echo
+  done
+}
+
+case "${1:-}" in
+  "")
+    quick_menu
+    ;;
+  queue)
+    print_ready_issue_queue "${2:-}"
+    ;;
+  next-issue)
+    queue_pick="$(next_ready_issue_pick "${2:-}")" || exit 1
+    create_worktree_with_defaults \
+      "$(printf '%s' "${queue_pick}" | cut -f1)" \
+      "$(printf '%s' "${queue_pick}" | cut -f2)" \
+      "$(printf '%s' "${queue_pick}" | cut -f3-)" \
+      "${3:-}"
+    ;;
+  create-issue)
+    issue_meta="$(issue_title_and_labels "${2:-}")" || exit 1
+    create_worktree_with_defaults \
+      "${2:-}" \
+      "$(printf '%s' "${issue_meta}" | cut -f1)" \
+      "$(printf '%s' "${issue_meta}" | cut -f2-)" \
+      "${3:-}"
+    ;;
+  resume-issue)
+    resume_issue_worktree "${2:-}" "${3:-}"
+    ;;
+  handoff-current)
+    handoff_current_worktree "${2:-}"
+    ;;
+  summary-current)
+    print_finish_worktree_summary "$(pwd -P)"
+    ;;
+  finish-current)
+    finish_worktree_protocol "$(pwd -P)"
+    ;;
+  *)
+    echo "ERROR: unknown command '${1}'"
+    echo "Usage: $0 [queue [stream]|next-issue [stream] [open_shell]|create-issue <issue> [open_shell]|resume-issue [path] [open_shell]|handoff-current [path]|summary-current|finish-current]"
+    exit 1
+    ;;
+esac

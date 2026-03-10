@@ -1,12 +1,28 @@
-.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session worktree push-main-both push-tag-both push-checkpoint-tag-both ci-status-both streaming-load-test policy-report validate-region validate-version-metadata validate-sdk-compat-matrix validate-deps
+.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session pre-validate-session validate-ci-fast validate-ci-full worktree issue-queue worktree-next-issue worktree-create-issue worktree-resume-issue worktree-agent-handoff worktree-push-issue terraform-init-local terraform-validate-local terraform-plan-local validate-fast validate-scope validate-push finish-worktree-summary finish-worktree-close toolchain-versions push-main-both push-tag-both push-checkpoint-tag-both ci-status-both streaming-load-test policy-report validate-region validate-version-metadata validate-sdk-compat-matrix validate-deps
 
 # Variables
 ROOT_DIR := $(abspath .)
 TERRAFORM_DIR := $(ROOT_DIR)/terraform
 TF_FILES := $(TERRAFORM_DIR)/**/*.tf
 MODULES := agentcore-foundation agentcore-tools agentcore-runtime agentcore-governance
+DEFAULT_TFVARS := $(ROOT_DIR)/examples/1-hello-world/terraform.tfvars
+LOCAL_TF_DATA_DIR := $(ROOT_DIR)/.scratch/tf-data
+LOCAL_TF_PLUGIN_CACHE_DIR := $(ROOT_DIR)/.scratch/tf-plugin-cache
 
 help: ## Show this help message
+	@echo "Default harness loop:"
+	@echo "  make issue-queue"
+	@echo "  make worktree"
+	@echo "  make validate-fast"
+	@echo "  make validate-scope SCOPE=terraform"
+	@echo "  make worktree-push-issue"
+	@echo "  make finish-worktree-close"
+	@echo ""
+	@echo "Common lanes:"
+	@echo "  make worktree-agent-handoff"
+	@echo "  make validate-ci-fast"
+	@echo "  make validate-ci-full"
+	@echo ""
 	@echo "Available targets:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-25s %s\n", $$1, $$2}'
 
@@ -285,6 +301,134 @@ preflight-session: ## Run startup preflight checks (worktree/branch/issue policy
 
 worktree: ## Interactive menu for linked worktree create/resume + preflight
 	@bash $(TERRAFORM_DIR)/scripts/session/worktree.sh
+
+issue-queue: ## Show ready issue queue ordered for make worktree (STREAM=<label> optional)
+	@bash $(TERRAFORM_DIR)/scripts/session/worktree.sh queue "$(STREAM)"
+
+worktree-next-issue: ## Create a worktree for the next ready issue (STREAM=<label>, OPEN_SHELL=1 optional)
+	@bash $(TERRAFORM_DIR)/scripts/session/worktree.sh next-issue "$(STREAM)" "$(OPEN_SHELL)"
+
+worktree-create-issue: ## Create a worktree for a specific issue (ISSUE=<num>, OPEN_SHELL=1 optional)
+	@test -n "$(ISSUE)" || (echo "ERROR: ISSUE required. Usage: make worktree-create-issue ISSUE=134 [OPEN_SHELL=1]" && exit 1)
+	@bash $(TERRAFORM_DIR)/scripts/session/worktree.sh create-issue "$(ISSUE)" "$(OPEN_SHELL)"
+
+worktree-resume-issue: ## Resume an issue worktree with preflight (WT_PATH=... optional, OPEN_SHELL=1 optional)
+	@bash $(TERRAFORM_DIR)/scripts/session/worktree.sh resume-issue "$(WT_PATH)" "$(OPEN_SHELL)"
+
+worktree-agent-handoff: ## Preflight + prompt/agent handoff for the current or selected issue worktree
+	@bash $(TERRAFORM_DIR)/scripts/session/worktree.sh handoff-current "$(WT_PATH)"
+
+terraform-init-local: ## Initialize Terraform locally with scratch data/plugin caches for offline-friendly validation
+	mkdir -p $(LOCAL_TF_DATA_DIR) $(LOCAL_TF_PLUGIN_CACHE_DIR)
+	@start=$$(date +%s); \
+	echo "==> terraform init (local scratch bootstrap)"; \
+	timeout 180s env TF_DATA_DIR=$(LOCAL_TF_DATA_DIR) TF_PLUGIN_CACHE_DIR=$(LOCAL_TF_PLUGIN_CACHE_DIR) terraform -chdir=$(TERRAFORM_DIR) init -backend=false -reconfigure -input=false; \
+	status=$$?; \
+	end=$$(date +%s); \
+	echo "==> terraform init finished in $$((end - start))s (status=$$status)"; \
+	if [ $$status -ne 0 ]; then \
+		status=$$?; \
+		echo "ERROR: local terraform init failed."; \
+		echo "Hint: the first bootstrap needs network access to download providers into .scratch/tf-plugin-cache."; \
+		echo "Hint: rerun 'make terraform-init-local' after verifying outbound access to registry.terraform.io and releases.hashicorp.com."; \
+		exit $$status; \
+	fi
+
+terraform-validate-local: ## Run terraform validate with timing and scratch-local caches
+	@start=$$(date +%s); \
+	echo "==> terraform validate"; \
+	timeout 300s env TF_DATA_DIR=$(LOCAL_TF_DATA_DIR) TF_PLUGIN_CACHE_DIR=$(LOCAL_TF_PLUGIN_CACHE_DIR) terraform -chdir=$(TERRAFORM_DIR) validate; \
+	status=$$?; \
+	end=$$(date +%s); \
+	echo "==> terraform validate finished in $$((end - start))s (status=$$status)"; \
+	if [ $$status -ne 0 ]; then \
+		echo "ERROR: terraform validate failed or timed out."; \
+		echo "Hint: rerun 'make terraform-validate-local' directly to isolate validation from the wider harness."; \
+		exit $$status; \
+	fi
+
+terraform-plan-local: ## Run terraform plan -backend=false with timing and scratch-local caches (TFVARS=... optional)
+	@start=$$(date +%s); \
+	echo "==> terraform plan -backend=false"; \
+	timeout 600s env TF_DATA_DIR=$(LOCAL_TF_DATA_DIR) TF_PLUGIN_CACHE_DIR=$(LOCAL_TF_PLUGIN_CACHE_DIR) terraform -chdir=$(TERRAFORM_DIR) plan -backend=false -lock=false -var-file="../$(patsubst $(ROOT_DIR)/%,%,$(if $(TFVARS),$(TFVARS),$(DEFAULT_TFVARS)))"; \
+	status=$$?; \
+	end=$$(date +%s); \
+	echo "==> terraform plan finished in $$((end - start))s (status=$$status)"; \
+	if [ $$status -ne 0 ]; then \
+		echo "ERROR: terraform plan failed or timed out."; \
+		echo "Hint: rerun 'make terraform-plan-local TFVARS=<path>' directly to debug the planning path."; \
+		exit $$status; \
+	fi
+
+validate-fast: ## Fast inner loop: preflight + fmt/check + validate + region guard (TFVARS=... optional)
+	$(MAKE) preflight-session
+	$(MAKE) terraform-init-local
+	terraform -chdir=$(TERRAFORM_DIR) fmt -check -recursive
+	$(MAKE) terraform-validate-local
+	$(MAKE) validate-region TFVARS="$(if $(TFVARS),$(TFVARS),$(DEFAULT_TFVARS))"
+
+validate-scope: ## Scope validation (SCOPE=terraform|python|docs|frontend|all; TFVARS=... optional)
+	@case "$(SCOPE)" in \
+	  ""|terraform) \
+	    $(MAKE) validate-fast TFVARS="$(if $(TFVARS),$(TFVARS),$(DEFAULT_TFVARS))" ;; \
+	  python) \
+	    $(MAKE) test-python-unit ;; \
+	  docs) \
+	    $(MAKE) validate-version-metadata && $(MAKE) check-openapi-client ;; \
+	  frontend) \
+	    $(MAKE) test-frontend ;; \
+	  all) \
+	    $(MAKE) validate-push TFVARS="$(if $(TFVARS),$(TFVARS),$(DEFAULT_TFVARS))" ;; \
+	  *) \
+	    echo "ERROR: unknown SCOPE='$(SCOPE)'. Use terraform, python, docs, frontend, or all."; \
+	    exit 1 ;; \
+	esac
+
+validate-push: ## Pre-push gate: preflight + Terraform + plan + policy + scanners + pre-commit (TFVARS=... optional)
+	$(MAKE) preflight-session
+	$(MAKE) terraform-init-local
+	terraform -chdir=$(TERRAFORM_DIR) fmt -check -recursive
+	$(MAKE) terraform-validate-local
+	$(MAKE) validate-region TFVARS="$(if $(TFVARS),$(TFVARS),$(DEFAULT_TFVARS))"
+	$(MAKE) terraform-plan-local TFVARS="$(if $(TFVARS),$(TFVARS),$(DEFAULT_TFVARS))"
+	$(MAKE) policy-report
+	tflint --chdir=$(TERRAFORM_DIR) --init
+	tflint --chdir=$(TERRAFORM_DIR) --recursive --config $(TERRAFORM_DIR)/.tflint.hcl
+	checkov -d $(TERRAFORM_DIR) --framework terraform --compact --config-file $(TERRAFORM_DIR)/.checkov.yaml
+	pre-commit run --all-files
+
+pre-validate-session: ## Enforced pre-push validation for the current worktree
+	$(MAKE) preflight-session
+	$(MAKE) validate-push
+
+validate-ci-fast: ## Local approximation of the fast GitHub validation lane
+	$(MAKE) validate-version-metadata
+	$(MAKE) check-openapi-client
+	$(MAKE) toolchain-versions
+	$(MAKE) issue-queue
+
+validate-ci-full: ## Local approximation of the broad CI lane
+	$(MAKE) validate-ci-fast
+	$(MAKE) validate-push
+	$(MAKE) validate-sdk-compat-matrix
+	$(MAKE) validate-deps
+
+worktree-push-issue: ## Preflight + validate + push the current issue branch
+	$(MAKE) pre-validate-session
+	git push -u origin $$(git branch --show-current)
+
+finish-worktree-summary: ## Print finish-stage summary for the current worktree
+	@bash $(TERRAFORM_DIR)/scripts/session/worktree.sh summary-current
+
+finish-worktree-close: ## Run guided finish protocol for the current worktree
+	@bash $(TERRAFORM_DIR)/scripts/session/worktree.sh finish-current
+
+toolchain-versions: ## Show local Terraform CLI version and repo provider/version constraints
+	@echo "Terraform CLI:"
+	@terraform version
+	@echo ""
+	@echo "Repo version constraints:"
+	@rg -n "required_version|source  = \"hashicorp/|version = \"~>" $(TERRAFORM_DIR)/versions.tf $(TERRAFORM_DIR)/modules/*/versions.tf
 
 format-check: ## Check if files are properly formatted
 	terraform -chdir=$(TERRAFORM_DIR) fmt -check -recursive
