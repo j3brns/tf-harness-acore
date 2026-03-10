@@ -1,0 +1,49 @@
+<mxGraphModel dx="1700" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1000" math="0" shadow="0">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="10" value="Client" style="swimlane;startSize=34;rounded=1;html=1;whiteSpace=wrap;container=1;fillColor=#F7F7F2;strokeColor=#C9C7B8;fontColor=#2E3440;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="40" y="80" width="180" height="700" as="geometry"/>
+    </mxCell>
+    <mxCell id="20" value="BFF Edge" style="swimlane;startSize=34;rounded=1;html=1;whiteSpace=wrap;container=1;fillColor=#EAF3FF;strokeColor=#5B8FF9;fontColor=#2E3440;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="260" y="80" width="240" height="700" as="geometry"/>
+    </mxCell>
+    <mxCell id="30" value="Identity" style="swimlane;startSize=34;rounded=1;html=1;whiteSpace=wrap;container=1;fillColor=#E9F7F4;strokeColor=#3BA272;fontColor=#2E3440;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="540" y="80" width="240" height="700" as="geometry"/>
+    </mxCell>
+    <mxCell id="40" value="Runtime" style="swimlane;startSize=34;rounded=1;html=1;whiteSpace=wrap;container=1;fillColor=#FFF4E5;strokeColor=#F6A54B;fontColor=#2E3440;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="820" y="80" width="300" height="700" as="geometry"/>
+    </mxCell>
+    <mxCell id="50" value="State" style="swimlane;startSize=34;rounded=1;html=1;whiteSpace=wrap;container=1;fillColor=#F4ECFF;strokeColor=#8E6AD8;fontColor=#2E3440;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="1160" y="80" width="220" height="700" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="101" value="1. Request app shell or API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontColor=#2E3440;" vertex="1" parent="10"><mxGeometry x="20" y="60" width="140" height="50" as="geometry"/></mxCell>
+    <mxCell id="102" value="2. Serve SPA or start auth" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D9E8FB;strokeColor=#5B8FF9;fontColor=#2E3440;" vertex="1" parent="20"><mxGeometry x="30" y="60" width="170" height="50" as="geometry"/></mxCell>
+    <mxCell id="103" value="3. Exchange code, create session" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5F5E3;strokeColor=#3BA272;fontColor=#2E3440;" vertex="1" parent="30"><mxGeometry x="30" y="140" width="170" height="50" as="geometry"/></mxCell>
+    <mxCell id="104" value="4. Persist session" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8DDFB;strokeColor=#8E6AD8;fontColor=#2E3440;" vertex="1" parent="50"><mxGeometry x="30" y="140" width="150" height="50" as="geometry"/></mxCell>
+    <mxCell id="105" value="5. Send authenticated chat request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontColor=#2E3440;" vertex="1" parent="10"><mxGeometry x="20" y="240" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="106" value="6. Validate cookie and tenant scope" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D9E8FB;strokeColor=#5B8FF9;fontColor=#2E3440;" vertex="1" parent="20"><mxGeometry x="30" y="240" width="170" height="60" as="geometry"/></mxCell>
+    <mxCell id="107" value="7. Lookup session and authorize" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5F5E3;strokeColor=#3BA272;fontColor=#2E3440;" vertex="1" parent="30"><mxGeometry x="30" y="240" width="170" height="60" as="geometry"/></mxCell>
+    <mxCell id="108" value="8. Read session" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8DDFB;strokeColor=#8E6AD8;fontColor=#2E3440;" vertex="1" parent="50"><mxGeometry x="30" y="250" width="150" height="50" as="geometry"/></mxCell>
+    <mxCell id="109" value="9. Invoke proxy with app + tenant context" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D9E8FB;strokeColor=#5B8FF9;fontColor=#2E3440;" vertex="1" parent="20"><mxGeometry x="30" y="360" width="170" height="60" as="geometry"/></mxCell>
+    <mxCell id="110" value="10. Route gateway / runtime / tools" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDE3C7;strokeColor=#F6A54B;fontColor=#2E3440;" vertex="1" parent="40"><mxGeometry x="50" y="360" width="200" height="60" as="geometry"/></mxCell>
+    <mxCell id="111" value="11. Read or write tenant memory" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDE3C7;strokeColor=#F6A54B;fontColor=#2E3440;" vertex="1" parent="40"><mxGeometry x="50" y="470" width="200" height="60" as="geometry"/></mxCell>
+    <mxCell id="112" value="12. Memory / artifacts / logs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8DDFB;strokeColor=#8E6AD8;fontColor=#2E3440;" vertex="1" parent="50"><mxGeometry x="30" y="470" width="150" height="60" as="geometry"/></mxCell>
+    <mxCell id="113" value="13. Stream NDJSON response back" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDE3C7;strokeColor=#F6A54B;fontColor=#2E3440;" vertex="1" parent="40"><mxGeometry x="50" y="600" width="200" height="60" as="geometry"/></mxCell>
+    <mxCell id="114" value="14. Render response" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontColor=#2E3440;" vertex="1" parent="10"><mxGeometry x="20" y="610" width="140" height="50" as="geometry"/></mxCell>
+
+    <mxCell id="200" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#7F8C8D;endArrow=block;endFill=1;" edge="1" parent="1" source="101" target="102"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="201" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#3BA272;endArrow=block;endFill=1;" edge="1" parent="1" source="102" target="103"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="202" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#8E6AD8;endArrow=block;endFill=1;" edge="1" parent="1" source="103" target="104"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="203" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#7F8C8D;endArrow=block;endFill=1;" edge="1" parent="1" source="105" target="106"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="204" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#3BA272;endArrow=block;endFill=1;" edge="1" parent="1" source="106" target="107"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="205" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#8E6AD8;endArrow=block;endFill=1;" edge="1" parent="1" source="107" target="108"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="206" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#5B8FF9;endArrow=block;endFill=1;" edge="1" parent="1" source="107" target="109"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="207" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#F6A54B;endArrow=block;endFill=1;" edge="1" parent="1" source="109" target="110"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="208" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#F6A54B;endArrow=block;endFill=1;" edge="1" parent="1" source="110" target="111"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="209" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#8E6AD8;endArrow=block;endFill=1;" edge="1" parent="1" source="111" target="112"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="210" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#F6A54B;endArrow=block;endFill=1;" edge="1" parent="1" source="111" target="113"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="211" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#7F8C8D;endArrow=block;endFill=1;" edge="1" parent="1" source="113" target="114"><mxGeometry relative="1" as="geometry"/></mxCell>
+  </root>
+</mxGraphModel>

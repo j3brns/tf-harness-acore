@@ -4,61 +4,29 @@
 
 A hardened Terraform framework for deploying enterprise AI agents on AWS Bedrock AgentCore. The gap between a raw foundation model and a production-grade agent is filled with identity propagation, tenant isolation, encrypted state management, and a deployment pipeline that refuses to cut corners.
 
+## At a Glance
+
+- Fixed module boundaries: `foundation`, `tools`, `runtime`, `governance`, and `bff`
+- Multi-tenant execution model anchored to `app_id`, `tenant_id`, and `agent_name`
+- Server-side token handling for browser-facing workloads
+- Native Terraform resources where stable, CLI bridge where the provider surface is still incomplete
+- Worktree- and issue-driven contributor loop with explicit validation and finish stages
 
 ## Architecture
 
 ### The North-South Join
 
-The North-South Join is a hierarchical identity model that anchors every request to three coordinates.
+The North-South Join anchors every request to three coordinates:
 
-- **North** is the entry point: the AppID, materialized as an API Gateway.
-- **Middle** is the identity layer: the TenantID, extracted from the OIDC token and validated by a Lambda Authorizer against DynamoDB.
-- **South** is the compute layer: the AgentName, where the Bedrock Runtime Engine executes agent logic.
+- **North**: the `app_id` boundary and public entrypoint
+- **Middle**: the validated tenant and session context
+- **South**: the concrete runtime, tools, and policy surface that execute work
 
-Data partitioning follows the same hierarchy -- DynamoDB composite keys use `APP#{app_id}#TENANT#{tenant_id}`, S3 paths use `{app_id}/{tenant_id}/{agent_name}/memory/`, and CloudWatch log groups nest under `/aws/bedrock/agentcore/{resource-type}/{agent-name}`.
+That same hierarchy drives data partitioning. DynamoDB session keys use `APP#{app_id}#TENANT#{tenant_id}`, S3 memory paths use `{app_id}/{tenant_id}/{agent_name}/memory/`, and runtime context is carried through the proxy path instead of trusting caller-supplied tenant identifiers.
 
-```mermaid
-graph TD
-    subgraph North["North (Entry Point: AppID)"]
-        CF["CloudFront CDN"]
-        APIGW["API Gateway REST"]
-    end
+![Platform architecture overview](docs/diagrams/architecture-overview.drawio.svg)
 
-    subgraph Middle["Middle (Identity: TenantID)"]
-        LAuth["OIDC Handler Lambda"]
-        LAuthorizer["Lambda Authorizer"]
-        DDB["DynamoDB Session Store"]
-    end
-
-    subgraph South["South (Compute: AgentName)"]
-        LProxy["Agent Proxy Lambda"]
-        BGateway["Bedrock Gateway"]
-        BRuntime["Bedrock Runtime Engine"]
-        BSandbox["Code Interpreter Sandbox"]
-    end
-
-    subgraph Storage["Partitioned Data Layers"]
-        S3SPA["S3: SPA Assets"]
-        S3Deploy["S3: Artifacts"]
-        S3Memory["S3: Long-term Memory"]
-        CW["CloudWatch Logs & Metrics"]
-    end
-
-    Browser["Browser"] <--> CF
-    CF <--> S3SPA
-    Browser -- "AppID Context" --> APIGW
-    APIGW --> LAuthorizer
-    LAuthorizer <--> DDB
-    APIGW -- "OIDC Flow" --> LAuth
-    LAuth <--> DDB
-    APIGW -- "Validated Request" --> LProxy
-    LProxy -- "x-tenant-id / x-app-id" --> BGateway
-    BGateway --> BRuntime
-    BRuntime <--> S3Memory
-    South -.-> CW
-    North -.-> CW
-    Middle -.-> CW
-```
+_The public edge, identity plane, runtime plane, and state systems all line up on the same application and tenant boundary._
 
 > The `hashicorp/aws` provider is pinned to `~> 6.33.0` (freeze point for Workstream A). The MCP gateway and gateway targets use native `aws_bedrockagentcore_*` resources. Workload identity, runtime, memory, browser, code interpreter, policy engine, evaluators, and credential providers use the CLI bridge pattern pending stable native coverage.
 
@@ -97,21 +65,11 @@ CLI-managed resource IDs persist in SSM Parameter Store, which means they surviv
 
 ### Logical Topology
 
-The module dependency graph is fixed and intentional. Foundation has no dependencies. Tools and Runtime depend on Foundation. Governance depends on Foundation and Runtime. BFF depends on Foundation. This ordering prevents circular references and ensures that shared infrastructure (IAM roles, log groups, WAF ACLs) exists before any module that consumes it.
+The module dependency graph is fixed on purpose. `foundation` establishes shared identity, gateway, WAF, and observability primitives. `tools` and `runtime` consume that base. `governance` sits on top of `runtime` so policy and evaluation logic can reason about the workloads that actually exist. `bff` depends on `foundation` but remains outside the runtime-governance chain to avoid circular references.
 
-```mermaid
-graph TD
-    A["agentcore-foundation"] --> B["agentcore-tools"]
-    A --> C["agentcore-runtime"]
-    C --> D["agentcore-governance"]
-    A --> E["agentcore-bff"]
+![Module topology](docs/diagrams/module-topology.drawio.svg)
 
-    style A fill:#e1f5fe
-    style B fill:#f3e5f5
-    style C fill:#fff3e0
-    style D fill:#e8f5e9
-    style E fill:#fff9c4
-```
+_Foundation is the base layer. Every other module consumes it, but only governance depends on runtime._
 
 ---
 
@@ -218,7 +176,7 @@ terraform apply -var-file=../examples/1-hello-world/terraform.tfvars
 
 ### The Inner Loop
 
-The distance between saving a file and seeing it execute in AWS is measured in seconds, not minutes. The OCDS build protocol described above is what makes this possible, but `hot_reload.py` is what makes it automatic. Run the watcher against your agent source directory and it monitors every `.py` file via `watchdog`. When you save, it fires a targeted `terraform apply -target=module.agentcore_runtime` that triggers only OCDS Stage 2 -- your code is repackaged, the dependency layer is untouched, and the new artifact lands in S3 within a few seconds. The Lambda picks up the new code on its next invocation. No container builds, no CI round-trips, no manual zipping.
+The inner loop is designed to keep packaging and validation narrow. `hot_reload.py` watches your agent source tree and triggers only the runtime packaging surface that changed. Most agent-code edits therefore rebuild Stage 2 only: code is repackaged, the dependency layer is reused, and the new artifact lands in S3 without a full dependency rebuild or CI round-trip.
 
 ```bash
 # Terminal 1: start the hot-reload watcher
@@ -228,7 +186,7 @@ python terraform/scripts/hot_reload.py examples/3-deepresearch/agent-code
 python terraform/scripts/acore_debug.py
 ```
 
-The debug TUI (`acore_debug.py`) auto-discovers your deployed infrastructure from `terraform output -json`, then streams CloudWatch logs into a live terminal panel alongside a latency trace that breaks down each request into Gateway, Authorizer, Router, Lambda, and Bedrock segments. Press `r` to trigger a manual reload without leaving the debugger. The tool speaks the OCDS protocol -- when it reloads, it runs an identical targeted apply that respects the two-stage hash boundaries.
+The debug TUI (`acore_debug.py`) then auto-discovers deployed infrastructure from `terraform output -json`, tails CloudWatch logs, and renders latency breakdowns across Gateway, Authorizer, Router, Lambda, and Bedrock segments. Press `r` to trigger a manual reload without leaving the debugger. The tool uses the same targeted apply semantics as the watcher, so local debugging does not bypass the packaging model.
 
 ### Frontend Component Library (React + Tailwind)
 

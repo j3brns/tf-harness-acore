@@ -60,6 +60,12 @@ Use the harness runbook as the default path for day-to-day work: [docs/runbooks/
 Use [docs/runbooks/devops-loop.md](docs/runbooks/devops-loop.md) when deciding which validation or CI lane to use.
 Use [docs/archive/README.md](docs/archive/README.md) only for historical context, not for current workflow decisions.
 
+The repo is optimized for an issue-queue driven linked-worktree loop. The default path is short on purpose: pick ready work, allocate a worktree, iterate with the smallest validation lane that covers the touched scope, then finish with explicit PR and issue evidence.
+
+![Developer harness loop](docs/diagrams/developer-loop.drawio.svg)
+
+_The default path is queue -> worktree -> fast loop -> scope gate -> finish. Everything else is an exception path._
+
 ### Harness Loop
 
 ```bash

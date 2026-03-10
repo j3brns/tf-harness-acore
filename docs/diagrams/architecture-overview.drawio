@@ -1,0 +1,140 @@
+<mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="10" value="Public Clients" style="swimlane;startSize=32;rounded=1;html=1;whiteSpace=wrap;container=1;fillColor=#F7F7F2;strokeColor=#C9C7B8;fontColor=#2E3440;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="40" y="120" width="200" height="280" as="geometry"/>
+    </mxCell>
+    <mxCell id="11" value="Browser / SPA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontColor=#2E3440;" vertex="1" parent="10">
+      <mxGeometry x="40" y="70" width="120" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="12" value="Automation / MCP Client" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontColor=#2E3440;" vertex="1" parent="10">
+      <mxGeometry x="30" y="170" width="140" height="60" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="20" value="Edge and Entry" style="swimlane;startSize=32;rounded=1;html=1;whiteSpace=wrap;container=1;fillColor=#EAF3FF;strokeColor=#5B8FF9;fontColor=#2E3440;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="300" y="60" width="280" height="380" as="geometry"/>
+    </mxCell>
+    <mxCell id="21" value="CloudFront" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D9E8FB;strokeColor=#5B8FF9;fontColor=#2E3440;" vertex="1" parent="20">
+      <mxGeometry x="80" y="60" width="120" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="22" value="API Gateway REST" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D9E8FB;strokeColor=#5B8FF9;fontColor=#2E3440;" vertex="1" parent="20">
+      <mxGeometry x="80" y="180" width="120" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="23" value="Gateway Catalog / AppID Boundary" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D9E8FB;strokeColor=#5B8FF9;fontColor=#2E3440;" vertex="1" parent="20">
+      <mxGeometry x="55" y="290" width="170" height="60" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="30" value="Identity and Session Plane" style="swimlane;startSize=32;rounded=1;html=1;whiteSpace=wrap;container=1;fillColor=#E9F7F4;strokeColor=#3BA272;fontColor=#2E3440;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="640" y="60" width="360" height="380" as="geometry"/>
+    </mxCell>
+    <mxCell id="31" value="OIDC Handler Lambda" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5F5E3;strokeColor=#3BA272;fontColor=#2E3440;" vertex="1" parent="30">
+      <mxGeometry x="40" y="70" width="130" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="32" value="Lambda Authorizer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5F5E3;strokeColor=#3BA272;fontColor=#2E3440;" vertex="1" parent="30">
+      <mxGeometry x="200" y="70" width="120" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="33" value="DynamoDB Sessions\nAPP#... TENANT#..." style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#D5F5E3;strokeColor=#3BA272;fontColor=#2E3440;" vertex="1" parent="30">
+      <mxGeometry x="95" y="210" width="170" height="80" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="40" value="AgentCore Runtime Plane" style="swimlane;startSize=32;rounded=1;html=1;whiteSpace=wrap;container=1;fillColor=#FFF4E5;strokeColor=#F6A54B;fontColor=#2E3440;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="1060" y="60" width="460" height="380" as="geometry"/>
+    </mxCell>
+    <mxCell id="41" value="Agent Proxy Lambda" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDE3C7;strokeColor=#F6A54B;fontColor=#2E3440;" vertex="1" parent="40">
+      <mxGeometry x="30" y="80" width="120" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="42" value="Gateway / MCP Entry" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDE3C7;strokeColor=#F6A54B;fontColor=#2E3440;" vertex="1" parent="40">
+      <mxGeometry x="180" y="80" width="120" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="43" value="Runtime Engine" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDE3C7;strokeColor=#F6A54B;fontColor=#2E3440;" vertex="1" parent="40">
+      <mxGeometry x="330" y="80" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="44" value="Code Interpreter" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDE3C7;strokeColor=#F6A54B;fontColor=#2E3440;" vertex="1" parent="40">
+      <mxGeometry x="70" y="220" width="120" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="45" value="Browser Tool" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDE3C7;strokeColor=#F6A54B;fontColor=#2E3440;" vertex="1" parent="40">
+      <mxGeometry x="220" y="220" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="46" value="Policy + Evaluators" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDE3C7;strokeColor=#F6A54B;fontColor=#2E3440;" vertex="1" parent="40">
+      <mxGeometry x="340" y="220" width="100" height="60" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="50" value="State and Observability" style="swimlane;startSize=32;rounded=1;html=1;whiteSpace=wrap;container=1;fillColor=#F4ECFF;strokeColor=#8E6AD8;fontColor=#2E3440;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="300" y="520" width="1220" height="250" as="geometry"/>
+    </mxCell>
+    <mxCell id="51" value="S3 SPA Assets" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#E8DDFB;strokeColor=#8E6AD8;fontColor=#2E3440;" vertex="1" parent="50">
+      <mxGeometry x="40" y="90" width="140" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="52" value="S3 Deployment Artifacts" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#E8DDFB;strokeColor=#8E6AD8;fontColor=#2E3440;" vertex="1" parent="50">
+      <mxGeometry x="250" y="90" width="160" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="53" value="S3 Tenant Memory\n/app/tenant/agent/" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#E8DDFB;strokeColor=#8E6AD8;fontColor=#2E3440;" vertex="1" parent="50">
+      <mxGeometry x="500" y="90" width="170" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="54" value="CloudWatch Logs + Metrics" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#E8DDFB;strokeColor=#8E6AD8;fontColor=#2E3440;" vertex="1" parent="50">
+      <mxGeometry x="760" y="90" width="180" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="55" value="SSM / State Hand-off" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#E8DDFB;strokeColor=#8E6AD8;fontColor=#2E3440;" vertex="1" parent="50">
+      <mxGeometry x="1030" y="90" width="150" height="70" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="100" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#7F8C8D;endArrow=block;endFill=1;" edge="1" parent="1" source="11" target="21">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="101" value="static content" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#7F8C8D;endArrow=block;endFill=1;" edge="1" parent="1" source="21" target="51">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="102" value="authenticated API" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#7F8C8D;endArrow=block;endFill=1;" edge="1" parent="1" source="11" target="22">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="103" value="OIDC login + callback" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#3BA272;endArrow=block;endFill=1;" edge="1" parent="1" source="22" target="31">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="104" value="session validation" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#3BA272;endArrow=block;endFill=1;" edge="1" parent="1" source="22" target="32">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="105" value="session state" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#3BA272;endArrow=block;endFill=1;" edge="1" parent="1" source="31" target="33">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="106" value="tenant + app context" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#F6A54B;endArrow=block;endFill=1;" edge="1" parent="1" source="22" target="41">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="107" value="route tools / runtime" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#F6A54B;endArrow=block;endFill=1;" edge="1" parent="1" source="41" target="42">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="108" value="invoke agent" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#F6A54B;endArrow=block;endFill=1;" edge="1" parent="1" source="42" target="43">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="109" value="optional tools" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#F6A54B;endArrow=block;endFill=1;" edge="1" parent="1" source="43" target="44">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="110" value="optional tools" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#F6A54B;endArrow=block;endFill=1;" edge="1" parent="1" source="43" target="45">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="111" value="guardrails + scoring" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#F6A54B;endArrow=block;endFill=1;" edge="1" parent="1" source="43" target="46">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="112" value="artifact fetch" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#8E6AD8;endArrow=block;endFill=1;" edge="1" parent="1" source="43" target="52">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="113" value="tenant memory" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;strokeColor=#8E6AD8;endArrow=block;endFill=1;" edge="1" parent="1" source="43" target="53">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="114" value="logs + traces" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;dashed=1;strokeColor=#8E6AD8;endArrow=block;endFill=1;" edge="1" parent="1" source="41" target="54">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="115" value="logs + traces" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;dashed=1;strokeColor=#8E6AD8;endArrow=block;endFill=1;" edge="1" parent="1" source="42" target="54">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="116" value="logs + traces" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;dashed=1;strokeColor=#8E6AD8;endArrow=block;endFill=1;" edge="1" parent="1" source="43" target="54">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="117" value="CLI/native state hand-off" style="edgeStyle=orthogonalEdgeStyle;rounded=1;jettySize=auto;html=1;dashed=1;strokeColor=#8E6AD8;endArrow=block;endFill=1;" edge="1" parent="1" source="42" target="55">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="118" value="north-south join" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF7E6;strokeColor=#D6B656;fontColor=#2E3440;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="650" y="450" width="260" height="50" as="geometry"/>
+    </mxCell>
+  </root>
+</mxGraphModel>
