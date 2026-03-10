@@ -61,6 +61,7 @@ Use [docs/runbooks/devops-loop.md](docs/runbooks/devops-loop.md) when deciding w
 Use [docs/archive/README.md](docs/archive/README.md) only for historical context, not for current workflow decisions.
 
 The repo is optimized for an issue-queue driven linked-worktree loop. The default path is short on purpose: pick ready work, allocate a worktree, iterate with the smallest validation lane that covers the touched scope, then finish with explicit PR and issue evidence.
+For documentation work, keep prose compact and reuse the repo's diagram style. When a local skill clearly matches the task, use it rather than improvising a parallel workflow.
 
 ![Developer harness loop](docs/diagrams/developer-loop.drawio.svg)
 
