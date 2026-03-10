@@ -301,6 +301,8 @@ The repository now treats the worktree harness as the default contributor loop: 
 
 For the broader validation and CI/CD interaction model, including which lane to use for local fast checks versus broad CI approximation, see [docs/runbooks/devops-loop.md](./docs/runbooks/devops-loop.md).
 
+Historical planning and superseded docs live under [docs/archive/README.md](./docs/archive/README.md). Treat that directory as reference history, not active guidance.
+
 Run session preflight checks before editing and before commit/push:
 
 ```bash
@@ -346,6 +348,12 @@ make validate-scope SCOPE=terraform
 make validate-push
 make finish-worktree-summary
 ```
+
+Current known CI debt is intentionally separated from the default loop:
+- `terraform-validate` / `examples-validate`: pre-existing runtime/BFF dependency cycle
+- `template-test`: template/module release-tag drift
+
+Do not broaden normal worktree scope to fix those unless the assigned issue explicitly covers that remediation.
 
 For AWS-specific changes, query AWS Knowledge MCP before changing code or docs that depend on current AWS behavior, availability, quotas, or IAM semantics. Checked 2026-03-10 against AWS primary documentation:
 - https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-regions.html

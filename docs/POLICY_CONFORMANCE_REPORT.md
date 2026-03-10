@@ -30,4 +30,4 @@ Standardized tags: `AppID`, `Environment`, `AgentName`, `ManagedBy`, `Owner`.
 | `versions.tf` default_tags | PASS | AppID: ✅, Environment: ✅, AgentName: ✅, ManagedBy: ✅, Owner: ✅ |
 
 ---
-*Note: This report is automatically generated. Any deviations must be approved via the Exception Change Control process documented in GEMINI.md.*
+*Note: This report is automatically generated. Any deviations must be approved via the Exception Change Control process documented in AGENTS.md.*

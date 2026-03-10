@@ -55,6 +55,16 @@ Current fitness assessment:
   - Terraform validation still surfaces a pre-existing BFF/runtime dependency cycle
   - first-run provider bootstrap is slower than the steady-state path
 
+## Known Current CI Debt
+
+These are not part of the default contributor loop unless the assigned issue explicitly targets them:
+
+- `terraform-validate`: pre-existing BFF/runtime dependency cycle
+- `examples-validate`: same Terraform dependency cycle, exercised through example tfvars
+- `template-test`: generated template pinned to release-tag module inputs that have drifted from the current template surface
+
+Treat these as platform or release debt. Do not bury them inside unrelated docs/workflow PRs just to make checks green.
+
 ## Cognitive Load Rules
 
 - Do not start with the full CI surface unless you are debugging CI.

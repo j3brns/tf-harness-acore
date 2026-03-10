@@ -58,6 +58,7 @@ Sources:
 
 Use the harness runbook as the default path for day-to-day work: [docs/runbooks/developer-harness.md](docs/runbooks/developer-harness.md).
 Use [docs/runbooks/devops-loop.md](docs/runbooks/devops-loop.md) when deciding which validation or CI lane to use.
+Use [docs/archive/README.md](docs/archive/README.md) only for historical context, not for current workflow decisions.
 
 ### Harness Loop
 
@@ -740,7 +741,7 @@ terraform --help
 1. Check `AGENTS.md` - canonical AI agent development rules
 2. Check `docs/architecture.md` - System design
 3. Check `docs/adr/` - Architecture decisions
-4. Create GitLab issue for bugs/features
+4. Check `docs/runbooks/developer-harness.md` and `docs/runbooks/devops-loop.md` for the current execution loop
 
 ## Next Steps
 

@@ -10,6 +10,18 @@ LOCAL_TF_DATA_DIR := $(ROOT_DIR)/.scratch/tf-data
 LOCAL_TF_PLUGIN_CACHE_DIR := $(ROOT_DIR)/.scratch/tf-plugin-cache
 
 help: ## Show this help message
+	@echo "Default harness loop:"
+	@echo "  make issue-queue"
+	@echo "  make worktree-next-issue OPEN_SHELL=1"
+	@echo "  make validate-fast"
+	@echo "  make validate-scope SCOPE=terraform"
+	@echo "  make worktree-push-issue"
+	@echo "  make finish-worktree-summary"
+	@echo ""
+	@echo "Common lanes:"
+	@echo "  make validate-ci-fast"
+	@echo "  make validate-ci-full"
+	@echo ""
 	@echo "Available targets:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-25s %s\n", $$1, $$2}'
 

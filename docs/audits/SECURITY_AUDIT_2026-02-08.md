@@ -32,7 +32,7 @@ $ grep -n 'Resource.*=.*"\*"' terraform/modules/agentcore-foundation/iam.tf
 **Analysis**:
 - Only **1 wildcard** found at line 104
 - Has required comment: `# AWS-REQUIRED: sts:GetCallerIdentity does not support resource-level scoping`
-- This is an **approved exception** per CLAUDE.md Rule 1.1
+- This is an **approved exception** per AGENTS.md Rule 1.1
 - All other resources are scoped to specific ARNs
 
 **Verification**:
