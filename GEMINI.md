@@ -167,6 +167,19 @@ If AWS Knowledge MCP is unavailable, say so explicitly and fall back to official
 - Behavior, workflow, CI/CD, or architecture changes require doc updates in the same change.
 - Do not defer docs to a follow-up commit.
 
+### Rule 7.2.1: Documentation Style
+
+- Keep prose compact, structured, and low-noise. Prefer tightening existing sections over adding sprawling explanation.
+- Diagrams must use a consistent visual language across the active docs surface.
+- When a diagram is added or materially redesigned, commit the editable source with the rendered asset in the same change.
+- Prefer updating the current canonical docs over adding parallel improvement notes or replacement files.
+
+### Rule 7.2.2: Skill Use
+
+- When a local skill clearly matches the task, use it instead of re-creating the workflow from scratch.
+- Skill use must stay scoped and practical; do not load unrelated skills or expand task scope just because a skill exists.
+- When a skill materially changes the output shape or workflow, keep the resulting repo docs aligned in the same change.
+
 ### Rule 7.3: Scratch and New Files
 
 - Temporary outputs and one-off investigation files belong in `.scratch/` and must not be committed.
