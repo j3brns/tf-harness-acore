@@ -65,12 +65,11 @@ Use [docs/archive/README.md](docs/archive/README.md) only for historical context
 ```bash
 make issue-queue
 make worktree
-make worktree-next-issue OPEN_SHELL=1
+make worktree-agent-handoff
 make validate-fast
 make validate-ci-fast
 make validate-scope SCOPE=terraform
 make validate-push
-make finish-worktree-summary
 make finish-worktree-close
 ```
 
@@ -86,23 +85,22 @@ For AWS-specific changes, check AWS Knowledge MCP before editing anything that d
 # 1. Create or resume a linked worktree from the ready queue
 make issue-queue
 make worktree
-make worktree-next-issue OPEN_SHELL=1
 
-# 2. Fast inner loop (NO AWS needed)
+# 2. Prompt / assistant / yolo handoff if you need to relaunch from the current worktree
+make worktree-agent-handoff
+
+# 3. Fast inner loop (NO AWS needed)
 make validate-fast
 
-# 3. Scope-specific checks before push
+# 4. Scope-specific checks before push
 make validate-scope SCOPE=terraform
-
-# 4. Full pre-push gate
-make validate-push
 
 # 5. Commit (pre-commit hooks run automatically)
 git add .
 git commit -m "feat: add new capability"
 
 # 6. Push the worktree branch
-git push -u origin <branch>
+make worktree-push-issue
 
 # 7. Inspect finish stage / complete guided finish
 make finish-worktree-summary

@@ -327,12 +327,15 @@ make worktree
 
 The default menu now biases toward the common path: next ready issue, resume the current issue worktree, inspect the queue, or finish the current worktree. The detailed legacy menu still exists behind the advanced option.
 
+It now also includes the prompt/assistant handoff directly in the start path. `make worktree` is intended to carry the normal loop from allocation into prompted agent launch, then expose push and finish without making you remember separate commands first.
+
 For a tighter loop, use the explicit shortcuts:
 
 ```bash
 make worktree-next-issue OPEN_SHELL=1
 make worktree-create-issue ISSUE=134 OPEN_SHELL=1
 make worktree-resume-issue OPEN_SHELL=1
+make worktree-agent-handoff
 make worktree-push-issue
 ```
 
@@ -346,7 +349,7 @@ make worktree
 make validate-fast
 make validate-scope SCOPE=terraform
 make validate-push
-make finish-worktree-summary
+make finish-worktree-close
 ```
 
 Current known CI debt is intentionally separated from the default loop:

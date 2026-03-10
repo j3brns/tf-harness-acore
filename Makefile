@@ -1,4 +1,4 @@
-.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session pre-validate-session validate-ci-fast validate-ci-full worktree issue-queue worktree-next-issue worktree-create-issue worktree-resume-issue worktree-push-issue terraform-init-local terraform-validate-local terraform-plan-local validate-fast validate-scope validate-push finish-worktree-summary finish-worktree-close toolchain-versions push-main-both push-tag-both push-checkpoint-tag-both ci-status-both streaming-load-test policy-report validate-region validate-version-metadata validate-sdk-compat-matrix validate-deps
+.PHONY: help init plan apply destroy validate fmt lint docs clean test preflight-session pre-validate-session validate-ci-fast validate-ci-full worktree issue-queue worktree-next-issue worktree-create-issue worktree-resume-issue worktree-agent-handoff worktree-push-issue terraform-init-local terraform-validate-local terraform-plan-local validate-fast validate-scope validate-push finish-worktree-summary finish-worktree-close toolchain-versions push-main-both push-tag-both push-checkpoint-tag-both ci-status-both streaming-load-test policy-report validate-region validate-version-metadata validate-sdk-compat-matrix validate-deps
 
 # Variables
 ROOT_DIR := $(abspath .)
@@ -12,13 +12,14 @@ LOCAL_TF_PLUGIN_CACHE_DIR := $(ROOT_DIR)/.scratch/tf-plugin-cache
 help: ## Show this help message
 	@echo "Default harness loop:"
 	@echo "  make issue-queue"
-	@echo "  make worktree-next-issue OPEN_SHELL=1"
+	@echo "  make worktree"
 	@echo "  make validate-fast"
 	@echo "  make validate-scope SCOPE=terraform"
 	@echo "  make worktree-push-issue"
-	@echo "  make finish-worktree-summary"
+	@echo "  make finish-worktree-close"
 	@echo ""
 	@echo "Common lanes:"
+	@echo "  make worktree-agent-handoff"
 	@echo "  make validate-ci-fast"
 	@echo "  make validate-ci-full"
 	@echo ""
@@ -313,6 +314,9 @@ worktree-create-issue: ## Create a worktree for a specific issue (ISSUE=<num>, O
 
 worktree-resume-issue: ## Resume an issue worktree with preflight (WT_PATH=... optional, OPEN_SHELL=1 optional)
 	@bash $(TERRAFORM_DIR)/scripts/session/worktree.sh resume-issue "$(WT_PATH)" "$(OPEN_SHELL)"
+
+worktree-agent-handoff: ## Preflight + prompt/agent handoff for the current or selected issue worktree
+	@bash $(TERRAFORM_DIR)/scripts/session/worktree.sh handoff-current "$(WT_PATH)"
 
 terraform-init-local: ## Initialize Terraform locally with scratch data/plugin caches for offline-friendly validation
 	mkdir -p $(LOCAL_TF_DATA_DIR) $(LOCAL_TF_PLUGIN_CACHE_DIR)

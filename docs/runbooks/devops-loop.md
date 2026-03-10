@@ -9,6 +9,7 @@ This runbook maps the developer harness to the repository's DevOps interaction s
 Use the smallest lane that matches the question:
 
 - editing code locally: `validate-fast`
+- starting or resuming work with prompt/yolo handoff: `worktree` or `worktree-agent-handoff`
 - checking current-doc / generated-artifact drift: `validate-ci-fast`
 - preparing to push a branch: `worktree-push-issue`
 - approximating the broad validation lane locally: `validate-ci-full`
@@ -38,6 +39,12 @@ Push current issue branch with enforced preflight + validation:
 
 ```bash
 make worktree-push-issue
+```
+
+Prompt / assistant / yolo handoff for the current or selected issue worktree:
+
+```bash
+make worktree-agent-handoff
 ```
 
 ## CI Fitness

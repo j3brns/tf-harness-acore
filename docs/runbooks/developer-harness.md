@@ -10,11 +10,11 @@ Optimize for this path:
 
 ```bash
 make issue-queue
-make worktree-next-issue OPEN_SHELL=1
+make worktree
 make validate-fast
 make validate-scope SCOPE=terraform
 make worktree-push-issue
-make finish-worktree-summary
+make finish-worktree-close
 ```
 
 ## Operating Model
@@ -31,8 +31,15 @@ make finish-worktree-summary
 
 ```bash
 make issue-queue
-make worktree-next-issue OPEN_SHELL=1
+make worktree
 ```
+
+`make worktree` is the imperative start point. The quick path is:
+- next ready issue
+- prompt / assistant selection
+- yolo or normal handoff
+- push current issue branch
+- finish current worktree
 
 2. Start every session with worktree preflight:
 

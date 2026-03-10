@@ -1068,6 +1068,22 @@ open_shell_in_worktree() {
   exec "${SHELL:-bash}" -l
 }
 
+handoff_current_worktree() {
+  local wt_path="${1:-}"
+  if [ -z "${wt_path}" ]; then
+    if [[ "$(git branch --show-current 2>/dev/null || true)" =~ ${WORKTREE_BRANCH_REGEX} ]]; then
+      wt_path="$(pwd -P)"
+    else
+      wt_path="$(choose_worktree_path false)"
+      if is_menu_back "${wt_path}"; then
+        return 0
+      fi
+    fi
+  fi
+  run_preflight_in_worktree "${wt_path}"
+  open_shell_in_worktree "${wt_path}"
+}
+
 run_command_in_worktree() {
   local wt_path="$1"
   local command_str=""
@@ -1748,11 +1764,13 @@ main_menu() {
 quick_menu() {
   while :; do
     echo "Worktree Quick Menu"
-    echo "  1) Next ready issue (default)"
-    echo "  2) Resume issue worktree"
-    echo "  3) Issue queue"
-    echo "  4) Finish current worktree"
-    echo "  5) Advanced menu"
+    echo "  1) Start next ready issue -> prompt/yolo handoff (default)"
+    echo "  2) Resume issue -> prompt/yolo handoff"
+    echo "  3) Handoff current issue worktree"
+    echo "  4) Issue queue"
+    echo "  5) Push current issue branch"
+    echo "  6) Finish current worktree"
+    echo "  7) Advanced menu"
     echo "  0) Exit"
     echo
 
@@ -1777,14 +1795,30 @@ quick_menu() {
         resume_issue_worktree "" "1"
         ;;
       3)
+        handoff_current_worktree
+        ;;
+      4)
         print_ready_issue_queue "${WORKTREE_READY_STREAM_LABEL:-}"
         pause
         ;;
-      4)
-        print_finish_worktree_summary "$(pwd -P)"
+      5)
+        echo "Running preflight + validate + push for current issue branch"
+        if (cd "$(pwd -P)" && make worktree-push-issue); then
+          echo "Push completed."
+        else
+          echo "Push failed."
+        fi
         pause
         ;;
-      5)
+      6)
+        if [[ "$(git branch --show-current 2>/dev/null || true)" =~ ${WORKTREE_BRANCH_REGEX} ]]; then
+          print_finish_worktree_summary "$(pwd -P)"
+          finish_worktree_protocol "$(pwd -P)"
+        else
+          finish_worktree_protocol
+        fi
+        ;;
+      7)
         main_menu
         ;;
       0|back)
@@ -1824,6 +1858,9 @@ case "${1:-}" in
   resume-issue)
     resume_issue_worktree "${2:-}" "${3:-}"
     ;;
+  handoff-current)
+    handoff_current_worktree "${2:-}"
+    ;;
   summary-current)
     print_finish_worktree_summary "$(pwd -P)"
     ;;
@@ -1832,7 +1869,7 @@ case "${1:-}" in
     ;;
   *)
     echo "ERROR: unknown command '${1}'"
-    echo "Usage: $0 [queue [stream]|next-issue [stream] [open_shell]|create-issue <issue> [open_shell]|resume-issue [path] [open_shell]|summary-current|finish-current]"
+    echo "Usage: $0 [queue [stream]|next-issue [stream] [open_shell]|create-issue <issue> [open_shell]|resume-issue [path] [open_shell]|handoff-current [path]|summary-current|finish-current]"
     exit 1
     ;;
 esac
