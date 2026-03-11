@@ -1,7 +1,7 @@
 # Inner Loop: Experimental AgentCore Terraform SPA Franchisee stack
 
 ![Bedrock AgentCore Terraform Splash](docs/images/readme-splash.jpg)
-## [Beta skunk works; Evaluate via burner account + Keycloak OIDC harness. Breaking changes unannounced before v1.0.0]
+## [Beta skunk works; Evaluate via burner account + Keycloak OIDC harness. Breaking changes until v1.0.0]
 
 A hardened Terraform franchise framework for small teams, units and App domains - until now - deploying AWS Bedrock AgentCore at the console. 
 The gap between a raw foundation model and a production-grade independently refined and releasable agent, looks like these 20,000 franchise LoC's; 
