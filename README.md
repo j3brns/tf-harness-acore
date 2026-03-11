@@ -1,13 +1,14 @@
-# Inner Loop: Experimental AgentCore Terraform SPA Franchise stack
+# Inner Loop: Experimental AgentCore Terraform SPA Franchisee stack
 
 ![Bedrock AgentCore Terraform Splash](docs/images/readme-splash.jpg)
 [Beta level skunk works; Evaluating burner account + Keycloak OIDC harness. Expect breaking changes unannounced until v1.0.0]
 
-A hardened Terraform franchise framework for teams andn domains deploying enterprise AI agents on AWS Bedrock AgentCore. 
-The gap between a raw foundation model and a production-grade independently releasable agent; 
---is filled with identity propagation, tenant isolation, encrypted state management, reporting, operator apps and a deployment pipeline that refuses to cut corners.
-Exposition Cloudfront SPA portal layer, multitenancy segregation including mediation. 
+A hardened Terraform franchise framework for small teams, units and App domains - until now - chaotically deploying AWS Bedrock AgentCore. 
+The gap between a raw foundation model and a production-grade independently refined and releasable agent, looks like these 20,000 franchise LoC's; 
+LoC filled with identity propagation, tenant isolation, encrypted state management, reporting, operator apps and a deployment pipeline that refuses to cut corners.
+Exposition is in as well and Claude or Codex  can handle the Cloudfront SPA portal layer, and multitenant segregation including mediation. 
 DX is delivered by an innner local loop with localstack and super fast differential agent releases to runtime.
+Engg teams are looking on, with the TF and the CDK looking very different, but with similar interest..
 
 Shared on Github, deployed on Gitlab (don't ask!). An adjacent project using CDK and approximating a SaaS offer is also being developed by me [in my servant of Mary time]. https://github.com/j3brns/tf-acore-aas
 
