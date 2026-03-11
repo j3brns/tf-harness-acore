@@ -5,8 +5,10 @@
 
 A hardened Terraform franchise framework for small teams, units and App domains - until now - deploying AWS Bedrock AgentCore at the console. 
 The gap between a raw foundation model and a production-grade independently refined and releasable agent, looks like these 20,000 franchise LoC's; 
-LoC filled with identity propagation, tenant isolation, encrypted state management, reporting, operator apps and a deployment pipeline that refuses to cut corners.
+LoC's filled with identity propagation, tenant isolation, encrypted state management, reporting, operator apps and a deployment pipeline that refuses to cut corners.
+
 Exposition is in as well and Claude or Codex  can handle the Cloudfront SPA portal layer, and multitenant segregation including mediation. 
+
 DX is delivered by an innner local loop with localstack and super fast differential agent releases to runtime.
 Engg teams are looking on, with the TF and the CDK looking very different, but with similar interest..
 
