@@ -1,4 +1,4 @@
-# Bedrock AgentCore Terraform
+# Inner Loop: Experimental AgentCore Terraform SPA Franchise stack
 
 ![Bedrock AgentCore Terraform Splash](docs/images/readme-splash.jpg)
 
