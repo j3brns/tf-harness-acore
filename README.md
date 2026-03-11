@@ -1,7 +1,7 @@
 # Inner Loop: Experimental AgentCore Terraform SPA Franchise stack
 
 ![Bedrock AgentCore Terraform Splash](docs/images/readme-splash.jpg)
-Experimental Beta level; Evaluating with burner account and Keycloak OIDC
+[Experimental Beta level skunk works project; Evaluating with burner account and Keycloak OIDC. Expect breaking changes unannounced until v1.0.0]
 
 A hardened Terraform franchise framework for teams andn domains deploying enterprise AI agents on AWS Bedrock AgentCore. 
 The gap between a raw foundation model and a production-grade independently releasable agent; 
@@ -9,9 +9,9 @@ The gap between a raw foundation model and a production-grade independently rele
 Exposition Cloudfront SPA portal layer, multitenancy segregation including mediation. 
 DX is delivered by an innner local loop with localstack and super fast differential agent releases to runtime.
 
-Shared on Github, deployed on Gitlab (don't ask!)
+Shared on Github, deployed on Gitlab (don't ask!). An adjacent project using CDK and approximating a SaaS offer is also beimng sun up.
 
-## At a Glance
+## Inner Loop At a Glance
 
 - Fixed module boundaries: `foundation`, `tools`, `runtime`, `governance`, and `bff`
 - Multi-tenant execution model anchored to `app_id`, `tenant_id`, and `agent_name`
