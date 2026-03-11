@@ -1,8 +1,15 @@
 # Inner Loop: Experimental AgentCore Terraform SPA Franchise stack
 
 ![Bedrock AgentCore Terraform Splash](docs/images/readme-splash.jpg)
+Experimental Beta level; Evaluating with burner account and Keycloak OIDC
 
-A hardened Terraform framework for deploying enterprise AI agents on AWS Bedrock AgentCore. The gap between a raw foundation model and a production-grade agent is filled with identity propagation, tenant isolation, encrypted state management, and a deployment pipeline that refuses to cut corners.
+A hardened Terraform franchise framework for teams andn domains deploying enterprise AI agents on AWS Bedrock AgentCore. 
+The gap between a raw foundation model and a production-grade independently releasable agent; 
+--is filled with identity propagation, tenant isolation, encrypted state management, reporting, operator apps and a deployment pipeline that refuses to cut corners.
+Exposition Cloudfront SPA portal layer, multitenancy segregation including mediation. 
+DX is delivered by an innner local loop with localstack and super fast differential agent releases to runtime.
+
+Shared on Github, deployed on Gitlab (don't ask!)
 
 ## At a Glance
 
@@ -30,7 +37,7 @@ _The public edge, identity plane, runtime plane, and state systems all line up o
 
 > The `hashicorp/aws` provider is pinned to `~> 6.33.0` (freeze point for Workstream A). The MCP gateway and gateway targets use native `aws_bedrockagentcore_*` resources. Workload identity, runtime, memory, browser, code interpreter, policy engine, evaluators, and credential providers use the CLI bridge pattern pending stable native coverage.
 
-This framework bridges that gap with a stateful CLI bridge pattern that wraps every AgentCore control-plane operation in a lifecycle manager backed by SSM Parameter Store, giving you full infrastructure-as-code semantics today and a clean `terraform import` migration path when native resources arrive.
+This framework bridged that gap at first with a stateful CLI bridge pattern that wraps every AgentCore control-plane operation in a lifecycle manager backed by SSM Parameter Store, giving you full infrastructure-as-code semantics today and a clean `terraform import` migration path when native resources arrive. , with TF provider v6.33, we now have coverage and run time in LHR (10/3/26 update). The inne loop will migrate out of eu-west1 from now.
 
 ---
 
