@@ -42,3 +42,8 @@ output "audit_logs_athena_workgroup" {
   description = "Athena workgroup name for BFF proxy audit log queries"
   value       = local.audit_logs_enabled ? aws_athena_workgroup.bff_audit_logs[0].name : ""
 }
+
+output "proxy_role_arn" {
+  description = "ARN of the BFF Proxy Role used for agent invocation"
+  value       = var.enable_bff ? aws_iam_role.proxy[0].arn : ""
+}

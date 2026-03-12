@@ -6,18 +6,15 @@ resource "aws_bedrockagentcore_code_interpreter" "this" {
   execution_role_arn = aws_iam_role.code_interpreter[0].arn
 
   network_configuration {
-    execution_mode = var.code_interpreter_network_mode
-    dynamic "vpc_configuration" {
+    network_mode = var.code_interpreter_network_mode
+    dynamic "vpc_config" {
       for_each = var.code_interpreter_vpc_config != null ? [var.code_interpreter_vpc_config] : []
       content {
-        subnet_ids          = vpc_configuration.value.subnet_ids
-        security_group_ids  = vpc_configuration.value.security_group_ids
-        associate_public_ip = vpc_configuration.value.associate_public_ip
+        subnets         = vpc_config.value.subnet_ids
+        security_groups = vpc_config.value.security_group_ids
       }
     }
   }
-
-  tags = var.tags
 
   depends_on = [aws_iam_role.code_interpreter]
 }

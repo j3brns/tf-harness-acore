@@ -107,3 +107,4 @@ excalidraw-mcp-*/
 terraform/tests/frontend/playwright-report/
 terraform/tests/frontend/test-results/
 terraform/tests/frontend/node_modules/
+.gitnexus

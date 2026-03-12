@@ -7,17 +7,19 @@ resource "aws_bedrockagentcore_agent_runtime" "this" {
 
   agent_runtime_artifact {
     code_configuration {
-      source_s3_uri = "s3://${local.deployment_bucket}/${local.deployment_key}"
+      runtime     = var.python_version
+      entry_point = [var.runtime_entry_file]
+      code {
+        s3 {
+          bucket = local.deployment_bucket
+          prefix = local.deployment_key
+        }
+      }
     }
   }
 
   network_configuration {
-    # Default SANDBOX mode aligns with previous CLI behavior
-    execution_mode = "SANDBOX"
-  }
-
-  lifecycle_configuration {
-    status = "DRAFT"
+    network_mode = "PUBLIC"
   }
 
   tags = var.tags
