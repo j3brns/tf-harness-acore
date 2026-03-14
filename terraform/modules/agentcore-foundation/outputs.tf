@@ -21,8 +21,8 @@ output "gateway_role_arn" {
 }
 
 output "workload_identity_id" {
-  description = "ID of the workload identity"
-  value       = var.enable_identity ? aws_bedrockagentcore_workload_identity.this[0].workload_identity_id : null
+  description = "ID (ARN) of the workload identity"
+  value       = var.enable_identity ? aws_bedrockagentcore_workload_identity.this[0].workload_identity_arn : null
 }
 
 output "workload_identity_arn" {

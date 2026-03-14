@@ -108,7 +108,6 @@ module "agentcore_runtime" {
   enable_s3_encryption   = var.enable_s3_encryption
   enable_observability   = var.enable_observability
   logging_bucket_id      = module.agentcore_foundation.access_logs_bucket_id
-  proxy_role_arn         = module.agentcore_bff.proxy_role_arn
 
   # Packaging
   enable_packaging     = var.enable_packaging

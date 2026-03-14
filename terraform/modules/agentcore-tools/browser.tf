@@ -6,13 +6,12 @@ resource "aws_bedrockagentcore_browser" "this" {
   execution_role_arn = aws_iam_role.browser[0].arn
 
   network_configuration {
-    execution_mode = var.browser_network_mode
-    dynamic "vpc_configuration" {
+    network_mode = var.browser_network_mode
+    dynamic "vpc_config" {
       for_each = var.browser_vpc_config != null ? [var.browser_vpc_config] : []
       content {
-        subnet_ids          = vpc_configuration.value.subnet_ids
-        security_group_ids  = vpc_configuration.value.security_group_ids
-        associate_public_ip = vpc_configuration.value.associate_public_ip
+        subnets         = vpc_config.value.subnet_ids
+        security_groups = vpc_config.value.security_group_ids
       }
     }
   }
@@ -20,12 +19,12 @@ resource "aws_bedrockagentcore_browser" "this" {
   dynamic "recording" {
     for_each = var.enable_browser_recording && var.browser_recording_s3_bucket != "" ? [1] : []
     content {
-      s3_bucket_name = var.browser_recording_s3_bucket
-      s3_key_prefix  = var.browser_recording_s3_prefix
+      s3_location {
+        bucket = var.browser_recording_s3_bucket
+        prefix = var.browser_recording_s3_prefix
+      }
     }
   }
-
-  tags = var.tags
 
   depends_on = [aws_iam_role.browser]
 }

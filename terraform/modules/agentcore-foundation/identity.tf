@@ -4,6 +4,4 @@ resource "aws_bedrockagentcore_workload_identity" "this" {
 
   name                                = "${var.agent_name}-workload-identity"
   allowed_resource_oauth2_return_urls = var.oauth_return_urls
-
-  tags = var.tags
 }

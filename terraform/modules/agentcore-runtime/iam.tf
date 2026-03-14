@@ -24,18 +24,19 @@ resource "aws_iam_role" "runtime" {
         }
       }],
       # Senior Move: Allow Proxy to assume this role with session policies
-      var.proxy_role_arn != "" ? [{
+      # Use deterministic ARN construction to break the module dependency cycle
+      [{
         Action = "sts:AssumeRole"
         Effect = "Allow"
         Principal = {
           AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
         }
         Condition = {
-          ArnEquals = {
-            "aws:PrincipalArn" = var.proxy_role_arn
+          ArnLike = {
+            "aws:PrincipalArn" = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.agent_name}-proxy-role-${var.environment}"
           }
         }
-      }] : []
+      }]
     )
   })
 
@@ -58,7 +59,7 @@ resource "aws_iam_role_policy" "runtime_base" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/runtime/*"
+        Resource = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock/agentcore/${var.agent_name}/*"
       },
       {
         Effect = "Allow"
